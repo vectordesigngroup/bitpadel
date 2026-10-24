@@ -2,7 +2,7 @@
 
 **An open "Bitcoin padel club in a box" kit.** Playbooks, templates and checklists for anyone starting a Bitcoin-friendly padel (and pickleball) club, from a single pilot court to a flagship venue.
 
-> **Status:** early draft (v0.1). Docs and templates only; reference code (Lightning booking and door-access apps) is on the [roadmap](docs/ROADMAP.md).
+> **Status:** early draft (v0.1). Playbooks and templates, plus a self-hosted reference app for Lightning booking and LNURL-auth entry in [`reference/club-box`](reference/club-box). See the [roadmap](docs/ROADMAP.md) for what is still ahead.
 > Nothing here is legal, tax or investment advice. Read the [DISCLAIMER](DISCLAIMER.md).
 
 ## The idea
@@ -27,7 +27,8 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 | [`docs/06-community-growth.md`](docs/06-community-growth.md) | Waitlist, founding members, Reddit, Instagram, local partners |
 | [`docs/07-sponsorship-playbook.md`](docs/07-sponsorship-playbook.md) | Sponsorship (not investment) packages and how to sell them |
 | [`docs/08-treasury-policy-considerations.md`](docs/08-treasury-policy-considerations.md) | Questions to settle with a CPA and attorney before a business holds Bitcoin |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What's next, including the reference code |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What's done and what's next |
+| [`reference/club-box`](reference/club-box) | Self-hosted Lightning court booking and LNURL-auth entry (mock backend for local use) |
 | [`templates/`](templates/) | Blank financial model (CSV with formulas), founding-member page, event run-of-show, sponsor one-pager |
 | [`brand/`](brand/) | Neutral placeholder look you should replace with your own club's brand |
 
@@ -36,7 +37,7 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 1. **Read** [`docs/01-concept-and-phases.md`](docs/01-concept-and-phases.md) and decide which phase you're starting with (most clubs should start with one pilot court).
 2. **Fill in** [`templates/financial-model.csv`](templates/financial-model.csv) with your own local quotes. Every input starts at zero on purpose: the kit has no prices, because yours depend on your city, site and costs.
 3. **Work through** [`docs/02-pilot-checklist.md`](docs/02-pilot-checklist.md) with your landlord or host site, your local permitting office and an insurance broker.
-4. **Pick a Lightning stack** from [`docs/04-lightning-integrations.md`](docs/04-lightning-integrations.md) and test it with small payments before opening.
+4. **Pick a Lightning stack** from [`docs/04-lightning-integrations.md`](docs/04-lightning-integrations.md). You can run the reference booking and entry app locally with its mock backend ([`reference/club-box`](reference/club-box)), then test a real node with small payments before opening.
 5. **Start the community before the court:** a waitlist, a founding-member interest page ([`templates/founding-member-page.html`](templates/founding-member-page.html)) and a first Bitcoin meetup or small-business workshop ([`docs/03-bitcoin-hub-playbook.md`](docs/03-bitcoin-hub-playbook.md)).
 6. **Talk to professionals** before you take money from the public or hold Bitcoin as a business: a local attorney, a CPA and an insurance broker.
 

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enroll a wallet</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/">Booking</a>
+      <a href="/kiosk">Door kiosk</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+  <main class="kiosk-main">
+    <h1>Enroll a Lightning wallet</h1>
+    <p class="note">Staff create this code in admin and show it to the member. The wallet's linking key is stored. No name, email, or balance is requested.</p>
+    <img id="qr" alt="Enrollment LNURL-auth QR" hidden width="360" height="360">
+    <p id="status" class="status" role="status"></p>
+  </main>
+  <script src="/enroll.js"></script>
+</body>
+</html>

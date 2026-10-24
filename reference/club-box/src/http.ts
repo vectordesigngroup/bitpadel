@@ -1,0 +1,246 @@
+import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { AppError, LnurlError, PaymentError } from "./errors.js";
+import { log } from "./log.js";
+import { safeEqual } from "./security.js";
+
+const CSP =
+  "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+
+const BODY_LIMIT = 256 * 1024;
+
+const STATIC_FILES: Record<string, string> = {
+  "/": "booking.html",
+  "/booking": "booking.html",
+  "/admin": "admin.html",
+  "/kiosk": "kiosk.html",
+  "/enroll": "enroll.html",
+  "/styles.css": "styles.css",
+  "/booking.js": "booking.js",
+  "/admin.js": "admin.js",
+  "/kiosk.js": "kiosk.js",
+  "/enroll.js": "enroll.js",
+};
+
+const CONTENT_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+};
+
+export type HttpReq = {
+  method: string;
+  url: URL;
+  headers: IncomingHttpHeaders;
+  rawBody: Buffer;
+  ip: string;
+  params: Record<string, string>;
+  res: ServerResponse;
+};
+
+export type Route = {
+  method: string;
+  pattern: string;
+  handler: (req: HttpReq) => Promise<void>;
+};
+
+export function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  sendBytes(res, status, Buffer.from(JSON.stringify(body)), "application/json; charset=utf-8");
+}
+
+export function sendBytes(res: ServerResponse, status: number, body: Buffer, contentType: string): void {
+  if (res.headersSent) return;
+  res.writeHead(status, {
+    "content-type": contentType,
+    "content-length": body.length,
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "content-security-policy": CSP,
+    "x-frame-options": "DENY",
+  });
+  res.end(body);
+}
+
+export function sendText(
+  res: ServerResponse,
+  status: number,
+  body: string,
+  contentType: string,
+  extra?: Record<string, string>,
+): void {
+  if (res.headersSent) return;
+  const payload = Buffer.from(body);
+  res.writeHead(status, {
+    "content-type": contentType,
+    "content-length": payload.length,
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "content-security-policy": CSP,
+    "x-frame-options": "DENY",
+    ...extra,
+  });
+  res.end(payload);
+}
+
+export function readJson(req: HttpReq): unknown {
+  if (req.rawBody.length === 0) throw new AppError(400, "Expected a JSON body");
+  try {
+    return JSON.parse(req.rawBody.toString("utf8")) as unknown;
+  } catch {
+    throw new AppError(400, "Invalid JSON");
+  }
+}
+
+export function requireAdmin(req: HttpReq, adminToken: string): void {
+  const header = req.headers.authorization;
+  const token = typeof header === "string" && header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+  if (!token || !safeEqual(token, adminToken)) throw new AppError(401, "Admin token required");
+}
+
+export function listen(server: Server, port: number, host: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+}
+
+export function createAppServer(options: {
+  trustProxy: boolean;
+  routes: Route[];
+  publicDir: string;
+}): Server {
+  const publicRoot = path.resolve(options.publicDir);
+  return createServer((incoming, res) => {
+    void handleRequest(incoming, res, options.routes, options.trustProxy, publicRoot);
+  });
+}
+
+async function handleRequest(
+  incoming: IncomingMessage,
+  res: ServerResponse,
+  routes: Route[],
+  trustProxy: boolean,
+  publicRoot: string,
+): Promise<void> {
+  try {
+    const method = incoming.method ?? "GET";
+    const host = incoming.headers.host ?? "localhost";
+    const url = new URL(incoming.url ?? "/", `http://${host}`);
+    const rawBody = await readBody(incoming);
+    const matches = routes
+      .map((route) => ({ route, params: matchPattern(route.pattern, url.pathname) }))
+      .filter((item): item is { route: Route; params: Record<string, string> } => item.params !== null);
+    const found = matches.find((item) => item.route.method === method);
+    if (!found) {
+      if (matches.length > 0) {
+        sendJson(res, 405, { error: "Method not allowed" });
+        return;
+      }
+      if (method !== "GET" && method !== "HEAD") {
+        sendJson(res, 404, { error: "Not found" });
+        return;
+      }
+      const file = staticFile(url.pathname, publicRoot);
+      if (!file) {
+        sendJson(res, 404, { error: "Not found" });
+        return;
+      }
+      const body = await readFile(file.path);
+      if (method === "HEAD") {
+        sendBytes(res, 200, Buffer.alloc(0), file.contentType);
+        return;
+      }
+      sendBytes(res, 200, body, file.contentType);
+      return;
+    }
+    await found.route.handler({
+      method,
+      url,
+      headers: incoming.headers,
+      rawBody,
+      ip: clientIp(incoming, trustProxy),
+      params: found.params,
+      res,
+    });
+  } catch (error) {
+    if (res.headersSent) {
+      res.end();
+      return;
+    }
+    if (error instanceof LnurlError) {
+      sendJson(res, 200, { status: "ERROR", reason: error.message });
+      return;
+    }
+    if (error instanceof AppError) {
+      sendJson(res, error.status, { error: error.message });
+      return;
+    }
+    if (error instanceof PaymentError) {
+      sendJson(res, 502, { error: error.message });
+      return;
+    }
+    log("error", "request failed", { error: error instanceof Error ? error.message : "error" });
+    sendJson(res, 500, { error: "Internal error" });
+  }
+}
+
+function matchPattern(pattern: string, pathname: string): Record<string, string> | null {
+  const expected = pattern.split("/").filter((part) => part.length > 0);
+  const actual = pathname.split("/").filter((part) => part.length > 0);
+  if (expected.length !== actual.length) return null;
+  const params: Record<string, string> = {};
+  for (let index = 0; index < expected.length; index += 1) {
+    const token = expected[index];
+    const value = actual[index];
+    if (token === undefined || value === undefined) return null;
+    if (token.startsWith(":")) {
+      try {
+        params[token.slice(1)] = decodeURIComponent(value);
+      } catch {
+        return null;
+      }
+    } else if (token !== value) {
+      return null;
+    }
+  }
+  return params;
+}
+
+function staticFile(pathname: string, publicRoot: string): { path: string; contentType: string } | null {
+  const name = STATIC_FILES[pathname];
+  if (!name) return null;
+  const full = path.resolve(publicRoot, name);
+  if (full !== publicRoot && !full.startsWith(`${publicRoot}${path.sep}`)) return null;
+  const extension = path.extname(name);
+  const contentType = CONTENT_TYPES[extension];
+  if (!contentType) return null;
+  return { path: full, contentType };
+}
+
+async function readBody(incoming: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of incoming) {
+    const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    total += buffer.length;
+    if (total > BODY_LIMIT) throw new AppError(413, "Body too large");
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks);
+}
+
+function clientIp(incoming: IncomingMessage, trustProxy: boolean): string {
+  if (trustProxy) {
+    const forwarded = incoming.headers["x-forwarded-for"];
+    const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    const first = raw?.split(",")[0]?.trim();
+    if (first) return first.slice(0, 80);
+  }
+  return incoming.socket.remoteAddress ?? "unknown";
+}

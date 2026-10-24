@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Door kiosk</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/">Booking</a>
+      <a href="/kiosk" aria-current="page">Door kiosk</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+  <main class="kiosk-main">
+    <h1>Member entry</h1>
+    <p class="safety">This service can pulse an entry lock only. It cannot lock a door shut, block an exit, or control fire or other life-safety systems.</p>
+    <p class="safety">If this screen cannot reach the club server, use a fob, a PIN, or staff. Leaving does not use this service.</p>
+    <div id="areas" class="row center"></div>
+    <img id="qr" alt="LNURL-auth QR" hidden width="360" height="360">
+    <p id="status" class="status" role="status"></p>
+    <noscript>
+      <p>Wallet sign-in needs this page's script and the local server. Use a fob, a PIN, or staff. Exits do not use this screen.</p>
+    </noscript>
+  </main>
+  <script src="/kiosk.js"></script>
+</body>
+</html>

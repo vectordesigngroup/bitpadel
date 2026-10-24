@@ -1,6 +1,6 @@
 # Lightning integrations
 
-Three integrations make a club "Lightning-native": **booking**, **member access** and **the shop**. Reference code is planned (see the [roadmap](ROADMAP.md)); this doc describes the architecture so you can build or buy.
+Three integrations make a club "Lightning-native": **booking**, **member access** and **the shop**. A self-hosted reference app for the first two lives in [`reference/club-box`](../reference/club-box) (mock, BTCPay Server, and LNbits for bookings; LNURL-auth plus an entry-only door adapter). This doc is the architecture. The shop section is still something you build or buy.
 
 > Test everything with small amounts first. Lightning software changes quickly; check each project's current docs and wallet support before you commit.
 

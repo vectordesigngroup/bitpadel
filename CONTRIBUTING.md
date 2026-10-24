@@ -5,7 +5,7 @@ Thanks for helping more people start Bitcoin-friendly padel clubs.
 ## Ways to help
 - **Club founders:** share what worked and what didn't (permits, courts, pricing approaches without your private numbers, community growth).
 - **Bitcoin educators:** improve the small-business curriculum and workshop materials.
-- **Lightning developers:** help with the reference booking and LNURL-auth door-access code on the [roadmap](docs/ROADMAP.md).
+- **Lightning developers:** extend the reference booking and LNURL-auth entry app in [`reference/club-box`](reference/club-box). The [roadmap](docs/ROADMAP.md) lists what is still open.
 - **Translators:** Spanish first, then any language.
 
 ## How

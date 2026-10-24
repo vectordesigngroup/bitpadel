@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Club admin</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/">Booking</a>
+      <a href="/kiosk">Door kiosk</a>
+      <a href="/admin" aria-current="page">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Courts, prices, and members</h1>
+    <p class="note">Prices are integers in your currency's minor units. Nothing on this page fills in a price for you.</p>
+    <p id="status" class="status" role="status"></p>
+    <form id="login" class="card">
+      <label>Admin token
+        <input id="token" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">Load admin</button>
+    </form>
+    <div id="app" hidden>
+      <section>
+        <h2>Server</h2>
+        <p id="server" class="note"></p>
+      </section>
+      <form id="court-form" class="card">
+        <h2>Add a court</h2>
+        <label>Court name
+          <input name="name" required maxlength="60">
+        </label>
+        <button type="submit">Add court</button>
+      </form>
+      <form id="slot-form" class="card">
+        <h2>Add a slot</h2>
+        <label>Court
+          <select name="courtId" required></select>
+        </label>
+        <label>Starts
+          <input name="startsAt" type="datetime-local" required>
+        </label>
+        <label>Ends
+          <input name="endsAt" type="datetime-local" required>
+        </label>
+        <label>Price, minor units
+          <input name="priceMinor" inputmode="numeric" required>
+        </label>
+        <button type="submit">Add slot</button>
+      </form>
+      <section>
+        <h2>Slots</h2>
+        <div id="slots"></div>
+      </section>
+      <form id="member-form" class="card">
+        <h2>Members</h2>
+        <p class="note">Use a membership number or other label. Do not put a person's name here unless your privacy policy says so.</p>
+        <label>Label
+          <input name="label" required maxlength="80">
+        </label>
+        <button type="submit">Add member</button>
+      </form>
+      <div id="members"></div>
+      <section>
+        <h2>Bookings</h2>
+        <p><a href="/api/admin/bookings.csv" id="csv">Download CSV</a></p>
+        <div id="bookings"></div>
+      </section>
+      <section>
+        <h2>Access log</h2>
+        <div id="audit"></div>
+      </section>
+    </div>
+  </main>
+  <script src="/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Court booking</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/" aria-current="page">Booking</a>
+      <a href="/kiosk">Door kiosk</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Book a court</h1>
+    <p class="note">The price on a slot is the one your club saved in admin. This page does not choose a price.</p>
+    <div id="courts" class="row"></div>
+    <div id="slots"></div>
+    <section id="invoice" hidden>
+      <h2>Lightning invoice</h2>
+      <p id="invoice-note"></p>
+      <img id="invoice-qr" alt="Invoice QR" width="280" height="280">
+      <p id="invoice-amount"></p>
+      <p id="bolt11" class="mono"></p>
+      <p id="invoice-status" role="status"></p>
+    </section>
+    <p id="status" class="status" role="status"></p>
+  </main>
+  <footer>
+    <p>Reference app. Replace the placeholder colors with your club's brand.</p>
+  </footer>
+  <script src="/booking.js"></script>
+</body>
+</html>

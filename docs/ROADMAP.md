@@ -6,8 +6,8 @@
 - Neutral placeholder brand.
 
 ## Next
-- [ ] **Reference code: Lightning court booking** (placeholder). A small open-source app or plugin that holds a court slot, creates a Lightning invoice via BTCPay Server or LNbits, confirms on webhook and releases unpaid holds.
-- [ ] **Reference code: LNURL-auth door access** (placeholder). An access server that verifies LNURL-auth signatures against a member list and sends an authenticated unlock to a door controller, with audit logging, revocation and a fob fallback. Must ship with the safety notes in [`04-lightning-integrations.md`](04-lightning-integrations.md).
+- [x] **Reference code: Lightning court booking.** [`reference/club-box`](../reference/club-box) holds a slot, invoices through BTCPay Server (Greenfield), LNbits, or a local mock, confirms when the invoice settles, and releases unpaid holds. Prices come from configuration and the admin page.
+- [x] **Reference code: LNURL-auth door access.** The same app enrolls a wallet, shows a rotating kiosk QR, checks the signature (expiry, replay, rate limit), pulses an entry-only controller, and writes an audit log. Safety rules are in [`04-lightning-integrations.md`](04-lightning-integrations.md) and on the kiosk page. Egress and life-safety stay outside this software. A fob, PIN, or staff path remains the fallback.
 - [ ] Open workshop slide deck for the small-business Lightning curriculum.
 - [ ] Spreadsheet version of the financial model (with charts).
 - [ ] Translations (Spanish first).
