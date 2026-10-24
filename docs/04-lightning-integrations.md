@@ -74,9 +74,22 @@ Members unlock member-only areas (lounge, lockers, after-hours court) by signing
 - The linking key is pseudonymous and different for each site, so it doesn't reveal the member's wallet, balance or other activity. Store only the public key, member ID and access log.
 - Set a log retention period and explain it in your privacy policy.
 - Not every wallet supports LNURL-auth; check current support and keep fobs available.
+- The reference app can also accept an NTAG 424 DNA SUN tap or a DESFire proof. Programming steps are in [`nfc-card-programming.md`](nfc-card-programming.md). A plain UID is clonable. The insecure UID switch is off unless the operator sets it. A Bolt Card is a Lightning payment card, not a door credential.
+- Door hardware categories, a wiring sketch, and the installer checklist are in the [club-box hardware section](../reference/club-box/README.md#compatible-door-hardware). Examples are not certifications. Egress and fire release stay off this software.
+
+### Check-in and privacy
+A successful unlock records who arrived. The kiosk can add a guest count and a named guest. Marketing consent is a separate, opt-in record. Photos stay on the club server. The notice template is [`templates/privacy-notice.md`](../templates/privacy-notice.md). It is not legal advice.
 
 ## 3. Lightning at the shop and events
 - Use the same processor as bookings so all payments land in one place (BTCPay's POS app, an LNbits POS extension, or a hosted processor's POS).
 - A tablet at the counter with a fixed QR for tips and a POS for items.
 - Event tickets payable with Lightning (many tools support ticketing with LNURL or invoices).
 - Train staff on: confirming a payment really settled, refunds, and spotting scams (fake "payment sent" screens).
+
+## 4. Read-only Playtomic availability
+
+Clubs that already take bookings in Playtomic can import them into the reference app without giving up Lightning holds for empty courts. The official third-party API is read-only, covers about the last three months plus future bookings, and is offered on Playtomic's Champion or Master plans. Credentials are created under Settings, Developer Tools.
+
+The reference client requests a token and then only reads bookings and payments. It caches the token, spaces calls, and backs off on rate limits and the payments processing response. Imported court time is mapped onto a local court, shown on the calendar, and blocked for a new Lightning hold. Conflicts are flagged for staff. A member's arrival can match today's imported booking by email or a linked player id.
+
+Two-way sync is the [Playtomic Connect](https://playtomic.com/connect) partner program. Unofficial or scraped integrations are being blocked and must not be used. Player emails are personal data. Store what the match needs, and do not add a player to marketing unless they opted in.

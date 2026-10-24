@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/">Booking</a>
+      <a href="/privacy" aria-current="page">Privacy</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Privacy choices</h1>
+    <p class="note">This page is a template for the club's own notice. It is not legal advice. Ask a lawyer about US state privacy laws, CAN-SPAM, TCPA, and GDPR where they apply.</p>
+    <p>Operational visit records and marketing contacts are stored separately. Unsubscribing stops marketing. Deletion clears the contact stored with this privacy link.</p>
+    <form id="privacy" class="card">
+      <label>Privacy token
+        <input name="token" required maxlength="80">
+      </label>
+      <button type="submit" name="action" value="unsubscribe">Unsubscribe</button>
+      <button type="submit" class="secondary" name="action" value="delete">Delete this contact</button>
+    </form>
+    <p id="status" class="status" role="status"></p>
+  </main>
+  <script src="/privacy.js"></script>
+</body>
+</html>

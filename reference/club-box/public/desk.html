@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Front desk</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/">Booking</a>
+      <a href="/kiosk">Door kiosk</a>
+      <a href="/desk" aria-current="page">Front desk</a>
+      <a href="/admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>On site now</h1>
+    <p class="safety">This screen shows who arrived. It does not lock an exit or touch fire systems.</p>
+    <p id="status" class="status" role="status"></p>
+    <form id="login" class="card">
+      <label>Staff or admin token
+        <input id="token" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">Load desk</button>
+    </form>
+    <div id="app" hidden>
+      <p id="headcount" class="note"></p>
+      <div id="people"></div>
+      <h2>Today's imported bookings</h2>
+      <div id="bookings"></div>
+      <h2>Conflicts</h2>
+      <div id="conflicts"></div>
+    </div>
+  </main>
+  <script src="/desk.js"></script>
+</body>
+</html>

@@ -12,7 +12,9 @@
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test test/*.test.ts"
+    "test": "tsx --test test/*.test.ts",
+    "card:program": "tsx src/nfc/program-cli.ts",
+    "reader:bridge": "tsx src/nfc/bridge-cli.ts"
   },
   "license": "MIT",
   "dependencies": {

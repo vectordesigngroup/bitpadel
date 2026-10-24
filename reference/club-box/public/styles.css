@@ -43,6 +43,7 @@ input, select {
   background: var(--bg);
   color: var(--text);
 }
+input[type="checkbox"] { width: auto; margin-right: 8px; }
 button, .button {
   display: inline-block;
   background: var(--primary);

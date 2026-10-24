@@ -115,6 +115,7 @@ async function refresh() {
   renderBookings(bookings.bookings);
   const audit = await api("/api/admin/audit?limit=20");
   renderAudit(audit.audit);
+  await renderPlaytomic(courts.courts);
   setStatus("");
 }
 
@@ -245,8 +246,109 @@ function renderMembers(members) {
         setStatus(error.message);
       }
     });
+    const profile = document.createElement("button");
+    profile.type = "button";
+    profile.className = "secondary";
+    profile.textContent = "Save profile";
+    const name = field("Display name", member.displayName || "");
+    const email = field("Email", member.email || "");
+    const phone = field("Phone", member.phone || "");
+    profile.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/members/${member.id}/profile`, {
+          method: "POST",
+          body: JSON.stringify({
+            displayName: name.value,
+            email: email.value,
+            phone: phone.value,
+            playtomicPlayerId: player.value || null,
+          }),
+        });
+        await refresh();
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    const player = field("Playtomic player id", member.playtomicPlayerId || "");
+    const uid = field("Card UID hex", "");
+    const issue = document.createElement("button");
+    issue.type = "button";
+    issue.className = "secondary";
+    issue.textContent = "Enroll card";
+    issue.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/members/${member.id}/cards`, {
+          method: "POST",
+          body: JSON.stringify({ uid: uid.value, scheme: "ntag424-sun", label: "issued" }),
+        });
+        await refresh();
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    block.append(name, email, phone, player, profile, uid, issue);
+    for (const card of member.cards || []) {
+      const line = document.createElement("p");
+      line.className = "mono note";
+      line.textContent = `${card.scheme} ${card.uid} ${card.status}`;
+      block.append(line);
+      if (card.status === "active") {
+        block.append(cardButton(card.id, "revoke", "Revoke card"), cardButton(card.id, "lost", "Mark lost"));
+      }
+    }
     block.append(enroll, toggle);
     root.append(block);
+  }
+}
+
+function field(label, value) {
+  const input = document.createElement("input");
+  input.value = value;
+  input.setAttribute("aria-label", label);
+  input.placeholder = label;
+  return input;
+}
+
+function cardButton(cardId, action, text) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "secondary";
+  button.textContent = text;
+  button.addEventListener("click", async () => {
+    try {
+      await api(`/api/admin/cards/${cardId}/${action}`, { method: "POST" });
+      await refresh();
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  return button;
+}
+
+async function renderPlaytomic(courts) {
+  const select = document.querySelector("#map-form select");
+  select.replaceChildren();
+  for (const court of courts.filter((court) => court.active)) {
+    const option = document.createElement("option");
+    option.value = court.id;
+    option.textContent = court.name;
+    select.append(option);
+  }
+  const maps = await api("/api/admin/playtomic/maps");
+  const root = document.querySelector("#maps");
+  root.replaceChildren();
+  for (const map of maps.maps) {
+    const line = document.createElement("p");
+    line.textContent = `${map.courtName} ← ${map.resourceId}`;
+    root.append(line);
+  }
+  const conflicts = await api("/api/admin/playtomic/conflicts");
+  const list = document.querySelector("#conflicts");
+  list.replaceChildren();
+  for (const conflict of conflicts.conflicts) {
+    const line = document.createElement("p");
+    line.textContent = conflict.detail;
+    list.append(line);
   }
 }
 
@@ -277,6 +379,30 @@ function renderAudit(rows) {
     root.append(line);
   }
 }
+
+document.querySelector("#map-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  try {
+    await api("/api/admin/playtomic/maps", {
+      method: "POST",
+      body: JSON.stringify({ courtId: data.get("courtId"), resourceId: data.get("resourceId") }),
+    });
+    await refresh();
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#sync").addEventListener("click", async () => {
+  try {
+    const result = await api("/api/admin/playtomic/sync", { method: "POST" });
+    setStatus(`Synced ${result.report.bookings} bookings.`);
+    await refresh();
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
 
 if (token) {
   document.querySelector("#token").value = token;

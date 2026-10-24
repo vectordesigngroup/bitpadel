@@ -34,6 +34,8 @@ import { AppError } from "./errors.js";
 import { readJson, requireAdmin, sendBytes, sendJson, sendText, type HttpReq, type Route } from "./http.js";
 import { log } from "./log.js";
 import { pngQr } from "./qr.js";
+import { accessRoutes } from "./routes-access.js";
+import { playtomicRoutes } from "./routes-playtomic.js";
 import { SAFETY } from "./safety.js";
 import {
   asObject,
@@ -82,6 +84,8 @@ export function buildRoutes(ctx: AppDeps): Route[] {
     { method: "POST", pattern: "/api/admin/members/:id/enroll", handler: (req) => adminEnroll(req, ctx) },
     { method: "POST", pattern: "/api/admin/keys/:id/revoke", handler: (req) => adminRevokeKey(req, ctx) },
     { method: "GET", pattern: "/api/admin/audit", handler: (req) => adminAudit(req, ctx) },
+    ...accessRoutes(ctx),
+    ...playtomicRoutes(ctx),
   ];
 }
 
@@ -96,6 +100,10 @@ function health(req: HttpReq, ctx: AppDeps): Promise<void> {
     areaHours: ctx.config.areaHours,
     clubTimeZone: ctx.config.clubTimeZone,
     holdMinutes: ctx.config.holdMinutes,
+    nfcConfigured: Boolean(ctx.config.nfc.keys.masterKey && ctx.config.nfc.keys.metaReadKey),
+    uidMode: ctx.config.nfc.uidMode,
+    playtomicConfigured: Boolean(ctx.config.playtomic),
+    guestLimit: ctx.config.guestLimit,
     ...SAFETY,
   });
   return Promise.resolve();
@@ -213,6 +221,13 @@ function adminConfig(req: HttpReq, ctx: AppDeps): Promise<void> {
     holdMinutes: ctx.config.holdMinutes,
     k1TtlSeconds: ctx.config.k1TtlSeconds,
     logRetentionDays: ctx.config.logRetentionDays,
+    guestLimit: ctx.config.guestLimit,
+    membershipTypes: ctx.config.membershipTypes,
+    consentTextVersion: ctx.config.consentTextVersion,
+    waiverTextVersion: ctx.config.waiverTextVersion,
+    nfcConfigured: Boolean(ctx.config.nfc.keys.masterKey && ctx.config.nfc.keys.metaReadKey),
+    uidMode: ctx.config.nfc.uidMode,
+    playtomicConfigured: Boolean(ctx.config.playtomic),
     ...SAFETY,
   });
   return Promise.resolve();

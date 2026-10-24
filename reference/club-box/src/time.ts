@@ -80,3 +80,25 @@ export function isValidTimeZone(timeZone: string): boolean {
     return false;
   }
 }
+
+/** Start of the local calendar day and the next local midnight, as UTC instants. */
+export function localDayBounds(now: Date, timeZone: string): { start: Date; end: Date } {
+  const parts = partsInZone(now, timeZone);
+  const year = parts.year ?? "1970";
+  const month = parts.month ?? "01";
+  const day = parts.day ?? "01";
+  const ymd = `${year}-${month}-${day}`;
+  const start = zonedLocalToUtc(ymd, "00:00", timeZone);
+  const end = zonedLocalToUtc(nextCivilDate(ymd), "00:00", timeZone);
+  return { start, end };
+}
+
+function nextCivilDate(ymd: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!match) throw new Error("invalid local date");
+  const utc = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1));
+  const year = utc.getUTCFullYear();
+  const month = String(utc.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(utc.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

@@ -6,6 +6,7 @@ import type { AppConfig } from "./config.js";
 import type { DoorController } from "./doors/types.js";
 import { createAppServer } from "./http.js";
 import type { PaymentBackend } from "./payments/types.js";
+import { PlaytomicClient } from "./playtomic/client.js";
 import { RateLimiter } from "./rate-limit.js";
 import { buildRoutes } from "./routes.js";
 
@@ -16,14 +17,22 @@ export function createClubServer(options: {
   door: DoorController;
   now?: () => Date;
   publicDir?: string;
+  playtomic?: PlaytomicClient | null;
 }): Server {
   const now = options.now ?? (() => new Date());
   const windowMs = options.config.rateLimitWindowSeconds * 1000;
+  const playtomic =
+    options.playtomic === undefined
+      ? options.config.playtomic
+        ? new PlaytomicClient(options.config.playtomic, now)
+        : null
+      : options.playtomic;
   const routes = buildRoutes({
     config: options.config,
     db: options.db,
     payments: options.payments,
     door: options.door,
+    playtomic,
     now,
     limiters: {
       holds: new RateLimiter(windowMs, options.config.rateLimitMax),

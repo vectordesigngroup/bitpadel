@@ -1,6 +1,8 @@
 const statusEl = document.querySelector("#status");
 const qrEl = document.querySelector("#qr");
 const areasEl = document.querySelector("#areas");
+const checkinEl = document.querySelector("#checkin");
+const uidWarning = document.querySelector("#uid-warning");
 let area = new URLSearchParams(location.search).get("area") || "";
 let timer = 0;
 
@@ -20,6 +22,7 @@ async function start() {
     setStatus("Access server unreachable. Use a fob, a PIN, or staff. Exits stay available without this screen.");
     return;
   }
+  uidWarning.hidden = health.uidMode !== "insecure-dev";
   if (!area || !health.areas.includes(area)) {
     area = "";
     areasEl.replaceChildren();
@@ -76,8 +79,8 @@ function watch(k1, expiresAt) {
       const body = await response.json();
       if (body.challenge.status === "unlocked") {
         qrEl.hidden = true;
+        showCheckin(body.challenge.checkin);
         setStatus("Entry pulsed. The strike releases on its own. You can always leave without this screen.");
-        timer = window.setTimeout(rotate, 4000);
         return;
       }
       if (body.challenge.status === "denied") {
@@ -95,6 +98,42 @@ function watch(k1, expiresAt) {
   timer = window.setTimeout(tick, 1000);
 }
 
+function showCheckin(checkin) {
+  if (!checkin) return;
+  checkinEl.hidden = false;
+  document.querySelector("#checkin-name").textContent = checkin.displayName;
+  const photo = document.querySelector("#checkin-photo");
+  if (checkin.hasPhoto) {
+    photo.hidden = false;
+    photo.alt = "Member photo";
+    photo.src = `/api/checkins/${checkin.id}/photo?token=${encodeURIComponent(checkin.token)}`;
+  }
+  const count = document.querySelector("#guest-count");
+  count.textContent = String(checkin.guestCount);
+  document.querySelector("#guest-link").href = `/guest?checkin=${encodeURIComponent(checkin.id)}&token=${encodeURIComponent(checkin.token)}`;
+  document.querySelector("#guest-up").onclick = () => changeGuests(checkin, 1, count);
+  document.querySelector("#guest-down").onclick = () => changeGuests(checkin, -1, count);
+}
+
+async function changeGuests(checkin, delta, count) {
+  const next = Math.max(0, Number(count.textContent) + delta);
+  if (next > checkin.guestLimit) {
+    setStatus("That is over the guest limit.");
+    return;
+  }
+  const response = await fetch(`/api/checkins/${checkin.id}/guest-count`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: checkin.token, guestCount: next }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    setStatus(body.error || "Could not update guests.");
+    return;
+  }
+  count.textContent = String(body.checkin.guestCount);
+}
+
 function reasonText(reason) {
   switch (reason) {
     case "door-failed":
@@ -106,9 +145,15 @@ function reasonText(reason) {
     case "outside-hours":
       return "That area is closed right now.";
     case "replay":
-      return "That code was already used.";
+    case "counter-replay":
+      return "That code or card counter was already used.";
     case "expired":
       return "That code expired.";
+    case "revoked":
+    case "lost":
+      return "That card is not active.";
+    case "unknown-card":
+      return "This card is not enrolled.";
     default:
       return "Entry was not granted. Use a fob, PIN, or staff if you need to get in.";
   }
