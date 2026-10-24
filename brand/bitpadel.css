@@ -1,0 +1,25 @@
+/* BitPadel neutral placeholder theme. Replace with your club's brand. */
+:root {
+  --bp-bg: #0F172A;      /* slate night */
+  --bp-surface: #1E293B;
+  --bp-text: #F8FAFC;
+  --bp-muted: #94A3B8;
+  --bp-primary: #14B8A6; /* court teal */
+  --bp-accent: #D9F99D;  /* ball lime */
+  --bp-radius: 12px;
+  --bp-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bp-bg); color: var(--bp-text); font-family: var(--bp-font); line-height: 1.6; }
+main, header, footer { max-width: 860px; margin: 0 auto; padding: 24px; }
+.hero { text-align: center; padding-top: 64px; }
+h1, h2 { line-height: 1.2; }
+h2 { color: var(--bp-primary); }
+section { background: var(--bp-surface); border-radius: var(--bp-radius); padding: 24px; margin: 24px 0; }
+a { color: var(--bp-accent); }
+.button { display: inline-block; background: var(--bp-primary); color: var(--bp-bg); border: 0; border-radius: 999px; padding: 12px 24px; font-weight: 700; text-decoration: none; cursor: pointer; }
+label { display: block; margin: 12px 0; }
+input:not([type=checkbox]) { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--bp-muted); background: var(--bp-bg); color: var(--bp-text); }
+fieldset { border: 1px solid var(--bp-muted); border-radius: 8px; }
+.note { color: var(--bp-muted); font-size: 0.9em; }
+footer { color: var(--bp-muted); text-align: center; }

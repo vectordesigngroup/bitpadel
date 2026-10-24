@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" role="img" aria-label="BitPadel placeholder logo">
+  <rect width="480" height="120" rx="16" fill="#0F172A"/>
+  <g transform="translate(60 60)">
+    <circle r="36" fill="none" stroke="#14B8A6" stroke-width="6"/>
+    <path d="M-36 0 H36 M0 -36 V36" stroke="#14B8A6" stroke-width="3" opacity="0.6"/>
+    <circle cx="18" cy="-14" r="9" fill="#D9F99D"/>
+  </g>
+  <text x="118" y="74" font-family="Inter, Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#F8FAFC">Bit<tspan fill="#14B8A6">Padel</tspan></text>
+  <text x="120" y="98" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13" fill="#94A3B8" letter-spacing="2">PLACEHOLDER · REPLACE WITH YOUR CLUB BRAND</text>
+</svg>

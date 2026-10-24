@@ -1,0 +1,42 @@
+Section,Item,Value,Unit,Notes
+INPUT,Number of courts,0,courts,Enter your own
+INPUT,Open hours per day,0,hours,
+INPUT,Open days per month,0,days,
+INPUT,Expected occupancy,0,fraction 0-1,Your assumption
+INPUT,Average court rental price per hour,0,currency/hour,Local research
+INPUT,Members,0,members,
+INPUT,Membership fee per month,0,currency/month,
+INPUT,Lesson/clinic revenue per month,0,currency/month,
+INPUT,Pro shop and drinks gross margin per month,0,currency/month,"Margin, not sales"
+INPUT,Event rental and workshop revenue per month,0,currency/month,
+INPUT,Sponsorship revenue per month,0,currency/month,Sponsorship only
+INPUT,Payment processing fees,0,fraction 0-1,Blend of card and Lightning
+INPUT,Rent or host-site share per month,0,currency/month,
+INPUT,Staff cost per month incl. taxes,0,currency/month,
+INPUT,Utilities and internet per month,0,currency/month,
+INPUT,Insurance per month,0,currency/month,
+INPUT,Software and subscriptions per month,0,currency/month,
+INPUT,Marketing per month,0,currency/month,
+INPUT,Maintenance and supplies per month,0,currency/month,
+INPUT,Other operating costs per month,0,currency/month,
+INPUT,Startup: court purchase or down payment,0,currency,
+INPUT,"Startup: freight, duties and installation",0,currency,
+INPUT,"Startup: site work (slab, lighting, shade)",0,currency,
+INPUT,Startup: clubhouse/shop and fit-out,0,currency,
+INPUT,Startup: permits and professional fees,0,currency,
+INPUT,Startup: opening inventory,0,currency,
+INPUT,Contingency,0,fraction 0-1,
+CALC,Available court hours per month,=C2*C3*C4,hours,
+CALC,Booked court hours per month,=C29*C5,hours,
+CALC,Court rental revenue per month,=C30*C6,currency/month,Simplification: ignores member-included hours
+CALC,Membership revenue per month,=C7*C8,currency/month,
+CALC,Gross revenue per month,=C31+C32+C9+C10+C11+C12,currency/month,
+CALC,Revenue after processing fees per month,=C33*(1-C13),currency/month,
+CALC,Operating costs per month,=C14+C15+C16+C17+C18+C19+C20+C21,currency/month,
+CALC,Operating costs per month incl. contingency,=C35*(1+C28),currency/month,
+CALC,Monthly result,=C34-C36,currency/month,
+CALC,Annual result (12 months),=C37*12,currency/year,
+CALC,Startup total,=C22+C23+C24+C25+C26+C27,currency,
+CALC,Startup total incl. contingency,=C39*(1+C28),currency,
+CALC,Startup plus first-year operating costs,=C40+C36*12,currency,
+CALC,Months to recover startup (if monthly result is positive),"=IF(C37>0,C40/C37,""n/a"")",months,Not a forecast
