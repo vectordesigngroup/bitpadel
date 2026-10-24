@@ -28,6 +28,7 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 | [`docs/07-sponsorship-playbook.md`](docs/07-sponsorship-playbook.md) | Sponsorship (not investment) packages and how to sell them |
 | [`docs/08-treasury-policy-considerations.md`](docs/08-treasury-policy-considerations.md) | Questions to settle with a CPA and attorney before a business holds Bitcoin |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What's done and what's next |
+| [`docs/manuals/`](docs/manuals/README.md) | Staff and operator manuals: daily ops, admin, install, maintenance, troubleshooting, security, training, emergencies, contributors, and one-page desk cards |
 | [`reference/club-box`](reference/club-box) | Self-hosted Lightning booking, LNURL-auth and NFC entry, check-in, and optional read-only Playtomic sync |
 | [`templates/`](templates/) | Blank financial model (CSV with formulas), founding-member page, event run-of-show, sponsor one-pager |
 | [`brand/`](brand/) | Neutral placeholder look you should replace with your own club's brand |
