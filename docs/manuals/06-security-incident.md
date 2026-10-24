@@ -8,8 +8,9 @@ Egress must always be free. A stuck exit is a life-safety problem for the fire m
 
 | Secret | Where it lives | Who should hold it |
 |---|---|---|
-| `ADMIN_TOKEN` | `.env` only | The smallest set of managers. Anyone with it can export bookings, change prices, revoke members, and download marketing contacts. |
-| `STAFF_TOKEN` | `.env` only | Front desk. It cannot change prices or export marketing. If it is unset, the desk requires the admin token. |
+| `ADMIN_TOKEN` | `.env` only | The smallest set of managers. Anyone with it can export bookings, change prices, revoke members, and download marketing contacts. It remains a bootstrap path beside named accounts. |
+| Staff passwords | SQLite, scrypt hash only | The person. The plaintext is never stored. Session tokens are stored as SHA-256 hashes. |
+| `STAFF_TOKEN` | `.env` only | Front desk, if you still share one token. It cannot change prices or export marketing. If it is unset, the desk accepts a front-desk or coach login, or the admin token. |
 | `DOOR_HTTP_TOKEN` | `.env` and the relay | Whoever can log into the relay host. The relay must not be on the public internet. |
 | `BTCPAY_API_KEY`, `BTCPAY_WEBHOOK_SECRET` | `.env` and BTCPay | Whoever administers BTCPay. |
 | `LNBITS_INVOICE_KEY`, `LNBITS_WEBHOOK_SECRET` | `.env`. The webhook secret is also inside the webhook path. | Whoever administers LNbits. |
@@ -19,7 +20,7 @@ Egress must always be free. A stuck exit is a life-safety problem for the fire m
 | Linking public keys | SQLite | Not secret. They are not spending keys. |
 | Privacy tokens | SQLite, on the guest or marketing row | The person they belong to. The guest page does not display them. |
 
-**Not yet implemented:** per-person admin accounts, hardware-token login, a vault integration, and encryption of the SQLite file.
+**Not yet implemented:** hardware-token login, a vault integration, and encryption of the SQLite file. Named staff accounts are in [integrations](10-integrations.md).
 
 Rules:
 
@@ -31,12 +32,11 @@ Rules:
 
 ## Staff access
 
-1. Give front desk `STAFF_TOKEN` and the pages `/desk`, `/kiosk`, and `/`.
-2. Give managers `ADMIN_TOKEN` and `/admin`.
-3. When someone leaves the staff, rotate the token they knew. There is no user to disable.
-4. Revoke a member's wallet key or card when they leave the membership. Revoking the member blocks every credential. Restoring the member does not restore revoked keys.
-
-**Not yet implemented:** a coach role. Coaches use the same desk or no login, according to your own policy. The app will not enforce it.
+1. Give front desk a `front-desk` account, or `STAFF_TOKEN`, and the pages `/desk`, `/kiosk`, and `/`.
+2. Give managers an `owner` or `manager` account, or `ADMIN_TOKEN`, and `/admin`.
+3. Give coaches a `coach` account if they should see the desk. That role cannot open Admin.
+4. When someone leaves the staff, disable their account. That deletes their sessions. If they also knew a shared token, rotate that token.
+5. Revoke a member's wallet key or card when they leave the membership. Revoking the member blocks every credential. Restoring the member does not restore revoked keys.
 
 ## Playbook: lost admin token
 

@@ -21,8 +21,14 @@
     <p class="note">Prices are integers in your currency's minor units. Nothing on this page fills in a price for you.</p>
     <p id="status" class="status" role="status"></p>
     <form id="login" class="card">
-      <label>Admin token
-        <input id="token" type="password" autocomplete="current-password" required>
+      <label>Username
+        <input id="username" autocomplete="username">
+      </label>
+      <label>Password
+        <input id="password" type="password" autocomplete="current-password">
+      </label>
+      <label>Or an admin or staff token
+        <input id="token" type="password" autocomplete="current-password">
       </label>
       <button type="submit">Load admin</button>
     </form>
@@ -67,6 +73,61 @@
         <button type="submit">Add member</button>
       </form>
       <div id="members"></div>
+      <form id="staff-form" class="card">
+        <h2>Staff accounts</h2>
+        <p class="note">Owners and managers can add accounts. A manager cannot create an owner. The admin token still works.</p>
+        <label>Username
+          <input name="username" required maxlength="40">
+        </label>
+        <label>Name
+          <input name="displayName" required maxlength="80">
+        </label>
+        <label>Password
+          <input name="password" type="password" required minlength="12">
+        </label>
+        <label>Role
+          <select name="role">
+            <option value="front-desk">front-desk</option>
+            <option value="coach">coach</option>
+            <option value="manager">manager</option>
+            <option value="owner">owner</option>
+          </select>
+        </label>
+        <button type="submit">Add staff account</button>
+      </form>
+      <form id="sales-form" class="card">
+        <h2>Sales report</h2>
+        <p class="note">Lightning bookings and stored Playtomic payment rows in the date range. Playtomic amounts stay as imported text.</p>
+        <label>From
+          <input name="from" type="date" required>
+        </label>
+        <label>To
+          <input name="to" type="date" required>
+        </label>
+        <button type="submit">Download sales CSV</button>
+        <button type="button" id="payment-health" class="secondary">Check Lightning balance</button>
+      </form>
+      <form id="marketing-form" class="card">
+        <h2>Marketing message</h2>
+        <p class="note">This sends only if that contact opted in. Receipts, privacy links, and household notices are transactional and use the providers in the environment.</p>
+        <label>Channel
+          <select name="channel">
+            <option value="email">email</option>
+            <option value="sms">sms</option>
+          </select>
+        </label>
+        <label>To
+          <input name="to" required maxlength="200">
+        </label>
+        <label>Subject
+          <input name="subject" maxlength="120">
+        </label>
+        <label>Text
+          <input name="text" required maxlength="2000">
+        </label>
+        <button type="submit">Send to opted-in contact</button>
+        <a href="/api/admin/marketing.csv" id="marketing-csv">Download marketing CSV</a>
+      </form>
       <section class="card">
         <h2>Playtomic courts</h2>
         <p class="note">Read-only import. This app never writes bookings back to Playtomic.</p>

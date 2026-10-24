@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { AppError, LnurlError, PaymentError } from "./errors.js";
 import { log } from "./log.js";
-import { safeEqual } from "./security.js";
+import { actorAllows, presentedCredential, resolveActor } from "./staff/gate.js";
+import type { AppDeps } from "./deps.js";
 
 const CSP =
   "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
-const BODY_LIMIT = 512 * 1024;
+const BODY_LIMIT = 2 * 1024 * 1024;
 
 const STATIC_FILES: Record<string, string> = {
   "/": "booking.html",
@@ -51,11 +52,22 @@ export type Route = {
   handler: (req: HttpReq) => Promise<void>;
 };
 
-export function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  sendBytes(res, status, Buffer.from(JSON.stringify(body)), "application/json; charset=utf-8");
+export function sendJson(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  extra?: Record<string, string>,
+): void {
+  sendBytes(res, status, Buffer.from(JSON.stringify(body)), "application/json; charset=utf-8", extra);
 }
 
-export function sendBytes(res: ServerResponse, status: number, body: Buffer, contentType: string): void {
+export function sendBytes(
+  res: ServerResponse,
+  status: number,
+  body: Buffer,
+  contentType: string,
+  extra?: Record<string, string>,
+): void {
   if (res.headersSent) return;
   res.writeHead(status, {
     "content-type": contentType,
@@ -65,6 +77,7 @@ export function sendBytes(res: ServerResponse, status: number, body: Buffer, con
     "referrer-policy": "no-referrer",
     "content-security-policy": CSP,
     "x-frame-options": "DENY",
+    ...extra,
   });
   res.end(body);
 }
@@ -100,20 +113,30 @@ export function readJson(req: HttpReq): unknown {
   }
 }
 
-export function requireAdmin(req: HttpReq, adminToken: string): void {
-  if (!presentedToken(req, adminToken)) throw new AppError(401, "Admin token required");
+export function requireAdmin(req: HttpReq, ctx: AppDeps): void {
+  const actor = resolveActor(req, ctx.config, ctx.db, ctx.now());
+  if (!actorAllows(actor, "admin")) throw new AppError(401, "Admin token required");
 }
 
-export function requireStaff(req: HttpReq, adminToken: string, staffToken: string | null): void {
-  if (presentedToken(req, adminToken)) return;
-  if (staffToken && presentedToken(req, staffToken)) return;
-  throw new AppError(401, "Staff token required");
+export function requireStaff(req: HttpReq, ctx: AppDeps): void {
+  const actor = resolveActor(req, ctx.config, ctx.db, ctx.now());
+  if (!actorAllows(actor, "desk")) throw new AppError(401, "Staff token required");
 }
 
-function presentedToken(req: HttpReq, expected: string): boolean {
-  const header = req.headers.authorization;
-  const token = typeof header === "string" && header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
-  return Boolean(token) && safeEqual(token, expected);
+export function sessionCookie(token: string, maxAgeSeconds: number, secure: boolean): string {
+  const parts = [
+    `club_session=${encodeURIComponent(token)}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    `Max-Age=${maxAgeSeconds}`,
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
+export function credentialToken(req: HttpReq): string {
+  return presentedCredential(req);
 }
 
 export function listen(server: Server, port: number, host: string): Promise<void> {

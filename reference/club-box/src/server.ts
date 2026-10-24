@@ -6,9 +6,13 @@ import type { AppConfig } from "./config.js";
 import type { DoorController } from "./doors/types.js";
 import { createAppServer } from "./http.js";
 import type { PaymentBackend } from "./payments/types.js";
+import { createNotifier } from "./notify/index.js";
+import type { Notifier } from "./notify/types.js";
 import { PlaytomicClient } from "./playtomic/client.js";
 import { RateLimiter } from "./rate-limit.js";
 import { buildRoutes } from "./routes.js";
+import { createStorage } from "./storage/index.js";
+import type { ObjectStorage } from "./storage/types.js";
 
 export function createClubServer(options: {
   config: AppConfig;
@@ -18,6 +22,8 @@ export function createClubServer(options: {
   now?: () => Date;
   publicDir?: string;
   playtomic?: PlaytomicClient | null;
+  notifier?: Notifier;
+  storage?: ObjectStorage;
 }): Server {
   const now = options.now ?? (() => new Date());
   const windowMs = options.config.rateLimitWindowSeconds * 1000;
@@ -27,12 +33,16 @@ export function createClubServer(options: {
         ? new PlaytomicClient(options.config.playtomic, now)
         : null
       : options.playtomic;
+  const notifier = options.notifier ?? createNotifier(options.config);
+  const storage = options.storage ?? createStorage(options.config);
   const routes = buildRoutes({
     config: options.config,
     db: options.db,
     payments: options.payments,
     door: options.door,
     playtomic,
+    notifier,
+    storage,
     now,
     limiters: {
       holds: new RateLimiter(windowMs, options.config.rateLimitMax),

@@ -8,7 +8,7 @@ Jobs the software does by itself:
 - About every hour, and once at startup: delete access-log rows and old challenges past `LOG_RETENTION_DAYS`, and delete old check-ins, imported bookings, and resolved conflicts past `VISIT_RETENTION_DAYS`.
 - If Playtomic sync minutes are greater than zero: sync on that interval, and once at startup.
 
-**Not yet implemented:** a maintenance scheduler, a backup command, email alerts, and a battery or lock-sensor reading.
+**Not yet implemented:** a maintenance scheduler inside this process, and a battery or lock-sensor reading. Backups are a CLI you schedule on the host. Entry-pulse failures and Playtomic sync failures can email or text `NOTIFY_ADMIN_EMAIL` and `NOTIFY_ADMIN_SMS`.
 
 ## Daily
 
@@ -39,7 +39,7 @@ Jobs the software does by itself:
 | Secrets | Confirm `.env` and `NFC_KEYS_FILE` are not in git (`git status` should not list them). |
 | Marketing | Export `GET /api/admin/marketing.csv` only if you use it. Confirm people who unsubscribed are not in the file. |
 | Playtomic token | Tokens last about an hour and refresh inside the client. You do not paste a bearer token by hand. If sync returns 401 after a refresh, the client id or secret is wrong or was regenerated in Playtomic (regenerating invalidates the old secret). |
-| Liquidity | **Not yet implemented** inside this app. If you run a Lightning node under BTCPay or LNbits, check that product's own channel and balance screens so invoices can still be paid. This app cannot open or close a channel. |
+| Liquidity | Admin **Check Lightning balance** calls the backend when that API allows it. LNbits reads `/api/v1/wallet`. BTCPay tries the store Lightning balance endpoint and reports the error if the key cannot. The public `/api/health` route does not call out. This app cannot open or close a channel. |
 
 ## Quarterly
 
@@ -79,24 +79,30 @@ Node.js on the host must stay at 22.13 or newer. The image pins Node 22.
 What to copy:
 
 - The SQLite file at `DATABASE_PATH`. In Compose that is `/data/club.sqlite` on volume `club-data`.
-- The WAL and SHM files next to it if they exist (`*.sqlite-wal`, `*.sqlite-shm`). They are gitignored. A clean copy is easier if the process is stopped, because the app allows one writer and a live copy can be mid-transaction.
-- The photos directory (`PHOTO_DIR`, or `photos` next to the database).
+- Prefer `npm run backup -- backup` while the server is running. It uses SQLite's online backup and then copies the file to `BACKUP_DIR` (or S3 if `BACKUP_DESTINATION=s3`).
+- The photos directory (`PHOTO_DIR`, or `photos` next to the database). The backup command copies the database, not the photo directory. Copy photos separately.
 - An offline copy of `.env` and the NFC key file, stored with the same care as a door key. Do not put them in the same git repo.
 
-**Not yet implemented:** `npm run backup`, a cron container, or encryption of the backup.
+Schedule on the host. This app does not run cron. Example, with your own path:
+
+```cron
+0 3 * * * cd /opt/club-box && npm run backup -- backup
+```
+
+**Not yet implemented:** a cron container in Compose, or encryption of the backup file.
 
 Restore drill:
 
-1. Stop the app (`docker compose stop` or end the Node process). SIGINT and SIGTERM close the database.
-2. Copy the live files to a spare folder. Start a second instance with `DATABASE_PATH` pointed at that spare folder and a different `PORT`. Do not point two processes at one file.
-3. Check `/api/health`, a known member, and one historical booking.
-4. Throw away the spare copy. Start the live process on the original path.
+1. Stop the app (`docker compose stop` or end the Node process). SIGINT and SIGTERM close the database. Do not restore over a file the server still has open.
+2. `npm run backup -- restore --from /path/to/club-....sqlite --force` copies the backup onto `DATABASE_PATH` and deletes leftover `-wal` and `-shm` files. Without `--force` the command refuses when the database file already exists.
+3. Copy photos back if you keep them outside the database.
+4. Start the app. Check `/api/health`, a known member, and one historical booking.
 
-To restore after a real loss, stop the app, replace the database and photos with the backup, then start. Bookings created after the backup are gone. There is no merge tool.
+To restore after a real loss, stop the app, restore, then start. Bookings created after the backup are gone. There is no merge tool.
 
 ## Log review
 
-Application logs are one JSON object per line on stdout and stderr (`time`, `level`, `msg`). Docker captures them with `docker compose logs`. Useful messages:
+Application logs are one JSON object per line (`time`, `level`, `msg`). With `LOG_FILE` empty they go to stdout and stderr, and Docker captures them with `docker compose logs`. With `LOG_FILE` set, the same lines are also appended to that file. When the file reaches `LOG_FILE_MAX_BYTES`, it rotates. `LOG_FILE_KEEP` is how many older files to retain (`club.log.1`, then `.2`). JSON lines are not deleted by `LOG_RETENTION_DAYS`. That setting deletes access-log rows in SQLite.
 
 | Message | Meaning |
 |---|---|
@@ -106,7 +112,7 @@ Application logs are one JSON object per line on stdout and stderr (`time`, `lev
 | `hold sweep failed` or `retention sweep failed` | The periodic job threw. |
 | `payment notice` | A webhook was interpreted (`confirmed`, `already-confirmed`, `expired`, `ignored`). |
 
-The member-facing history is Admin **Access log**, not the JSON lines. JSON lines are not deleted by `LOG_RETENTION_DAYS`. **Not yet implemented:** log rotation in the app. Rely on Docker or the host.
+The member-facing history is Admin **Access log**, not the JSON lines.
 
 ## Secret and certificate rotation
 
@@ -135,7 +141,7 @@ Keys are 16 bytes of hex. Slot layout and AN10922 diversification are in [card p
 
 ## Lightning liquidity
 
-**Not yet implemented:** any balance, channel, or fee check in this process. Operators of BTCPay or LNbits use those products' own screens. If invoices fail to be created, the status line on the booking page shows the error from the adapter. A mock backend never needs liquidity.
+Admin **Check Lightning balance** asks the selected backend. LNbits uses the wallet endpoint and can return a sats balance. BTCPay uses the store Lightning balance route when the API key is allowed to read it; otherwise the page shows the backend error and no balance. Mock reports that it holds no balance. Public `/api/health` does not call Lightning. This app cannot open or close a channel. If invoices fail to be created, the booking page shows the adapter error.
 
 ## Door hardware inspection
 

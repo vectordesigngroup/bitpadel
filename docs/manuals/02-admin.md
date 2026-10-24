@@ -6,22 +6,20 @@ Nothing here is legal advice. Privacy text in the app is a template. Have a lawy
 
 ## How admin access works
 
-Open `/admin`, paste `ADMIN_TOKEN`, and submit. The browser keeps it in `sessionStorage` for that tab. Closing the tab drops it. There is no user name and no second factor.
+Open `/admin`. Sign in with a staff username and password, or paste `ADMIN_TOKEN` or a session token. The browser keeps the bearer token in `sessionStorage` for that tab. A password login also sets an `HttpOnly` `club_session` cookie. Closing the tab drops `sessionStorage`. Sessions expire after `SESSION_TTL_HOURS` (default 12).
 
-`STAFF_TOKEN` is optional. If it is set (at least 16 characters), the desk, the on-site list, checkout, staff photos, today's Playtomic list, and the conflict list accept the staff token or the admin token. Marketing export, member edits, court prices, card issue, and Playtomic sync accept only the admin token.
+`STAFF_TOKEN` is optional. If it is set (at least 16 characters), the desk, the on-site list, checkout, staff photos, today's Playtomic list, and the conflict list accept the staff token, a front-desk or coach account, or the admin token. Marketing export, member edits, court prices, card issue, refunds, and Playtomic sync accept an owner, a manager, or the admin token.
 
-**Not yet implemented:** roles, a coach account, an audit of which person used the token, and a way to expire one person's copy of the token without changing it for everyone. Rotating the token is in the [security manual](06-security-incident.md).
+Roles are `owner`, `manager`, `front-desk`, and `coach`. Owners can create other owners. Managers can create managers, front desk, and coaches, and cannot create owners. Front desk and coach can use the desk and cannot open Admin. Disable an account from the API `POST /api/admin/staff/<id>/disable` or by asking an owner. Disabling deletes that account's sessions. The shared tokens are still rotated in the [security manual](06-security-incident.md). **Not yet implemented:** an audit row that names which person clicked, and a hardware-token second factor.
 
 ## Member profiles
 
 1. **Add a member.** The label is a membership number or similar handle. The new member is active.
-2. Fill **Display name**, **Email**, **Phone**, and **Playtomic player id** only if your notice says you collect them. Press **Save profile**. Empty text clears that field. The Playtomic id is how a later check-in matches today's import when the emails differ.
+2. Fill **Display name**, **Email**, **Phone**, **Playtomic player id**, **Membership type**, and **Guest cap**. Press **Save profile**. Empty text clears that field. A blank guest cap clears the per-member override and the club `GUEST_LIMIT` applies. Allowed type ids are `MEMBERSHIP_TYPES` (default `standard,household`).
 3. **Revoke member** blocks wallet and card entry. **Restore member** makes the membership active again. Restored members still need a key or card that was not revoked.
 4. **Enrollment QR** then **Open enrollment page** is the one-time wallet enroll. The linking key is a public key for this site. It is not a balance and not a payment key.
 
-The profile API also accepts `membershipType` and `guestLimit`. Allowed type ids are `MEMBERSHIP_TYPES` (default `standard,household`). `guestLimit` overrides `GUEST_LIMIT` for that member. Send `null` to clear the override.
-
-**Not yet implemented:** those two fields on the admin page. A manager who needs them sends `POST /api/admin/members/<id>/profile` with header `Authorization: Bearer <ADMIN_TOKEN>` and a JSON body. Example shape, with your own values:
+The same fields are accepted by `POST /api/admin/members/<id>/profile`. Example shape, with your own values:
 
 ```json
 {
@@ -31,20 +29,20 @@ The profile API also accepts `membershipType` and `guestLimit`. Allowed type ids
 }
 ```
 
-Photos use `POST /api/admin/members/<id>/photo` with JSON `data` (base64) and `contentType`. Files land in `PHOTO_DIR`, or in a `photos` directory next to the SQLite file if `PHOTO_DIR` is unset. The kiosk shows the photo after a successful unlock, using that visit's token. The desk loads it with the staff or admin token. The public booking page does not get the file.
+Choose a JPEG, PNG, or WebP and press **Upload photo**. The file must be at most `PHOTO_MAX_BYTES` (default 1 MB) and must fit the 2 MB HTTP body. Files go through the storage adapter (`STORAGE_BACKEND=local` by default) into `PHOTO_DIR`, or a `photos` directory next to the SQLite file. The kiosk shows the photo after a successful unlock, using that visit's token. The desk loads it with the staff or admin token. The public booking page does not get the file.
 
-**Not yet implemented:** a photo picker on the admin page, and automatic deletion of the file when a visit is purged.
+**Not yet implemented:** automatic deletion of the photo file when a visit is purged.
 
 ## Family plans
 
 "Family" in this app is a household record, not a priced plan.
 
-1. `POST /api/admin/households` with JSON `label` and `primaryMemberId`. The primary member's role becomes `primary`.
-2. `POST /api/admin/households/<id>/members` with JSON `memberId` and `role` of `primary` or `dependent`.
+1. On the member card, press **Make household primary**. That calls `POST /api/admin/households` with the member id.
+2. On the primary's card, paste another member id and press **Add dependent**.
 
-Each person unlocks only with their own enrolled wallet or card. The household does not bill anyone and does not raise the guest cap.
+Each person unlocks only with their own enrolled wallet or card. The household does not bill anyone and does not raise the guest cap. If the primary has an email, a transactional notice is sent.
 
-**Not yet implemented:** a household screen, invoices for a family plan, and shared entry.
+**Not yet implemented:** invoices for a family plan, and shared entry.
 
 ## Reports and data you can actually pull
 
@@ -52,12 +50,14 @@ Each person unlocks only with their own enrolled wallet or card. The household d
 |---|---|---|
 | Server snapshot | Admin **Server**, or `GET /api/health` | Health is public. It has backends, areas, guest cap, and whether NFC and Playtomic are configured. It has no member data. |
 | Lightning bookings | Admin list, and **Download CSV** (`GET /api/admin/bookings.csv`) | Admin. Latest 500 settled rows. Columns include minor units, currency, sats if stored, payment reference, confirmed time. |
+| Sales, date filtered | Admin **Download sales CSV** (`GET /api/admin/reports/sales.csv?from=YYYY-MM-DD&to=YYYY-MM-DD`) | Admin. Lightning bookings in range plus stored Playtomic payment rows (id, status, total text, date, product SKU). No payer names or tax ids. |
 | Access attempts | Admin **Access log** (`GET /api/admin/audit`) | Admin. Time, result, reason, area. |
 | Who is on site | `/desk` | Staff or admin. |
 | Today's Playtomic bookings and conflicts | `/desk` and Admin **Playtomic courts** | Staff or admin for the lists. Sync and mapping are admin. |
-| Marketing opt-ins | `GET /api/admin/marketing.csv` | Admin only. Columns are contact kind, contact, consent time, consent-text version, and source (`kiosk` or `playtomic`). People who did not opt in are absent. |
+| Marketing opt-ins | Admin **Download marketing CSV** | Admin only. Columns are contact kind, contact, consent time, consent-text version, and source (`kiosk` or `playtomic`). People who did not opt in are absent. |
+| One marketing message | Admin **Send to opted-in contact** | Admin. Refuses with "That contact has not opted in to marketing" when there is no active consent. |
 
-**Not yet implemented:** a button for the marketing CSV (open the path with the admin bearer token, the same way the bookings download sends the token from the admin page), a date range, tax reports, Playtomic payment export, and charts. Stored Playtomic payments are reconciliation fields only: ids, status, total text, dates, product SKU.
+**Not yet implemented:** tax reports and charts.
 
 The access log is deleted after `LOG_RETENTION_DAYS` (default 90). Check-ins, imported bookings, and resolved conflicts older than `VISIT_RETENTION_DAYS` (default 30) are deleted. The sweep runs at startup and about once an hour. Marketing rows are not part of that sweep.
 
@@ -75,7 +75,7 @@ Duties you can carry out with the current software:
 4. Deletion of that contact: `/privacy` **Delete this contact**, or `POST /api/privacy/delete` with the token. That clears the marketing contact value and the guest name and contact on the matching privacy token. It does not delete the member profile, the photo file, the linking key, or the access log.
 5. Playtomic player email is stored so the desk can match a visit. It is copied into the marketing list only when `accepts_commercial_communications` is true. A later sync that reports false unsubscribes that Playtomic-sourced row and leaves kiosk consents alone.
 
-**Not yet implemented:** sending the notice, emailing a privacy link, deleting a member, wiping photos on a schedule, and filing a breach notice. The app does not send email or SMS.
+**Not yet implemented:** deleting a member, wiping photos on a schedule, and filing a breach notice. Receipts, privacy links, household notices, and admin alerts (entry-pulse failure and Playtomic sync failure) are sent when email or SMS providers are configured. See [integrations](10-integrations.md). Marketing sends are a separate path and require opt-in.
 
 If the club is in Florida, ask an attorney whether Florida Statutes section 501.171 applies to a breach of the personal information you store, and what notice that statute requires. This kit does not interpret that statute and is not a breach-notice form. Other places have their own rules. US state privacy laws, CAN-SPAM, the TCPA for texts, and the GDPR where it applies are questions for that attorney.
 

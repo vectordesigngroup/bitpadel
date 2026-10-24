@@ -142,20 +142,25 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 | `BTCPAY_URL`, `BTCPAY_STORE_ID`, `BTCPAY_API_KEY`, `BTCPAY_WEBHOOK_SECRET` | Greenfield. Required when the backend is `btcpay`. |
 | `BTCPAY_PAYMENT_METHOD` | Default `BTC-LN`. Some servers use `BTC-LightningNetwork`. |
 | `LNBITS_URL`, `LNBITS_INVOICE_KEY`, `LNBITS_WEBHOOK_SECRET` | Required when the backend is `lnbits`. The secret is 16–128 characters from `[A-Za-z0-9_-]` because it sits in the webhook path. |
-| `DOOR_BACKEND` | `mock` or `http`. |
+| `DOOR_BACKEND` | `mock`, `http`, `gpio`, or `serial`. Only `pulse-entry`. Fire release stays on hardware. |
 | `DOOR_HTTP_URL`, `DOOR_HTTP_TOKEN`, `DOOR_HTTP_TIMEOUT_MS` | Required for `http`. Token at least 16 characters. |
+| `DOOR_GPIO_PIN`, `DOOR_GPIO_ACTIVE_HIGH` | Required pin for `gpio`. Needs optional `onoff` on that host. |
+| `DOOR_SERIAL_PATH` | Required for `serial`. One pulse line, then idle. |
 | `DOOR_PULSE_MS` | Pulse length, 200–10000 ms. Default 3000. |
 | `K1_TTL_SECONDS` | Challenge lifetime, 15–300. Default 90. |
 | `RATE_LIMIT_WINDOW_SECONDS`, `RATE_LIMIT_MAX` | Callback and hold limits. |
 | `CHALLENGE_RATE_LIMIT_MAX` | How often the kiosk may mint a new QR. |
-| `ADMIN_TOKEN` | Required. Bearer token for `/api/admin/*`. At least 16 characters. |
+| `ADMIN_TOKEN` | Required. Bearer token for `/api/admin/*`. At least 16 characters. Named staff logins are optional beside it. |
+| `STAFF_TOKEN` | Optional shared desk token. At least 16 characters. |
 | `ACCESS_AREAS` | Comma-separated ids such as `lounge,after-hours`. |
 | `ACCESS_AREA_HOURS` | Optional `area=HH:MM-HH:MM` pairs. Empty means the area is allowed whenever the server is up. A window that wraps past midnight is written with the start later than the end. |
 | `CLUB_TIMEZONE` | IANA name. Default `UTC`. Used for hours and generated slots. |
 | `LOG_RETENTION_DAYS` | Access-log and old-challenge retention. Default 90. |
 | `TRUST_PROXY` | `true` only behind a proxy that sets `X-Forwarded-For`. |
 
-Admin routes expect `Authorization: Bearer <ADMIN_TOKEN>`. The admin page keeps the token in `sessionStorage` for that browser tab.
+Admin routes expect `Authorization: Bearer <ADMIN_TOKEN>` or a staff session token. The admin page keeps that bearer token in `sessionStorage` for the browser tab. Password login also sets an `HttpOnly` cookie named `club_session`.
+
+Provider choices (email, SMS, photo storage, backups, logs, and staff bootstrap) are listed in [`.env.example`](.env.example) and [integrations](../../docs/manuals/10-integrations.md). Defaults are console mail, local files, and no GPIO.
 
 ## BTCPay Server
 
@@ -191,6 +196,8 @@ You choose the sats rate. The app does not look up an exchange rate.
 ```
 
 The request uses `Authorization: Bearer <DOOR_HTTP_TOKEN>`, does not follow redirects, and is not retried. A failed pulse is written as `door-failed`. Retrying later could open the door after the member has walked away.
+
+`gpio` pulses one pin through optional `onoff`, then returns the pin to idle. `serial` writes a single `pulse-entry` line to `DOOR_SERIAL_PATH`. Neither driver has a lock or fire-release command. The software never blocks egress. Fire-alarm release is wired at the hardware level.
 
 ### Example relay
 

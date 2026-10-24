@@ -122,7 +122,10 @@ async function hold(slotId, button) {
     const data = await getJson("/api/holds", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slotId }),
+      body: JSON.stringify({
+        slotId,
+        receiptEmail: document.querySelector("#receipt-email").value.trim() || undefined,
+      }),
     });
     showInvoice(data.hold);
   } catch (error) {

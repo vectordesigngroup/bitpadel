@@ -80,7 +80,7 @@ Copy [`.env.example`](../../reference/club-box/.env.example). The [configuration
 | `DOOR_BACKEND` | `mock` |
 | `PUBLIC_BASE_URL` | The origin phones will call |
 
-Leave Playtomic ids empty until you intend to sync. Leave NFC keys empty until you issue cryptographic cards. `NFC_UID_MODE` stays `off`.
+Leave Playtomic ids empty until you intend to sync. Leave NFC keys empty until you issue cryptographic cards. `NFC_UID_MODE` stays `off`. Email, SMS, storage, backups, and door drivers are in the [integrations manual](10-integrations.md). Defaults do not send mail or toggle a pin.
 
 ## BTCPay, LNbits, or mock
 

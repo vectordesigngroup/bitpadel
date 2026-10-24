@@ -19,6 +19,7 @@ The app version in this tree is `0.1.0` (`reference/club-box/package.json`). The
 | [7. Staff training](07-staff-training.md) | Onboarding, role cards, Lightning basics, quiz |
 | [8. Emergency and life safety](08-emergency.md) | Power, fire, medical, evacuation. Verify locally. |
 | [9. Developer and contributor](09-developer.md) | Layout, tests, new payment or card type, releases |
+| [10. Integrations](10-integrations.md) | Email, SMS, storage, backup, door, and payment providers each club plugs in |
 
 ## One-page cards
 
@@ -43,26 +44,22 @@ Print these and keep them at the desk. They point at the longer manual when a st
 | Privacy choices | `/privacy` |
 | Wallet enrollment | `/enroll` (opened from Admin) |
 
-`GET /api/health` reports whether the process is up, which payment and door backends are selected, whether Playtomic credentials are set, and `controlsEgress: false` and `controlsLifeSafety: false`.
+`GET /api/health` reports whether the process is up, which payment and door backends are selected, which email, SMS, storage, and backup providers are selected, whether Playtomic credentials are set, and `controlsEgress: false` and `controlsLifeSafety: false`. It does not call Lightning and it does not include secrets. Admin **Check Lightning balance** is the optional liquidity check.
 
 ## What a full club manual would include that this software does not
 
 **Not yet implemented:**
 
-- Named staff logins, a coach role, or per-person permissions. The app has an admin token and an optional staff token.
-- Buttons for households, membership type, per-member guest cap, or photo upload. Those exist as admin API calls. The admin page does not show them.
-- Membership billing, family prices, or benefits that turn on because someone is in a household.
-- Email or SMS, including payment receipts and breach notices.
-- Refunds. Settlement is recorded. Sats are not sent back.
-- A date-filtered sales report. The bookings CSV is the latest 500 settled Lightning bookings. Playtomic payment rows are stored in SQLite and have no page and no export.
-- A backup command, a restore command, or a log file. Logs are JSON lines on the process output. The access log is rows in SQLite.
+- Membership billing, family prices, or benefits that turn on because someone is in a household. Households can be edited in Admin and can email the primary. They do not bill.
+- A cash-up worksheet, tax report, or chart.
+- An automatic refund when a hold expires after the player paid. A manager can request a refund for a settled booking. LNbits needs a customer BOLT11 or it reports that the backend does not support an in-place refund.
 - A bundled TLS proxy or certificate manager.
-- A Lightning-node or channel-liquidity check inside this app.
-- A GPIO door driver. The example relay speaks HTTP and does not toggle pins.
-- A DESFire personalization tool. The programming command personalizes NTAG 424 DNA.
-- A reader bridge that runs a DESFire session. The bridge reads an NDEF URL and requests it.
+- A battery, lock-sensor, or fire-alarm reading. Fire-alarm release stays wired in hardware. Software only pulses entry.
+- A DESFire personalization tool or a DESFire reader bridge. Both are stubbed interfaces. `npm run card:program` still personalizes NTAG 424 DNA. The server can already check a DESFire proof if a reader posts one.
 - Fob, PIN, or mechanical-key logic. Those are physical fallbacks outside this process.
-- Any command that locks a door, holds it shut, or releases it for fire. Egress hardware stays on other circuits.
+- Any command that locks a door, holds it shut, or releases it for fire.
 - Two-way booking sync. Playtomic Connect is a separate partner program. Scraped Playtomic integrations are out of scope.
 - Shop point of sale, league brackets, or tournament software. Those topics stay in the playbooks.
 - Automated releases or a changelog file.
+- Deleting a member record, wiping photo files on the visit-retention timer, or sending a breach notice.
+- An in-app scheduler. Back up with cron on the host. See [integrations](10-integrations.md).

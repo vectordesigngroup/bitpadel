@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 
 export type SqlValue = string | number | bigint | Buffer | null;
 
-const SCHEMA_VERSION = "2";
+const SCHEMA_VERSION = "3";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -236,6 +236,36 @@ CREATE TABLE IF NOT EXISTS marketing_consents (
 
 CREATE INDEX IF NOT EXISTS external_bookings_window ON external_bookings (court_id, status, starts_at, ends_at);
 CREATE INDEX IF NOT EXISTS checkins_open ON checkins (member_id, checked_out_at);
+
+CREATE TABLE IF NOT EXISTS staff_accounts (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('owner', 'manager', 'front-desk', 'coach')),
+  password_hash TEXT NOT NULL,
+  disabled_at TEXT,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS staff_sessions (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES staff_accounts(id),
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS refunds (
+  id TEXT PRIMARY KEY,
+  booking_id TEXT,
+  invoice_id TEXT NOT NULL,
+  amount_minor INTEGER,
+  currency TEXT NOT NULL,
+  status TEXT NOT NULL,
+  provider_refund_id TEXT,
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
 `;
 
 function migrate(db: Database.Database): void {
@@ -261,6 +291,7 @@ function migrate(db: Database.Database): void {
   );
   ensureColumn(db, "access_audit", "credential_ref", "ALTER TABLE access_audit ADD COLUMN credential_ref TEXT");
   ensureColumn(db, "challenges", "checkin_id", "ALTER TABLE challenges ADD COLUMN checkin_id TEXT");
+  ensureColumn(db, "holds", "receipt_email", "ALTER TABLE holds ADD COLUMN receipt_email TEXT");
   db.exec(EXTRA_SCHEMA);
   const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'version'").get() as
     | { value: string }
@@ -269,7 +300,7 @@ function migrate(db: Database.Database): void {
     db.prepare("INSERT INTO schema_meta (key, value) VALUES ('version', ?)").run(SCHEMA_VERSION);
     return;
   }
-  if (row.value === "1" || row.value === SCHEMA_VERSION) {
+  if (row.value === "1" || row.value === "2" || row.value === SCHEMA_VERSION) {
     db.prepare("UPDATE schema_meta SET value = ? WHERE key = 'version'").run(SCHEMA_VERSION);
     return;
   }

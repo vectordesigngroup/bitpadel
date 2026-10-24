@@ -5,6 +5,8 @@ import { immediate, many, one } from "../db.js";
 import { AppError, LnurlError } from "../errors.js";
 import { newId, newK1 } from "../ids.js";
 import { log } from "../log.js";
+import { notifyAdminAlert } from "../notify/service.js";
+import type { Notifier } from "../notify/types.js";
 import type { RateLimiter } from "../rate-limit.js";
 import { minutesOfDay } from "../time.js";
 import { encodeLnurl } from "./lnurl.js";
@@ -17,6 +19,7 @@ export type AccessDeps = {
   door: DoorController;
   now: () => Date;
   callbacks: RateLimiter;
+  notifier?: Notifier;
 };
 
 export type ChallengeView = {
@@ -375,6 +378,13 @@ export async function finishEntry(
       credentialRef: input.credentialRef,
     });
     log("error", "entry pulse failed", { area: input.area, reason: pulse.reason });
+    if (deps.notifier) {
+      await notifyAdminAlert(
+        deps.notifier,
+        deps.config,
+        `Entry pulse failed for area ${input.area} (${pulse.reason}). People can still leave. This software does not release doors for fire.`,
+      );
+    }
     throw new AppError(502, "Entry controller did not respond. Use a fob, PIN, or staff.");
   }
   writeAudit(deps.db, {

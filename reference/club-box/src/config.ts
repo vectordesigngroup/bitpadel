@@ -3,7 +3,11 @@ import { loadNfcKeys, type NfcKeyMaterial } from "./nfc/keys.js";
 import { isValidTimeZone } from "./time.js";
 
 export type PaymentBackendName = "mock" | "btcpay" | "lnbits";
-export type DoorBackendName = "mock" | "http";
+export type DoorBackendName = "mock" | "http" | "gpio" | "serial";
+export type EmailProviderName = "console" | "smtp" | "postmark";
+export type SmsProviderName = "console" | "twilio" | "webhook";
+export type StorageBackendName = "local" | "memory";
+export type BackupDestinationName = "local" | "s3";
 
 export type BtcpayConfig = {
   url: string;
@@ -23,6 +27,55 @@ export type DoorHttpConfig = {
   url: string;
   token: string;
   timeoutMs: number;
+};
+
+export type SmtpConfig = {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+};
+
+export type PostmarkConfig = {
+  serverToken: string;
+  from: string;
+};
+
+export type TwilioConfig = {
+  accountSid: string;
+  authToken: string;
+  from: string;
+};
+
+export type SmsWebhookConfig = {
+  url: string;
+  token: string | null;
+};
+
+export type S3Config = {
+  endpoint: string;
+  bucket: string;
+  region: string;
+  accessKey: string;
+  secretKey: string;
+  prefix: string;
+};
+
+export type StaffBootstrapConfig = {
+  username: string;
+  password: string;
+  displayName: string;
+};
+
+export type DoorGpioConfig = {
+  pin: number;
+  activeHigh: boolean;
+};
+
+export type DoorSerialConfig = {
+  path: string;
 };
 
 export type UidMode = "off" | "insecure-dev";
@@ -65,6 +118,8 @@ export type AppConfig = {
   lnbits: LnbitsConfig | null;
   doorBackend: DoorBackendName;
   doorHttp: DoorHttpConfig | null;
+  doorGpio: DoorGpioConfig | null;
+  doorSerial: DoorSerialConfig | null;
   doorPulseMs: number;
   k1TtlSeconds: number;
   rateLimitWindowSeconds: number;
@@ -84,6 +139,24 @@ export type AppConfig = {
   consentTextVersion: string;
   waiverTextVersion: string;
   photoDir: string;
+  photoMaxBytes: number;
+  emailProvider: EmailProviderName;
+  smsProvider: SmsProviderName;
+  smtp: SmtpConfig | null;
+  postmark: PostmarkConfig | null;
+  twilio: TwilioConfig | null;
+  smsWebhook: SmsWebhookConfig | null;
+  notifyAdminEmail: string | null;
+  notifyAdminSms: string | null;
+  storageBackend: StorageBackendName;
+  backupDestination: BackupDestinationName;
+  backupDir: string;
+  s3: S3Config | null;
+  logFile: string | null;
+  logFileMaxBytes: number;
+  logFileKeep: number;
+  staffBootstrap: StaffBootstrapConfig | null;
+  sessionTtlHours: number;
   nfc: NfcConfig;
   playtomic: PlaytomicConfig | null;
 };
@@ -91,7 +164,11 @@ export type AppConfig = {
 export type Env = Record<string, string | undefined>;
 
 const PAYMENT_BACKENDS = ["mock", "btcpay", "lnbits"] as const;
-const DOOR_BACKENDS = ["mock", "http"] as const;
+const DOOR_BACKENDS = ["mock", "http", "gpio", "serial"] as const;
+const EMAIL_PROVIDERS = ["console", "smtp", "postmark"] as const;
+const SMS_PROVIDERS = ["console", "twilio", "webhook"] as const;
+const STORAGE_BACKENDS = ["local", "memory"] as const;
+const BACKUP_DESTINATIONS = ["local", "s3"] as const;
 const UID_MODES = ["off", "insecure-dev"] as const;
 const AREA_ID = /^[a-z0-9][a-z0-9-]{0,40}$/;
 const SECRET_PATH = /^[A-Za-z0-9_-]{16,128}$/;
@@ -106,6 +183,14 @@ export function loadConfig(env: Env): AppConfig {
   const currencyDecimals = intEnv(env, "CURRENCY_DECIMALS", null, 0, 8);
   const paymentBackend = oneOf(env.PAYMENT_BACKEND?.trim() || "mock", PAYMENT_BACKENDS, "PAYMENT_BACKEND");
   const doorBackend = oneOf(env.DOOR_BACKEND?.trim() || "mock", DOOR_BACKENDS, "DOOR_BACKEND");
+  const emailProvider = oneOf(env.EMAIL_PROVIDER?.trim() || "console", EMAIL_PROVIDERS, "EMAIL_PROVIDER");
+  const smsProvider = oneOf(env.SMS_PROVIDER?.trim() || "console", SMS_PROVIDERS, "SMS_PROVIDER");
+  const storageBackend = oneOf(env.STORAGE_BACKEND?.trim() || "local", STORAGE_BACKENDS, "STORAGE_BACKEND");
+  const backupDestination = oneOf(
+    env.BACKUP_DESTINATION?.trim() || "local",
+    BACKUP_DESTINATIONS,
+    "BACKUP_DESTINATION",
+  );
   const areas = parseAreas(env.ACCESS_AREAS ?? "");
   const clubTimeZone = env.CLUB_TIMEZONE?.trim() || "UTC";
   if (!isValidTimeZone(clubTimeZone)) throw new Error("CLUB_TIMEZONE must be an IANA timezone");
@@ -126,6 +211,8 @@ export function loadConfig(env: Env): AppConfig {
     lnbits: null,
     doorBackend,
     doorHttp: null,
+    doorGpio: null,
+    doorSerial: null,
     doorPulseMs: intEnv(env, "DOOR_PULSE_MS", 3000, 200, 10_000),
     k1TtlSeconds: intEnv(env, "K1_TTL_SECONDS", 90, 15, 300),
     rateLimitWindowSeconds: intEnv(env, "RATE_LIMIT_WINDOW_SECONDS", 60, 1, 3600),
@@ -145,6 +232,24 @@ export function loadConfig(env: Env): AppConfig {
     consentTextVersion: textVersion(env.CONSENT_TEXT_VERSION, "CONSENT_TEXT_VERSION"),
     waiverTextVersion: textVersion(env.WAIVER_TEXT_VERSION, "WAIVER_TEXT_VERSION"),
     photoDir: env.PHOTO_DIR?.trim() || defaultPhotoDir(databasePath),
+    photoMaxBytes: intEnv(env, "PHOTO_MAX_BYTES", 1_048_576, 1024, 1_048_576),
+    emailProvider,
+    smsProvider,
+    smtp: null,
+    postmark: null,
+    twilio: null,
+    smsWebhook: null,
+    notifyAdminEmail: optionalEmail(env.NOTIFY_ADMIN_EMAIL, "NOTIFY_ADMIN_EMAIL"),
+    notifyAdminSms: optionalPhone(env.NOTIFY_ADMIN_SMS, "NOTIFY_ADMIN_SMS"),
+    storageBackend,
+    backupDestination,
+    backupDir: env.BACKUP_DIR?.trim() || "./data/backups",
+    s3: null,
+    logFile: env.LOG_FILE?.trim() || null,
+    logFileMaxBytes: intEnv(env, "LOG_FILE_MAX_BYTES", 5_000_000, 10_000, 100_000_000),
+    logFileKeep: intEnv(env, "LOG_FILE_KEEP", 5, 1, 20),
+    staffBootstrap: parseStaffBootstrap(env),
+    sessionTtlHours: intEnv(env, "SESSION_TTL_HOURS", 12, 1, 168),
     nfc: {
       keys: loadNfcKeys(env),
       uidMode: oneOf(env.NFC_UID_MODE?.trim() || "off", UID_MODES, "NFC_UID_MODE"),
@@ -160,6 +265,13 @@ export function loadConfig(env: Env): AppConfig {
     config.lnbits = parseLnbits(env);
   }
   if (doorBackend === "http") config.doorHttp = parseDoorHttp(env);
+  if (doorBackend === "gpio") config.doorGpio = parseDoorGpio(env);
+  if (doorBackend === "serial") config.doorSerial = parseDoorSerial(env);
+  if (emailProvider === "smtp") config.smtp = parseSmtp(env);
+  if (emailProvider === "postmark") config.postmark = parsePostmark(env);
+  if (smsProvider === "twilio") config.twilio = parseTwilio(env);
+  if (smsProvider === "webhook") config.smsWebhook = parseSmsWebhook(env);
+  if (backupDestination === "s3") config.s3 = parseS3(env);
   return config;
 }
 
@@ -403,4 +515,99 @@ function parseDoorHttp(env: Env): DoorHttpConfig {
     token,
     timeoutMs: intEnv(env, "DOOR_HTTP_TIMEOUT_MS", 2000, 200, 10_000),
   };
+}
+
+function parseDoorGpio(env: Env): DoorGpioConfig {
+  return {
+    pin: intEnv(env, "DOOR_GPIO_PIN", null, 0, 999),
+    activeHigh: boolEnv(env, "DOOR_GPIO_ACTIVE_HIGH", true),
+  };
+}
+
+function parseDoorSerial(env: Env): DoorSerialConfig {
+  const devicePath = required(env, "DOOR_SERIAL_PATH");
+  if (devicePath.length > 200) throw new Error("DOOR_SERIAL_PATH is too long");
+  return { path: devicePath };
+}
+
+function parseSmtp(env: Env): SmtpConfig {
+  return {
+    host: required(env, "SMTP_HOST"),
+    port: intEnv(env, "SMTP_PORT", 587, 1, 65535),
+    secure: boolEnv(env, "SMTP_SECURE", false),
+    user: env.SMTP_USER?.trim() ?? "",
+    pass: env.SMTP_PASS ?? "",
+    from: requiredEmail(env, "SMTP_FROM"),
+  };
+}
+
+function parsePostmark(env: Env): PostmarkConfig {
+  return {
+    serverToken: required(env, "POSTMARK_SERVER_TOKEN"),
+    from: requiredEmail(env, "POSTMARK_FROM"),
+  };
+}
+
+function parseTwilio(env: Env): TwilioConfig {
+  return {
+    accountSid: required(env, "TWILIO_ACCOUNT_SID"),
+    authToken: required(env, "TWILIO_AUTH_TOKEN"),
+    from: required(env, "TWILIO_FROM"),
+  };
+}
+
+function parseSmsWebhook(env: Env): SmsWebhookConfig {
+  const token = env.SMS_WEBHOOK_TOKEN?.trim() ?? "";
+  return {
+    url: parseHttpUrl(required(env, "SMS_WEBHOOK_URL"), "SMS_WEBHOOK_URL"),
+    token: token || null,
+  };
+}
+
+function parseS3(env: Env): S3Config {
+  return {
+    endpoint: parseHttpUrl(required(env, "S3_ENDPOINT"), "S3_ENDPOINT"),
+    bucket: required(env, "S3_BUCKET"),
+    region: env.S3_REGION?.trim() || "us-east-1",
+    accessKey: required(env, "S3_ACCESS_KEY_ID"),
+    secretKey: required(env, "S3_SECRET_ACCESS_KEY"),
+    prefix: env.S3_PREFIX?.trim() ?? "",
+  };
+}
+
+function parseStaffBootstrap(env: Env): StaffBootstrapConfig | null {
+  const username = env.STAFF_BOOTSTRAP_USERNAME?.trim().toLowerCase() ?? "";
+  const password = env.STAFF_BOOTSTRAP_PASSWORD ?? "";
+  if (!username && !password.trim()) return null;
+  if (!username || !password) {
+    throw new Error("STAFF_BOOTSTRAP_USERNAME and STAFF_BOOTSTRAP_PASSWORD must both be set");
+  }
+  if (!/^[a-z0-9][a-z0-9._-]{1,39}$/.test(username)) {
+    throw new Error("STAFF_BOOTSTRAP_USERNAME must be 2-40 lowercase letters, numbers, dots, underscores, or hyphens");
+  }
+  if (password.length < 12 || password.length > 200) {
+    throw new Error("STAFF_BOOTSTRAP_PASSWORD must be 12-200 characters");
+  }
+  const displayName = env.STAFF_BOOTSTRAP_NAME?.trim() || username;
+  return { username, password, displayName: displayName.slice(0, 80) };
+}
+
+function optionalEmail(raw: string | undefined, name: string): string | null {
+  const value = raw?.trim() ?? "";
+  if (!value) return null;
+  if (!/^[^\s@]+@[^\s@]+$/.test(value) || value.length > 200) throw new Error(`${name} must be an email address`);
+  return value;
+}
+
+function requiredEmail(env: Env, name: string): string {
+  const value = optionalEmail(env[name], name);
+  if (!value) throw new Error(`Missing ${name}`);
+  return value;
+}
+
+function optionalPhone(raw: string | undefined, name: string): string | null {
+  const value = raw?.trim() ?? "";
+  if (!value) return null;
+  if (!/^[0-9+][0-9 ()-]{5,20}$/.test(value)) throw new Error(`${name} must look like a phone number`);
+  return value;
 }

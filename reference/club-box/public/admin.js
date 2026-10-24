@@ -13,7 +13,10 @@ async function api(pathname, options = {}) {
   if (options.body) headers.set("content-type", "application/json");
   const response = await fetch(pathname, { ...options, headers });
   if (pathname.endsWith(".csv")) {
-    if (!response.ok) throw new Error("Could not download bookings");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || "Could not download the file");
+    }
     return response.text();
   }
   const body = await response.json().catch(() => ({}));
@@ -21,28 +24,121 @@ async function api(pathname, options = {}) {
   return body;
 }
 
-document.querySelector("#login").addEventListener("submit", (event) => {
+document.querySelector("#login").addEventListener("submit", async (event) => {
   event.preventDefault();
-  token = document.querySelector("#token").value.trim();
-  sessionStorage.setItem("club-box-admin-token", token);
-  refresh().catch((error) => setStatus(error.message));
+  const username = document.querySelector("#username").value.trim();
+  const password = document.querySelector("#password").value;
+  try {
+    if (username) {
+      const response = await fetch("/api/session/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Login failed");
+      token = body.token;
+    } else {
+      token = document.querySelector("#token").value.trim();
+    }
+    sessionStorage.setItem("club-box-admin-token", token);
+    await refresh();
+  } catch (error) {
+    setStatus(error.message);
+  }
 });
 
 document.querySelector("#csv").addEventListener("click", async (event) => {
   event.preventDefault();
   try {
     const csv = await api("/api/admin/bookings.csv");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "bookings.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadText(csv, "bookings.csv");
   } catch (error) {
     setStatus(error.message);
   }
 });
+
+document.querySelector("#marketing-csv").addEventListener("click", async (event) => {
+  event.preventDefault();
+  try {
+    const csv = await api("/api/admin/marketing.csv");
+    downloadText(csv, "marketing.csv");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#sales-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const from = form.from.value;
+  const to = form.to.value;
+  try {
+    const csv = await api(`/api/admin/reports/sales.csv?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    downloadText(csv, "sales.csv");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#payment-health").addEventListener("click", async () => {
+  try {
+    const health = await api("/api/admin/payments/health");
+    const balance = health.balanceSats == null ? "no balance reported" : `${health.balanceSats} sats`;
+    setStatus(`${health.ok ? "Backend responded" : "Backend check failed"}. ${health.detail}. ${balance}.`);
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#staff-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    await api("/api/admin/staff", {
+      method: "POST",
+      body: JSON.stringify({
+        username: form.username.value,
+        displayName: form.displayName.value,
+        password: form.password.value,
+        role: form.role.value,
+      }),
+    });
+    form.reset();
+    setStatus("Staff account saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#marketing-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    await api("/api/admin/marketing/send", {
+      method: "POST",
+      body: JSON.stringify({
+        channel: form.channel.value,
+        to: form.to.value,
+        subject: form.subject.value,
+        text: form.text.value,
+      }),
+    });
+    setStatus("Marketing message sent to an opted-in contact.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+function downloadText(csv, filename) {
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 document.querySelector("#court-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -97,7 +193,7 @@ async function refresh() {
   config = await api("/api/admin/config");
   appEl.hidden = false;
   document.querySelector("#server").textContent =
-    `${config.currency} with ${config.currencyDecimals} decimal digits. Payments: ${config.paymentBackend}. Door: ${config.doorBackend}. ${config.entryGuidance}`;
+    `${config.currency} with ${config.currencyDecimals} decimal digits. Payments: ${config.paymentBackend}. Door: ${config.doorBackend}. Email: ${config.emailProvider}. SMS: ${config.smsProvider}. Photos: ${config.storageBackend}. ${config.entryGuidance}`;
   const courts = await api("/api/admin/courts");
   const select = document.querySelector("#slot-form select");
   select.replaceChildren();
@@ -197,6 +293,12 @@ function renderMembers(members) {
     const title = document.createElement("h3");
     title.textContent = `${member.label} · ${member.status}`;
     block.append(title);
+    const idLine = document.createElement("p");
+    idLine.className = "mono note";
+    idLine.textContent = member.householdId
+      ? `${member.id} · household ${member.householdId}`
+      : member.id;
+    block.append(idLine);
     for (const key of member.keys) {
       const line = document.createElement("p");
       line.className = "mono note";
@@ -262,14 +364,90 @@ function renderMembers(members) {
             email: email.value,
             phone: phone.value,
             playtomicPlayerId: player.value || null,
+            membershipType: membership.value,
+            guestLimit: guests.value.trim() === "" ? null : Number(guests.value),
           }),
         });
         await refresh();
+        setStatus("Profile saved.");
       } catch (error) {
         setStatus(error.message);
       }
     });
     const player = field("Playtomic player id", member.playtomicPlayerId || "");
+    const membership = document.createElement("select");
+    membership.setAttribute("aria-label", "Membership type");
+    for (const type of config.membershipTypes || []) {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = type;
+      option.selected = type === member.membershipType;
+      membership.append(option);
+    }
+    const guests = field("Guest cap, blank uses the club default", member.guestLimit == null ? "" : String(member.guestLimit));
+    const photo = document.createElement("input");
+    photo.type = "file";
+    photo.accept = "image/jpeg,image/png,image/webp";
+    photo.setAttribute("aria-label", "Member photo");
+    const upload = document.createElement("button");
+    upload.type = "button";
+    upload.className = "secondary";
+    upload.textContent = member.hasPhoto ? "Replace photo" : "Upload photo";
+    upload.addEventListener("click", async () => {
+      const file = photo.files && photo.files[0];
+      if (!file) {
+        setStatus("Choose a JPEG, PNG, or WebP first.");
+        return;
+      }
+      try {
+        const data = await fileToBase64(file);
+        await api(`/api/admin/members/${member.id}/photo`, {
+          method: "POST",
+          body: JSON.stringify({ contentType: file.type, data }),
+        });
+        await refresh();
+        setStatus("Photo saved.");
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    const household = document.createElement("button");
+    household.type = "button";
+    household.className = "secondary";
+    household.textContent = "Make household primary";
+    household.addEventListener("click", async () => {
+      try {
+        await api("/api/admin/households", {
+          method: "POST",
+          body: JSON.stringify({ label: `${member.label} household`, primaryMemberId: member.id }),
+        });
+        await refresh();
+        setStatus("Household saved. A notice is sent when the primary has an email.");
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    const dependent = field("Dependent member id", "");
+    const addDependent = document.createElement("button");
+    addDependent.type = "button";
+    addDependent.className = "secondary";
+    addDependent.textContent = "Add dependent";
+    addDependent.addEventListener("click", async () => {
+      if (!member.householdId) {
+        setStatus("Make this member a household primary first, or add them from the primary's card.");
+        return;
+      }
+      try {
+        await api(`/api/admin/households/${member.householdId}/members`, {
+          method: "POST",
+          body: JSON.stringify({ memberId: dependent.value.trim(), role: "dependent" }),
+        });
+        await refresh();
+        setStatus("Dependent added.");
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
     const uid = field("Card UID hex", "");
     const issue = document.createElement("button");
     issue.type = "button";
@@ -286,7 +464,7 @@ function renderMembers(members) {
         setStatus(error.message);
       }
     });
-    block.append(name, email, phone, player, profile, uid, issue);
+    block.append(name, email, phone, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue);
     for (const card of member.cards || []) {
       const line = document.createElement("p");
       line.className = "mono note";
@@ -307,6 +485,19 @@ function field(label, value) {
   input.setAttribute("aria-label", label);
   input.placeholder = label;
   return input;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("error", () => reject(new Error("Could not read the photo")));
+    reader.addEventListener("load", () => {
+      const text = String(reader.result || "");
+      const comma = text.indexOf(",");
+      resolve(comma >= 0 ? text.slice(comma + 1) : text);
+    });
+    reader.readAsDataURL(file);
+  });
 }
 
 function cardButton(cardId, action, text) {
@@ -361,8 +552,26 @@ function renderBookings(bookings) {
   }
   for (const booking of bookings) {
     const line = document.createElement("p");
-    line.textContent = `${booking.courtName} ${new Date(booking.startsAt).toLocaleString()} · ${booking.amountMinor} ${booking.currency} minor units`;
-    root.append(line);
+    line.textContent = `${booking.id} · ${booking.courtName} ${new Date(booking.startsAt).toLocaleString()} · ${booking.amountMinor} ${booking.currency} minor units`;
+    const refund = document.createElement("button");
+    refund.type = "button";
+    refund.className = "secondary";
+    refund.textContent = "Refund";
+    refund.addEventListener("click", async () => {
+      const reason = window.prompt("Refund reason");
+      if (!reason) return;
+      const bolt11 = window.prompt("Customer BOLT11 if the backend requires one. Leave empty for mock or BTCPay.") || "";
+      try {
+        const result = await api(`/api/admin/bookings/${booking.id}/refund`, {
+          method: "POST",
+          body: JSON.stringify({ reason, bolt11: bolt11.trim() || undefined }),
+        });
+        setStatus(`Refund ${result.status}: ${result.refundId}`);
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    root.append(line, refund);
   }
 }
 

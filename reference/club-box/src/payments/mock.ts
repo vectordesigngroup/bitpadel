@@ -2,7 +2,16 @@ import { randomBytes } from "node:crypto";
 import { AppError } from "../errors.js";
 import { minorToSats } from "../money.js";
 import type { AppConfig } from "../config.js";
-import type { InvoiceCreated, InvoiceRequest, PaymentBackend, WebhookInput, WebhookInterpretation } from "./types.js";
+import type {
+  BackendHealth,
+  InvoiceCreated,
+  InvoiceRequest,
+  PaymentBackend,
+  RefundRequest,
+  RefundResult,
+  WebhookInput,
+  WebhookInterpretation,
+} from "./types.js";
 
 /**
  * Local stand-in. Invoice strings are not BOLT11 and cannot be paid on Lightning.
@@ -32,5 +41,17 @@ export class MockPaymentBackend implements PaymentBackend {
 
   async interpretWebhook(_input: WebhookInput): Promise<WebhookInterpretation> {
     throw new AppError(404, "The mock backend does not accept payment webhooks");
+  }
+
+  async refund(input: RefundRequest): Promise<RefundResult> {
+    return {
+      supported: true,
+      refundId: `mock_refund_${randomBytes(8).toString("hex")}_${input.invoiceId}`,
+      status: "recorded",
+    };
+  }
+
+  async health(): Promise<BackendHealth> {
+    return { ok: true, detail: "Mock backend does not hold a Lightning balance", balanceSats: null };
   }
 }

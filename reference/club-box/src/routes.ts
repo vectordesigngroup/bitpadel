@@ -33,8 +33,10 @@ import type { AppDeps } from "./deps.js";
 import { AppError } from "./errors.js";
 import { readJson, requireAdmin, sendBytes, sendJson, sendText, type HttpReq, type Route } from "./http.js";
 import { log } from "./log.js";
+import { sendReceipt } from "./notify/service.js";
 import { pngQr } from "./qr.js";
 import { accessRoutes } from "./routes-access.js";
+import { opsRoutes } from "./routes-ops.js";
 import { playtomicRoutes } from "./routes-playtomic.js";
 import { SAFETY } from "./safety.js";
 import {
@@ -86,6 +88,7 @@ export function buildRoutes(ctx: AppDeps): Route[] {
     { method: "GET", pattern: "/api/admin/audit", handler: (req) => adminAudit(req, ctx) },
     ...accessRoutes(ctx),
     ...playtomicRoutes(ctx),
+    ...opsRoutes(ctx),
   ];
 }
 
@@ -104,6 +107,10 @@ function health(req: HttpReq, ctx: AppDeps): Promise<void> {
     uidMode: ctx.config.nfc.uidMode,
     playtomicConfigured: Boolean(ctx.config.playtomic),
     guestLimit: ctx.config.guestLimit,
+    emailProvider: ctx.config.emailProvider,
+    smsProvider: ctx.config.smsProvider,
+    storageBackend: ctx.config.storageBackend,
+    backupDestination: ctx.config.backupDestination,
     ...SAFETY,
   });
   return Promise.resolve();
@@ -125,7 +132,8 @@ async function createHold(req: HttpReq, ctx: AppDeps): Promise<void> {
   }
   const body = asObject(readJson(req));
   const slotId = requiredString(body, "slotId", 80);
-  const hold = await holdSlot(ctx.db, ctx.config, ctx.payments, slotId, ctx.now());
+  const receiptEmail = optionalReceiptEmail(body);
+  const hold = await holdSlot(ctx.db, ctx.config, ctx.payments, slotId, ctx.now(), receiptEmail);
   sendJson(req.res, 201, { hold });
 }
 
@@ -161,6 +169,7 @@ async function settleWebhook(req: HttpReq, ctx: AppDeps): Promise<void> {
   });
   const result = applyPaymentEvent(ctx.db, event, ctx.now());
   log("info", "payment notice", { backend: ctx.payments.name, outcome: result.outcome });
+  if (result.outcome === "confirmed" && result.bookingId) await deliverReceipt(ctx, result.bookingId);
   sendJson(req.res, 200, result);
 }
 
@@ -207,7 +216,7 @@ function walletEnroll(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminConfig(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendJson(req.res, 200, {
     currency: ctx.config.currency,
     currencyDecimals: ctx.config.currencyDecimals,
@@ -228,19 +237,23 @@ function adminConfig(req: HttpReq, ctx: AppDeps): Promise<void> {
     nfcConfigured: Boolean(ctx.config.nfc.keys.masterKey && ctx.config.nfc.keys.metaReadKey),
     uidMode: ctx.config.nfc.uidMode,
     playtomicConfigured: Boolean(ctx.config.playtomic),
+    emailProvider: ctx.config.emailProvider,
+    smsProvider: ctx.config.smsProvider,
+    storageBackend: ctx.config.storageBackend,
+    photoMaxBytes: ctx.config.photoMaxBytes,
     ...SAFETY,
   });
   return Promise.resolve();
 }
 
 function adminCourts(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendJson(req.res, 200, { courts: listCourts(ctx.db, false) });
   return Promise.resolve();
 }
 
 function adminCreateCourt(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const court = createCourt(ctx.db, requiredString(body, "name", 60), ctx.now());
   sendJson(req.res, 201, { court });
@@ -248,20 +261,20 @@ function adminCreateCourt(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminDeactivateCourt(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   deactivateCourt(ctx.db, req.params.id ?? "");
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 function adminSlots(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendJson(req.res, 200, { slots: slotsFor(req, ctx, true) });
   return Promise.resolve();
 }
 
 function adminCreateSlot(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const slot = createSlot(
     ctx.db,
@@ -279,7 +292,7 @@ function adminCreateSlot(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminGenerateSlots(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const date = requiredString(body, "date", 10);
   const startTime = requiredString(body, "startTime", 5);
@@ -306,7 +319,7 @@ function adminGenerateSlots(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminSetPrice(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const slot = setSlotPrice(ctx.db, req.params.id ?? "", requiredInt(body, "priceMinor", 1, PRICE_CAP));
   sendJson(req.res, 200, { slot });
@@ -314,28 +327,28 @@ function adminSetPrice(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminCancelSlot(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   cancelSlot(ctx.db, req.params.id ?? "");
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 function adminBookings(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendJson(req.res, 200, { bookings: listBookings(ctx.db) });
   return Promise.resolve();
 }
 
 function adminBookingsCsv(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendText(req.res, 200, bookingsCsv(listBookings(ctx.db)), "text/csv; charset=utf-8", {
     "content-disposition": "attachment; filename=\"bookings.csv\"",
   });
   return Promise.resolve();
 }
 
-function simulatePayment(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+async function simulatePayment(req: HttpReq, ctx: AppDeps): Promise<void> {
+  requireAdmin(req, ctx);
   if (ctx.config.paymentBackend !== "mock") {
     throw new AppError(404, "Mock settlement is only available when PAYMENT_BACKEND=mock");
   }
@@ -356,19 +369,19 @@ function simulatePayment(req: HttpReq, ctx: AppDeps): Promise<void> {
     },
     ctx.now(),
   );
+  if (result.outcome === "confirmed" && result.bookingId) await deliverReceipt(ctx, result.bookingId);
   const hold = getHold(ctx.db, holdId, ctx.now());
   sendJson(req.res, 200, { ...result, hold });
-  return Promise.resolve();
 }
 
 function adminMembers(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendJson(req.res, 200, { members: listMembers(ctx.db) });
   return Promise.resolve();
 }
 
 function adminCreateMember(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const member = createMember(ctx.db, requiredString(body, "label", 80), ctx.now());
   sendJson(req.res, 201, { member });
@@ -376,14 +389,14 @@ function adminCreateMember(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminMemberStatus(req: HttpReq, ctx: AppDeps, status: "active" | "revoked"): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   setMemberStatus(ctx.db, req.params.id ?? "", status);
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 function adminEnroll(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const challenge = mintEnrollChallenge(accessDeps(ctx), req.params.id ?? "");
   sendJson(req.res, 201, {
     challenge,
@@ -393,14 +406,14 @@ function adminEnroll(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminRevokeKey(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   revokeKey(ctx.db, req.params.id ?? "", ctx.now());
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 function adminAudit(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const raw = req.url.searchParams.get("limit");
   const limit = raw === null || raw === "" ? 100 : Number(raw);
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
@@ -449,5 +462,35 @@ function accessDeps(ctx: AppDeps) {
     door: ctx.door,
     now: ctx.now,
     callbacks: ctx.limiters.callbacks,
+    notifier: ctx.notifier,
   };
+}
+
+function optionalReceiptEmail(body: Record<string, unknown>): string | null {
+  if (body.receiptEmail === undefined || body.receiptEmail === null || body.receiptEmail === "") return null;
+  const email = requiredString(body, "receiptEmail", 200);
+  if (!/^[^\s@]+@[^\s@]+$/.test(email)) throw new AppError(400, "receiptEmail must be an email address");
+  return email;
+}
+
+async function deliverReceipt(ctx: AppDeps, bookingId: string): Promise<void> {
+  const row = one<{ receipt_email: string | null; amount_minor: number; currency: string }>(
+    ctx.db,
+    `SELECT h.receipt_email, b.amount_minor, b.currency
+     FROM bookings b
+     JOIN holds h ON h.id = b.hold_id
+     WHERE b.id = ?`,
+    bookingId,
+  );
+  if (!row?.receipt_email) return;
+  try {
+    await sendReceipt(ctx.notifier, {
+      to: row.receipt_email,
+      bookingId,
+      amountMinor: row.amount_minor,
+      currency: row.currency,
+    });
+  } catch (error) {
+    log("error", "receipt failed", { error: error instanceof Error ? error.message : "error" });
+  }
 }

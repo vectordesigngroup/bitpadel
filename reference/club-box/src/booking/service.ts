@@ -244,6 +244,7 @@ export async function holdSlot(
   payments: PaymentBackend,
   slotId: string,
   now: Date,
+  receiptEmail: string | null = null,
 ): Promise<HoldView> {
   releaseExpired(db, now);
   const slot = loadSlot(db, slotId, false);
@@ -285,6 +286,9 @@ export async function holdSlot(
   if (!claimed.ok) {
     const message = holdRefusal(claimed.reason);
     throw new AppError(409, message);
+  }
+  if (receiptEmail) {
+    db.prepare("UPDATE holds SET receipt_email = ? WHERE id = ?").run(receiptEmail, holdId);
   }
   const hold = getHold(db, holdId, now);
   if (!hold) throw new Error("hold missing after it was created");
