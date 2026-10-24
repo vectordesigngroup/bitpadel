@@ -1,4 +1,11 @@
 .DS_Store
 *.env
 .env*
+!.env.example
+!**/.env.example
 node_modules/
+dist/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

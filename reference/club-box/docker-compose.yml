@@ -1,0 +1,33 @@
+services:
+  club-box:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      DATABASE_PATH: /data/club.sqlite
+    volumes:
+      - club-data:/data
+    restart: unless-stopped
+
+  # Optional example entry relay. It is not published on the host.
+  # docker compose --profile relay up
+  # Set DOOR_BACKEND=http, DOOR_HTTP_URL=http://entry-relay:8787/pulse,
+  # and the same DOOR_HTTP_TOKEN in .env.
+  entry-relay:
+    profiles: ["relay"]
+    image: node:22-bookworm-slim
+    environment:
+      RELAY_TOKEN: ${DOOR_HTTP_TOKEN}
+      RELAY_HOST: 0.0.0.0
+      RELAY_PORT: "8787"
+    command: ["node", "/opt/relay/server.mjs"]
+    volumes:
+      - ./examples/http-relay/server.mjs:/opt/relay/server.mjs:ro
+    expose:
+      - "8787"
+
+volumes:
+  club-data:

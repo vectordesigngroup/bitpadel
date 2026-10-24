@@ -1,0 +1,73 @@
+/* Placeholder palette from the kit brand. Replace it with your club's own. */
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --primary: #14b8a6;
+  --accent: #d9f99d;
+  --danger: #fda4af;
+  --line: #334155;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.5;
+}
+a { color: var(--accent); }
+header, main, footer { width: min(960px, calc(100% - 32px)); margin: 0 auto; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+nav { display: flex; gap: 16px; }
+h1, h2 { line-height: 1.2; }
+h1 { margin-bottom: 8px; }
+.note, .safety, footer { color: var(--muted); }
+.safety { border-left: 3px solid var(--primary); padding-left: 12px; }
+section, .card, form.card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+label { display: block; margin: 12px 0; }
+input, select, button { font: inherit; }
+input, select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+button, .button {
+  display: inline-block;
+  background: var(--primary);
+  color: var(--bg);
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row.center { justify-content: center; }
+.slot, .member { border-top: 1px solid var(--line); padding: 12px 0; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+.status { min-height: 1.5em; }
+.kiosk-main { text-align: center; padding-top: 24px; }
+.kiosk-main img { width: min(360px, 80vw); height: auto; background: white; border-radius: 12px; }
+.danger { color: var(--danger); }
+footer { padding: 24px 0 40px; }
+@media (max-width: 640px) {
+  header { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
