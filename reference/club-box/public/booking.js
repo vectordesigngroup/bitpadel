@@ -52,6 +52,7 @@ async function load() {
     courtsEl.append(button);
   }
   await loadSlots();
+  await loadImported();
 }
 
 async function loadSlots() {
@@ -76,9 +77,9 @@ async function loadSlots() {
     price.textContent = formatMinor(slot.priceMinor, slot.currency, health.currencyDecimals);
     const state = document.createElement("p");
     state.className = "note";
-    state.textContent = slot.status;
+    state.textContent = slot.blocked ? "Imported booking covers this time" : slot.status;
     block.append(title, when, price, state);
-    if (slot.status === "open") {
+    if (slot.status === "open" && !slot.blocked) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "Hold and get invoice";
@@ -86,6 +87,31 @@ async function loadSlots() {
       block.append(button);
     }
     slotsEl.append(block);
+  }
+}
+
+async function loadImported() {
+  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const data = await getJson(`/api/calendar?from=${encodeURIComponent(from)}`);
+  const imported = data.blocks.filter(
+    (block) => block.source === "playtomic" && new Date(block.endsAt).getTime() > Date.now(),
+  );
+  if (imported.length === 0) return;
+  const heading = document.createElement("h2");
+  heading.textContent = "Imported bookings";
+  slotsEl.append(heading);
+  for (const block of imported) {
+    const row = document.createElement("article");
+    row.className = "slot";
+    const title = document.createElement("h2");
+    title.textContent = block.courtName;
+    const when = document.createElement("p");
+    when.textContent = `${new Date(block.startsAt).toLocaleString()} – ${new Date(block.endsAt).toLocaleString()}`;
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = block.label;
+    row.append(title, when, note);
+    slotsEl.append(row);
   }
 }
 

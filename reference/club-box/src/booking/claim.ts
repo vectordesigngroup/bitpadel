@@ -16,12 +16,15 @@ export type ClaimInput = {
 
 export type ClaimResult =
   | { ok: true; holdId: string }
-  | { ok: false; reason: "unavailable" | "price-changed" };
+  | { ok: false; reason: "unavailable" | "price-changed" | "blocked" };
 
 type SlotLock = {
   status: string;
   price_minor: number;
   currency: string;
+  court_id: string;
+  starts_at: string;
+  ends_at: string;
 };
 
 /**
@@ -34,13 +37,23 @@ export function claimOpenSlot(db: Database.Database, input: ClaimInput): ClaimRe
     return immediate(db, () => {
       const slot = one<SlotLock>(
         db,
-        "SELECT status, price_minor, currency FROM slots WHERE id = ?",
+        "SELECT status, price_minor, currency, court_id, starts_at, ends_at FROM slots WHERE id = ?",
         input.slotId,
       );
       if (!slot || slot.status !== "open") return { ok: false, reason: "unavailable" };
       if (slot.price_minor !== input.amountMinor || slot.currency !== input.currency) {
         return { ok: false, reason: "price-changed" };
       }
+      const imported = one<{ id: string }>(
+        db,
+        `SELECT id FROM external_bookings
+         WHERE court_id = ? AND status = 'active' AND starts_at < ? AND ends_at > ?
+         LIMIT 1`,
+        slot.court_id,
+        slot.ends_at,
+        slot.starts_at,
+      );
+      if (imported) return { ok: false, reason: "blocked" };
       const updated = db
         .prepare("UPDATE slots SET status = 'held' WHERE id = ? AND status = 'open'")
         .run(input.slotId);

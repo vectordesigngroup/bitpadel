@@ -1,3 +1,5 @@
+import path from "node:path";
+import { loadNfcKeys, type NfcKeyMaterial } from "./nfc/keys.js";
 import { isValidTimeZone } from "./time.js";
 
 export type PaymentBackendName = "mock" | "btcpay" | "lnbits";
@@ -21,6 +23,24 @@ export type DoorHttpConfig = {
   url: string;
   token: string;
   timeoutMs: number;
+};
+
+export type UidMode = "off" | "insecure-dev";
+
+export type NfcConfig = {
+  keys: NfcKeyMaterial;
+  uidMode: UidMode;
+};
+
+export type PlaytomicConfig = {
+  baseUrl: string;
+  clientId: string;
+  clientSecret: string;
+  tenantId: string;
+  /** 0 means the operator runs sync by hand. */
+  syncMinutes: number;
+  pageSize: number;
+  minGapMs: number;
 };
 
 export type AreaWindow = {
@@ -56,12 +76,23 @@ export type AppConfig = {
   clubTimeZone: string;
   logRetentionDays: number;
   trustProxy: boolean;
+  staffToken: string | null;
+  guestLimit: number;
+  checkinStaleMinutes: number;
+  visitRetentionDays: number;
+  membershipTypes: string[];
+  consentTextVersion: string;
+  waiverTextVersion: string;
+  photoDir: string;
+  nfc: NfcConfig;
+  playtomic: PlaytomicConfig | null;
 };
 
 export type Env = Record<string, string | undefined>;
 
 const PAYMENT_BACKENDS = ["mock", "btcpay", "lnbits"] as const;
 const DOOR_BACKENDS = ["mock", "http"] as const;
+const UID_MODES = ["off", "insecure-dev"] as const;
 const AREA_ID = /^[a-z0-9][a-z0-9-]{0,40}$/;
 const SECRET_PATH = /^[A-Za-z0-9_-]{16,128}$/;
 
@@ -78,11 +109,12 @@ export function loadConfig(env: Env): AppConfig {
   const areas = parseAreas(env.ACCESS_AREAS ?? "");
   const clubTimeZone = env.CLUB_TIMEZONE?.trim() || "UTC";
   if (!isValidTimeZone(clubTimeZone)) throw new Error("CLUB_TIMEZONE must be an IANA timezone");
+  const databasePath = env.DATABASE_PATH?.trim() || "./data/club.sqlite";
 
   const config: AppConfig = {
     host,
     port,
-    databasePath: env.DATABASE_PATH?.trim() || "./data/club.sqlite",
+    databasePath,
     publicBaseUrl: parseBaseUrl(env.PUBLIC_BASE_URL?.trim() || `http://127.0.0.1:${port || 3000}`),
     currency,
     currencyDecimals,
@@ -105,6 +137,19 @@ export function loadConfig(env: Env): AppConfig {
     clubTimeZone,
     logRetentionDays: intEnv(env, "LOG_RETENTION_DAYS", 90, 1, 3650),
     trustProxy: boolEnv(env, "TRUST_PROXY", false),
+    staffToken: optionalSecret(env.STAFF_TOKEN, "STAFF_TOKEN"),
+    guestLimit: intEnv(env, "GUEST_LIMIT", 0, 0, 50),
+    checkinStaleMinutes: intEnv(env, "CHECKIN_STALE_MINUTES", 480, 15, 10_080),
+    visitRetentionDays: intEnv(env, "VISIT_RETENTION_DAYS", 30, 1, 3650),
+    membershipTypes: parseMembershipTypes(env.MEMBERSHIP_TYPES ?? ""),
+    consentTextVersion: textVersion(env.CONSENT_TEXT_VERSION, "CONSENT_TEXT_VERSION"),
+    waiverTextVersion: textVersion(env.WAIVER_TEXT_VERSION, "WAIVER_TEXT_VERSION"),
+    photoDir: env.PHOTO_DIR?.trim() || defaultPhotoDir(databasePath),
+    nfc: {
+      keys: loadNfcKeys(env),
+      uidMode: oneOf(env.NFC_UID_MODE?.trim() || "off", UID_MODES, "NFC_UID_MODE"),
+    },
+    playtomic: parsePlaytomic(env),
   };
 
   if (paymentBackend === "btcpay") config.btcpay = parseBtcpay(env);
@@ -167,6 +212,67 @@ function optionalRate(env: Env, name: string): number | null {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be a positive number`);
   return value;
+}
+
+function optionalSecret(raw: string | undefined, name: string): string | null {
+  const token = raw?.trim() ?? "";
+  if (!token) return null;
+  if (token.length < 16) throw new Error(`${name} must be at least 16 characters`);
+  return token;
+}
+
+function textVersion(raw: string | undefined, name: string): string {
+  const value = raw?.trim() || "1";
+  if (!/^[A-Za-z0-9._-]{1,40}$/.test(value)) {
+    throw new Error(`${name} must be 1-40 letters, numbers, dots, underscores, or hyphens`);
+  }
+  return value;
+}
+
+function parseMembershipTypes(raw: string): string[] {
+  const trimmed = raw.trim();
+  const parts = (trimmed || "standard,household")
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length > 0);
+  if (parts.length === 0) throw new Error("MEMBERSHIP_TYPES must list at least one type");
+  const seen = new Set<string>();
+  for (const part of parts) {
+    if (!/^[a-z][a-z0-9-]{0,40}$/.test(part)) {
+      throw new Error(`MEMBERSHIP_TYPES id "${part}" must be lowercase letters, numbers, and hyphens`);
+    }
+    if (seen.has(part)) throw new Error(`MEMBERSHIP_TYPES lists "${part}" more than once`);
+    seen.add(part);
+  }
+  return parts;
+}
+
+function defaultPhotoDir(databasePath: string): string {
+  if (databasePath === ":memory:") return path.join(path.resolve("."), "data", "photos");
+  return path.join(path.dirname(path.resolve(databasePath)), "photos");
+}
+
+function parsePlaytomic(env: Env): PlaytomicConfig | null {
+  const clientId = env.PLAYTOMIC_CLIENT_ID?.trim() ?? "";
+  const clientSecret = env.PLAYTOMIC_CLIENT_SECRET?.trim() ?? "";
+  const tenantId = env.PLAYTOMIC_TENANT_ID?.trim() ?? "";
+  const any = clientId || clientSecret || tenantId;
+  if (!any) return null;
+  if (!clientId || !clientSecret || !tenantId) {
+    throw new Error("PLAYTOMIC_CLIENT_ID, PLAYTOMIC_CLIENT_SECRET, and PLAYTOMIC_TENANT_ID must all be set");
+  }
+  if (clientId.length > 200 || clientSecret.length > 200 || tenantId.length > 200) {
+    throw new Error("Playtomic credentials are too long");
+  }
+  return {
+    baseUrl: parseHttpUrl(env.PLAYTOMIC_BASE_URL?.trim() || "https://thirdparty.playtomic.io", "PLAYTOMIC_BASE_URL"),
+    clientId,
+    clientSecret,
+    tenantId,
+    syncMinutes: intEnv(env, "PLAYTOMIC_SYNC_MINUTES", 15, 0, 1440),
+    pageSize: intEnv(env, "PLAYTOMIC_PAGE_SIZE", 100, 1, 200),
+    minGapMs: intEnv(env, "PLAYTOMIC_MIN_GAP_MS", 60_000, 0, 60_000),
+  };
 }
 
 function parseAdminToken(raw: string): string {

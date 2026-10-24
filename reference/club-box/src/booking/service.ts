@@ -23,6 +23,8 @@ export type SlotView = {
   currency: string;
   status: "open" | "held" | "booked" | "cancelled";
   holdId: string | null;
+  /** True when an active imported booking already covers this court and time. */
+  blocked: boolean;
 };
 
 export type HoldView = {
@@ -71,7 +73,16 @@ type SlotRow = {
   status: string;
   hold_id: string | null;
   court_active: number;
+  blocked: number;
 };
+
+const BLOCKED_SQL = `EXISTS (
+  SELECT 1 FROM external_bookings e
+  WHERE e.court_id = s.court_id
+    AND e.status = 'active'
+    AND e.starts_at < s.ends_at
+    AND e.ends_at > s.starts_at
+) AS blocked`;
 
 const SLOT_STATUSES = new Set(["open", "held", "booked", "cancelled"]);
 const HOLD_STATUSES = new Set(["pending", "paid", "expired", "released"]);
@@ -202,7 +213,7 @@ export function listSlots(
     .prepare(
       `SELECT s.id, s.court_id, c.name AS court_name, s.starts_at, s.ends_at,
               s.price_minor, s.currency, s.status, c.active AS court_active,
-              h.id AS hold_id
+              h.id AS hold_id, ${BLOCKED_SQL}
        FROM slots s
        JOIN courts c ON c.id = s.court_id
        LEFT JOIN holds h ON h.slot_id = s.id AND h.status = 'pending'
@@ -242,6 +253,9 @@ export async function holdSlot(
   if (Date.parse(slot.startsAt) <= now.getTime()) {
     throw new AppError(400, "That slot has already started");
   }
+  if (slot.blocked) {
+    throw new AppError(409, "That time is already on the imported calendar.");
+  }
   const holdId = newId("hold");
   const expirySeconds = config.holdMinutes * 60;
   const invoice = await payments.createInvoice({
@@ -269,10 +283,7 @@ export async function holdSlot(
     nowIso: now.toISOString(),
   });
   if (!claimed.ok) {
-    const message =
-      claimed.reason === "price-changed"
-        ? "The price changed. Refresh and try again."
-        : "That slot is no longer open";
+    const message = holdRefusal(claimed.reason);
     throw new AppError(409, message);
   }
   const hold = getHold(db, holdId, now);
@@ -483,7 +494,7 @@ function loadSlot(db: Database.Database, slotId: string, includeHoldId: boolean)
     db,
     `SELECT s.id, s.court_id, c.name AS court_name, s.starts_at, s.ends_at,
             s.price_minor, s.currency, s.status, c.active AS court_active,
-            h.id AS hold_id
+            h.id AS hold_id, ${BLOCKED_SQL}
      FROM slots s
      JOIN courts c ON c.id = s.court_id
      LEFT JOIN holds h ON h.slot_id = s.id AND h.status = 'pending'
@@ -511,7 +522,23 @@ function toSlot(row: SlotRow, includeHoldId: boolean): SlotView {
     currency: row.currency,
     status: row.status as SlotView["status"],
     holdId: includeHoldId ? row.hold_id : null,
+    blocked: row.blocked === 1,
   };
+}
+
+function holdRefusal(reason: "unavailable" | "price-changed" | "blocked"): string {
+  switch (reason) {
+    case "price-changed":
+      return "The price changed. Refresh and try again.";
+    case "blocked":
+      return "That time is already on the imported calendar.";
+    case "unavailable":
+      return "That slot is no longer open";
+    default: {
+      const unknown: never = reason;
+      throw new Error(`Unhandled claim reason: ${String(unknown)}`);
+    }
+  }
 }
 
 function memoFor(slot: SlotView): string {

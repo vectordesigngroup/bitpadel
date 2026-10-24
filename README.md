@@ -2,7 +2,7 @@
 
 **An open "Bitcoin padel club in a box" kit.** Playbooks, templates and checklists for anyone starting a Bitcoin-friendly padel (and pickleball) club, from a single pilot court to a flagship venue.
 
-> **Status:** early draft (v0.1). Playbooks and templates, plus a self-hosted reference app for Lightning booking and LNURL-auth entry in [`reference/club-box`](reference/club-box). See the [roadmap](docs/ROADMAP.md) for what is still ahead.
+> **Status:** early draft (v0.1). Playbooks and templates, plus a self-hosted reference app for Lightning booking, LNURL-auth and NFC entry, check-in, and optional read-only Playtomic sync in [`reference/club-box`](reference/club-box). Door-hardware notes are in that app's [compatible door hardware](reference/club-box/README.md#compatible-door-hardware) section. See the [roadmap](docs/ROADMAP.md) for what is still ahead.
 > Nothing here is legal, tax or investment advice. Read the [DISCLAIMER](DISCLAIMER.md).
 
 ## The idea
@@ -28,7 +28,7 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 | [`docs/07-sponsorship-playbook.md`](docs/07-sponsorship-playbook.md) | Sponsorship (not investment) packages and how to sell them |
 | [`docs/08-treasury-policy-considerations.md`](docs/08-treasury-policy-considerations.md) | Questions to settle with a CPA and attorney before a business holds Bitcoin |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What's done and what's next |
-| [`reference/club-box`](reference/club-box) | Self-hosted Lightning court booking and LNURL-auth entry (mock backend for local use) |
+| [`reference/club-box`](reference/club-box) | Self-hosted Lightning booking, LNURL-auth and NFC entry, check-in, and optional read-only Playtomic sync |
 | [`templates/`](templates/) | Blank financial model (CSV with formulas), founding-member page, event run-of-show, sponsor one-pager |
 | [`brand/`](brand/) | Neutral placeholder look you should replace with your own club's brand |
 

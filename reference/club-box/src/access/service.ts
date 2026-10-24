@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
-import { immediate, one } from "../db.js";
+import { recordArrival, publicCheckin, type CheckinPublic } from "../checkin/service.js";
+import { immediate, many, one } from "../db.js";
 import { AppError, LnurlError } from "../errors.js";
 import { newId, newK1 } from "../ids.js";
 import { log } from "../log.js";
@@ -35,6 +36,7 @@ export type ChallengeStatus = {
   expiresAt: string;
   status: "pending" | "expired" | "unlocked" | "denied" | "enrolled";
   reason: string | null;
+  checkin: CheckinPublic | null;
 };
 
 export type MemberKeyView = {
@@ -44,12 +46,30 @@ export type MemberKeyView = {
   revokedAt: string | null;
 };
 
+export type CardSummary = {
+  id: string;
+  scheme: string;
+  uid: string;
+  status: string;
+  label: string;
+};
+
 export type MemberView = {
   id: string;
   label: string;
   status: "active" | "revoked";
   createdAt: string;
+  displayName: string | null;
+  phone: string | null;
+  email: string | null;
+  membershipType: string;
+  householdId: string | null;
+  householdRole: "primary" | "dependent" | null;
+  guestLimit: number | null;
+  hasPhoto: boolean;
+  playtomicPlayerId: string | null;
   keys: MemberKeyView[];
+  cards: CardSummary[];
 };
 
 export type AuditView = {
@@ -62,6 +82,8 @@ export type AuditView = {
   result: string;
   reason: string;
   doorResult: string | null;
+  credentialType: string;
+  credentialRef: string | null;
 };
 
 type ChallengeRow = {
@@ -72,6 +94,7 @@ type ChallengeRow = {
   expires_at: string;
   used_at: string | null;
   outcome: string | null;
+  checkin_id: string | null;
 };
 
 type KeyMember = {
@@ -87,13 +110,50 @@ export function createMember(db: Database.Database, label: string, now: Date): M
     label,
     now.toISOString(),
   );
-  return { id, label, status: "active", createdAt: now.toISOString(), keys: [] };
+  return {
+    id,
+    label,
+    status: "active",
+    createdAt: now.toISOString(),
+    displayName: null,
+    phone: null,
+    email: null,
+    membershipType: "standard",
+    householdId: null,
+    householdRole: null,
+    guestLimit: null,
+    hasPhoto: false,
+    playtomicPlayerId: null,
+    keys: [],
+    cards: [],
+  };
 }
 
 export function listMembers(db: Database.Database): MemberView[] {
   const members = db
-    .prepare("SELECT id, label, status, created_at FROM members ORDER BY created_at ASC")
-    .all() as Array<{ id: string; label: string; status: string; created_at: string }>;
+    .prepare(
+      `SELECT m.id, m.label, m.status, m.created_at, m.display_name, m.phone, m.email,
+              m.membership_type, m.household_id, m.household_role, m.guest_limit, m.photo_path,
+              p.player_id
+       FROM members m
+       LEFT JOIN member_playtomic p ON p.member_id = m.id
+       ORDER BY m.created_at ASC`,
+    )
+    .all() as Array<{
+    id: string;
+    label: string;
+    status: string;
+    created_at: string;
+    display_name: string | null;
+    phone: string | null;
+    email: string | null;
+    membership_type: string;
+    household_id: string | null;
+    household_role: string | null;
+    guest_limit: number | null;
+    photo_path: string | null;
+    player_id: string | null;
+  }>;
   const keys = db
     .prepare(
       "SELECT id, member_id, pubkey, enrolled_at, revoked_at FROM linking_keys ORDER BY enrolled_at ASC",
@@ -105,11 +165,31 @@ export function listMembers(db: Database.Database): MemberView[] {
     enrolled_at: string;
     revoked_at: string | null;
   }>;
+  const cards = many<{
+    id: string;
+    member_id: string;
+    scheme: string;
+    uid: string;
+    status: string;
+    label: string;
+  }>(
+    db,
+    "SELECT id, member_id, scheme, uid, status, label FROM card_credentials ORDER BY created_at ASC",
+  );
   return members.map((member) => ({
     id: member.id,
     label: member.label,
     status: member.status === "revoked" ? "revoked" : "active",
     createdAt: member.created_at,
+    displayName: member.display_name,
+    phone: member.phone,
+    email: member.email,
+    membershipType: member.membership_type,
+    householdId: member.household_id,
+    householdRole: member.household_role === "primary" || member.household_role === "dependent" ? member.household_role : null,
+    guestLimit: member.guest_limit,
+    hasPhoto: Boolean(member.photo_path),
+    playtomicPlayerId: member.player_id,
     keys: keys
       .filter((key) => key.member_id === member.id)
       .map((key) => ({
@@ -117,6 +197,15 @@ export function listMembers(db: Database.Database): MemberView[] {
         pubkey: key.pubkey,
         enrolledAt: key.enrolled_at,
         revokedAt: key.revoked_at,
+      })),
+    cards: cards
+      .filter((card) => card.member_id === member.id)
+      .map((card) => ({
+        id: card.id,
+        scheme: card.scheme,
+        uid: card.uid,
+        status: card.status,
+        label: card.label,
       })),
   }));
 }
@@ -196,6 +285,7 @@ export function challengeStatus(deps: AccessDeps, k1: string): ChallengeStatus |
     purpose,
     area: challenge.area,
     expiresAt: challenge.expires_at,
+    checkin: null,
   };
   if (!challenge.used_at || challenge.outcome === "opening") {
     if (challenge.expires_at <= deps.now().toISOString() && !challenge.used_at) {
@@ -203,7 +293,10 @@ export function challengeStatus(deps: AccessDeps, k1: string): ChallengeStatus |
     }
     return { ...base, status: "pending", reason: null };
   }
-  if (challenge.outcome === "unlocked") return { ...base, status: "unlocked", reason: "unlocked" };
+  if (challenge.outcome === "unlocked") {
+    const checkin = challenge.checkin_id ? publicCheckin(deps.db, deps.config, challenge.checkin_id) : null;
+    return { ...base, status: "unlocked", reason: "unlocked", checkin };
+  }
   if (challenge.outcome === "enrolled") return { ...base, status: "enrolled", reason: "enrolled" };
   return { ...base, status: "denied", reason: challenge.outcome ?? "denied" };
 }
@@ -223,42 +316,88 @@ export async function handleUnlock(
   guardCallback(deps, input, null);
   const decision = immediate(deps.db, () => decideUnlock(deps, input));
   if (!decision.ok) throw new LnurlError(decision.message);
+  const k1 = input.k1.toLowerCase();
+  try {
+    const checkin = await finishEntry(deps, {
+      memberId: decision.memberId,
+      area: decision.area,
+      credentialType: "lnurl",
+      credentialRef: input.key.toLowerCase(),
+      k1,
+      pubkey: input.key.toLowerCase(),
+    });
+    deps.db
+      .prepare("UPDATE challenges SET outcome = 'unlocked', checkin_id = ? WHERE k1 = ?")
+      .run(checkin.id, k1);
+  } catch (error) {
+    if (error instanceof AppError && error.status === 502) {
+      deps.db.prepare("UPDATE challenges SET outcome = 'door-failed' WHERE k1 = ?").run(k1);
+      throw new LnurlError(error.message);
+    }
+    throw error;
+  }
+  return { status: "OK" };
+}
+
+export async function finishEntry(
+  deps: AccessDeps,
+  input: {
+    memberId: string;
+    area: string;
+    credentialType: string;
+    credentialRef: string | null;
+    k1: string | null;
+    pubkey: string | null;
+  },
+): Promise<CheckinPublic> {
+  if (!deps.config.areas.includes(input.area)) throw new AppError(400, "Unknown area");
+  if (!areaIsOpen(deps.now(), input.area, deps.config)) throw new AppError(403, "That area is closed right now");
+  const member = one<{ status: string }>(deps.db, "SELECT status FROM members WHERE id = ?", input.memberId);
+  if (!member || member.status !== "active") throw new AppError(403, "Membership is not active");
+  const auditId = newId("aud");
   const pulse = await deps.door.pulseEntry({
-    area: decision.area,
-    requestId: decision.auditId,
+    area: input.area,
+    requestId: auditId,
     pulseMs: deps.config.doorPulseMs,
   });
-  deps.db
-    .prepare("UPDATE challenges SET outcome = ? WHERE k1 = ?")
-    .run(pulse.ok ? "unlocked" : "door-failed", input.k1.toLowerCase());
   if (!pulse.ok) {
     writeAudit(deps.db, {
-      id: decision.auditId,
+      id: auditId,
       at: deps.now().toISOString(),
-      area: decision.area,
-      k1: input.k1.toLowerCase(),
-      pubkey: input.key.toLowerCase(),
-      memberId: decision.memberId,
+      area: input.area,
+      k1: input.k1,
+      pubkey: input.pubkey,
+      memberId: input.memberId,
       result: "error",
       reason: pulse.reason === "rejected" ? "door-rejected" : "door-unreachable",
       doorResult: pulse.reason,
+      credentialType: input.credentialType,
+      credentialRef: input.credentialRef,
     });
-    log("error", "entry pulse failed", { area: decision.area, reason: pulse.reason });
-    throw new LnurlError("Entry controller did not respond. Use a fob, PIN, or staff.");
+    log("error", "entry pulse failed", { area: input.area, reason: pulse.reason });
+    throw new AppError(502, "Entry controller did not respond. Use a fob, PIN, or staff.");
   }
   writeAudit(deps.db, {
-    id: decision.auditId,
+    id: auditId,
     at: deps.now().toISOString(),
-    area: decision.area,
-    k1: input.k1.toLowerCase(),
-    pubkey: input.key.toLowerCase(),
-    memberId: decision.memberId,
+    area: input.area,
+    k1: input.k1,
+    pubkey: input.pubkey,
+    memberId: input.memberId,
     result: "unlocked",
     reason: "unlocked",
     doorResult: "pulsed",
+    credentialType: input.credentialType,
+    credentialRef: input.credentialRef,
   });
-  log("info", "entry pulsed", { area: decision.area });
-  return { status: "OK" };
+  log("info", "entry pulsed", { area: input.area, credentialType: input.credentialType });
+  return recordArrival(deps.db, deps.config, {
+    memberId: input.memberId,
+    area: input.area,
+    credentialType: input.credentialType,
+    credentialRef: input.credentialRef,
+    now: deps.now(),
+  });
 }
 
 export function handleEnroll(
@@ -274,7 +413,7 @@ export function handleEnroll(
 export function listAudit(db: Database.Database, limit: number): AuditView[] {
   const rows = db
     .prepare(
-      `SELECT id, at, area, k1, pubkey, member_id, result, reason, door_result
+      `SELECT id, at, area, k1, pubkey, member_id, result, reason, door_result, credential_type, credential_ref
        FROM access_audit ORDER BY at DESC, rowid DESC LIMIT ?`,
     )
     .all(limit) as Array<{
@@ -287,6 +426,8 @@ export function listAudit(db: Database.Database, limit: number): AuditView[] {
     result: string;
     reason: string;
     door_result: string | null;
+    credential_type: string;
+    credential_ref: string | null;
   }>;
   return rows.map((row) => ({
     id: row.id,
@@ -298,6 +439,8 @@ export function listAudit(db: Database.Database, limit: number): AuditView[] {
     result: row.result,
     reason: row.reason,
     doorResult: row.door_result,
+    credentialType: row.credential_type,
+    credentialRef: row.credential_ref,
   }));
 }
 
@@ -500,7 +643,7 @@ function loadChallenge(db: Database.Database, k1: string): ChallengeRow | undefi
   if (!isK1(k1)) return undefined;
   return one<ChallengeRow>(
     db,
-    "SELECT k1, purpose, member_id, area, expires_at, used_at, outcome FROM challenges WHERE k1 = ?",
+    "SELECT k1, purpose, member_id, area, expires_at, used_at, outcome, checkin_id FROM challenges WHERE k1 = ?",
     k1.toLowerCase(),
   );
 }
@@ -539,6 +682,41 @@ function deny(
   });
 }
 
+export function recordAudit(
+  db: Database.Database,
+  row: {
+    id: string;
+    at: string;
+    area: string | null;
+    k1: string | null;
+    pubkey: string | null;
+    memberId: string | null;
+    result: string;
+    reason: string;
+    doorResult: string | null;
+    credentialType?: string;
+    credentialRef?: string | null;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO access_audit (
+       id, at, area, k1, pubkey, member_id, result, reason, door_result, credential_type, credential_ref
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    row.id,
+    row.at,
+    row.area,
+    row.k1,
+    row.pubkey,
+    row.memberId,
+    row.result,
+    row.reason,
+    row.doorResult,
+    row.credentialType ?? "lnurl",
+    row.credentialRef ?? null,
+  );
+}
+
 function writeAudit(
   db: Database.Database,
   row: {
@@ -551,12 +729,16 @@ function writeAudit(
     result: string;
     reason: string;
     doorResult: string | null;
+    credentialType?: string;
+    credentialRef?: string | null;
   },
 ): void {
-  db.prepare(
-    `INSERT INTO access_audit (id, at, area, k1, pubkey, member_id, result, reason, door_result)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(row.id, row.at, row.area, row.k1, row.pubkey, row.memberId, row.result, row.reason, row.doorResult);
+  recordAudit(db, row);
+}
+
+export function assertAreaAvailable(deps: AccessDeps, area: string): void {
+  if (!deps.config.areas.includes(area)) throw new AppError(400, "Unknown area");
+  if (!areaIsOpen(deps.now(), area, deps.config)) throw new AppError(403, "That area is closed right now");
 }
 
 function areaIsOpen(now: Date, area: string, config: AppConfig): boolean {

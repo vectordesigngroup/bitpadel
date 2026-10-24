@@ -2,8 +2,8 @@
 
 A small self-hosted reference app for two club jobs:
 
-1. **Court booking.** List courts and slots, hold one, pay a Lightning invoice, and confirm the booking when the invoice settles.
-2. **Member-area entry.** Enroll a Lightning wallet with LNURL-auth (LUD-04). A kiosk shows a rotating challenge QR. A valid signature from an active member pulses an entry lock and writes an audit row.
+1. **Court booking.** List courts and slots, hold one, pay a Lightning invoice, and confirm the booking when the invoice settles. An optional read-only Playtomic import can block the same court time.
+2. **Member-area entry.** Enroll a Lightning wallet with LNURL-auth (LUD-04), or a cryptographic NFC card. A kiosk shows a rotating challenge QR. A valid wallet or card pulses an entry lock, records a check-in, and writes an audit row.
 
 Both run in one Node process with SQLite. Payment processors and the door controller are adapters. The **mock** adapters need no Lightning node and no hardware, so you can try the whole flow on a laptop.
 
@@ -64,6 +64,9 @@ Open:
 | Booking | http://127.0.0.1:3000/ |
 | Admin | http://127.0.0.1:3000/admin |
 | Door kiosk | http://127.0.0.1:3000/kiosk |
+| Front desk | http://127.0.0.1:3000/desk |
+| Guest form | http://127.0.0.1:3000/guest |
+| Privacy | http://127.0.0.1:3000/privacy |
 | Enrollment | linked from Admin after you add a member |
 
 The database file is `./data/club.sqlite` unless you change `DATABASE_PATH`.
@@ -232,6 +235,81 @@ Put TLS in front of the club-box port (Caddy, nginx, or similar). Set `PUBLIC_BA
 - Run one app instance per SQLite file. The double-booking guard is a transaction on that file.
 - Back up the database. It holds slots, invoices ids, linking public keys, and the access log.
 - Review the access log. Rows older than `LOG_RETENTION_DAYS` are deleted.
-- Linking keys are site-specific public keys. The app does not ask for an email address or a legal name.
-- Confirm your insurer is comfortable with wallet-based entry and any unstaffed hours.
+- Linking keys are site-specific public keys. A member label can stay a membership number. Name, phone, email, and a photo are optional profile fields for staff, stored on this server.
+- Confirm your insurer is comfortable with wallet or card entry and any unstaffed hours.
 - Refunds are a desk decision. This app records settlement; it does not send sats back.
+
+## Compatible door hardware
+
+Software in this app only sends a short entry pulse. A licensed locksmith or low-voltage installer does the physical work, with the fire marshal and the authority having jurisdiction. Nothing below is a certified product list. Brand names are examples of a category.
+
+| Hardware | What to know |
+|---|---|
+| Electric strike | Fail-secure stays locked without power. Fail-safe unlocks without power. The choice is a code decision for that door. |
+| Magnetic lock | Use one only where code requires free egress: a request-to-exit device and fire-alarm release on circuits this process cannot reach. |
+| Electrified mortise or cylindrical lockset | The locksmith selects the function. This software still only pulses entry. |
+| Smart lock or controller | Acceptable when it has a local HTTP API or a dry contact this app can pulse. Keep it on a private network. |
+| Relay or access controller | A relay board (Shelly-class or ESP32-class boards are examples) or a controller with Wiegand or OSDP can sit between this app and the strike. Examples only. |
+
+```mermaid
+flowchart LR
+  subgraph software [This process]
+    App[Club box]
+  end
+  App -->|pulse-entry on a private network| Relay[Relay or access controller]
+  Relay -->|entry coil only| Strike[Electric strike or lock]
+  Rex[Request to exit] --> Strike
+  Fire[Fire alarm release] --> Strike
+  Person[Person leaving] --> Rex
+```
+
+The request-to-exit and fire-alarm lines are not connected to this software.
+
+Checklist before the door goes live:
+
+- Power supply sized for the lock, with battery backup if the code or the insurer expects the entry side to keep working in an outage.
+- Free egress without a phone, a card, power, or this server.
+- Hardware that meets the accessibility requirement for that door.
+- Review with the authority having jurisdiction and the fire marshal.
+- A fob, PIN, or staff path that does not depend on this app.
+
+## NFC member cards
+
+Members can also unlock with a card. Prefer a cryptographic card:
+
+- **NTAG 424 DNA** with SUN/SDM. The server checks an AES-CMAC and a rolling counter. The phone or a reader opens the card's HTTPS URL. The encrypted PICC data uses one club meta-read key, because the UID is inside that ciphertext and cannot be used to diversify the key first (NXP AN12196). The file-read key is diversified per card with the method in NXP AN10922.
+- **MIFARE DESFire EV2 or EV3.** The reader finishes EV2 authentication. This server checks a truncated AES-CMAC over the UID and counter, using a per-card application key. The programming command in this repo personalizes NTAG 424 DNA. It does not replace a DESFire personalization tool.
+
+A plain UID, or a cheap NTAG215, can be copied with a phone. UID-only mode exists only as `NFC_UID_MODE=insecure-dev`. It is off unless you set that. The kiosk shows a warning while it is on.
+
+One member can hold several cards and several Lightning linking keys. Admin can enroll a card, revoke it, or mark it lost. Re-issuing a lost or revoked UID reactivates it and resets the counter. An active card cannot move to another member until it is revoked or marked lost.
+
+Keys come from `NFC_MASTER_KEY` and `NFC_SDM_META_READ_KEY`, or from `NFC_KEYS_FILE`. Do not commit either. See [card programming](../../docs/nfc-card-programming.md).
+
+A Bolt Card is a Lightning payment card that uses a similar chip. It is a separate product. Do not treat a payment card as a door credential, or a door credential as a way to pay.
+
+Readers: a phone that opens the SUN URL, a USB/PC/SC reader at the kiosk (`npm run reader:bridge`), or the in-memory card used by the tests. `npm run card:program -- --dry-run` prints APDUs and does not need a reader.
+
+## Profiles, check-in, and guests
+
+Optional profile fields are a display name, phone, email, membership type, and a photo. Photos stay as files next to the database (`data/photos` by default) and are shown to staff and on the kiosk after a successful unlock. The public booking page does not receive them.
+
+An unlock by wallet or card records a check-in. The kiosk shows the name and photo and can add a guest count. The front desk lists who is on site. Open visits expire after `CHECKIN_STALE_MINUTES` (default 480). Visit rows older than `VISIT_RETENTION_DAYS` are deleted. Marketing rows are not deleted on that schedule.
+
+`GUEST_LIMIT` defaults to 0, so guests stay off until you set a cap. A member row can override it. Named guests need a waiver acknowledgement. The marketing checkbox is off unless the guest turns it on. That consent is stored apart from the visit, with the time and the consent-text version. Export `GET /api/admin/marketing.csv` for opted-in contacts only. Unsubscribe and deletion use the privacy token from the guest form.
+
+Collect as little as you need. Staff routes accept the admin token or `STAFF_TOKEN`. This repository's notice template is [templates/privacy-notice.md](../../templates/privacy-notice.md). It is not legal advice. US state privacy laws, CAN-SPAM, TCPA for texts, and GDPR where it applies are local questions for a lawyer. The app does not send email or SMS.
+
+## Read-only Playtomic sync
+
+Playtomic's third-party API is optional. Set `PLAYTOMIC_CLIENT_ID`, `PLAYTOMIC_CLIENT_SECRET`, and `PLAYTOMIC_TENANT_ID` together, or leave all three empty. Credentials are created in Playtomic Manager under Settings, Developer Tools, on a Champion or Master plan. The default base URL is `https://thirdparty.playtomic.io`.
+
+The client posts only to `/api/v1/oauth/token`. Bookings and payments are GET requests. Tokens last about an hour and are cached until shortly before expiry. A 401 refreshes once. Requests wait `PLAYTOMIC_MIN_GAP_MS` (default 60 seconds) because the API documents about one call per minute. HTTP 429 and the payments `202` snapshot response wait for `Retry-After`, then back off. Sync repeats every `PLAYTOMIC_SYNC_MINUTES` (0 means the admin **Sync now** button only). Upserts use the Playtomic booking id, so a second sync updates the same row.
+
+Map each Playtomic `resource_id` to a local court in admin. Imported active bookings show on the court calendar without player emails. Lightning holds that overlap a mapped booking are refused. A canceled Playtomic booking stops blocking. If a court is unmapped, or an import overlaps a booking or hold that already exists, the desk gets a conflict flag.
+
+At arrival, a member card or wallet, or a guest email, can match today's Playtomic booking by the linked player id or by email, and the check-in points at that booking.
+
+Player email is personal data. It is stored so the desk can match a visit. It is copied into the marketing list only when Playtomic's `accepts_commercial_communications` is true. A later sync that reports false unsubscribes that Playtomic-sourced consent and leaves kiosk consents alone. Payment rows keep the payment ids, status, total text, dates, and product SKU. They do not keep payer names or tax ids.
+
+This integration does not write bookings or payments back. Two-way sync is the [Playtomic Connect](https://playtomic.com/connect) partner program. Unofficial or scraped integrations are being blocked and must not be used. The public API only covers roughly the last three months plus future bookings.

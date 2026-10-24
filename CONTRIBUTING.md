@@ -5,7 +5,7 @@ Thanks for helping more people start Bitcoin-friendly padel clubs.
 ## Ways to help
 - **Club founders:** share what worked and what didn't (permits, courts, pricing approaches without your private numbers, community growth).
 - **Bitcoin educators:** improve the small-business curriculum and workshop materials.
-- **Lightning developers:** extend the reference booking and LNURL-auth entry app in [`reference/club-box`](reference/club-box). The [roadmap](docs/ROADMAP.md) lists what is still open.
+- **Lightning developers:** extend the reference booking, entry, and check-in app in [`reference/club-box`](reference/club-box). The [roadmap](docs/ROADMAP.md) lists what is still open.
 - **Translators:** Spanish first, then any language.
 
 ## How
@@ -14,7 +14,8 @@ Thanks for helping more people start Bitcoin-friendly padel clubs.
 3. Keep docs plain, practical and place-neutral. Note where rules vary by location.
 
 ## Ground rules for content
-- **No personal data** (names, emails, phone numbers) of real members, leads or customers.
+- **No personal data** (names, emails, phone numbers, photos) of real members, leads or customers. The reference app can store profiles, but the repository stays on placeholders such as `example.invalid`.
+- **No NFC keys, Playtomic secrets, or door tokens** in commits. Use `.env` and a gitignored key file.
 - **No investment language.** No promises of returns, no recommendations to buy or sell any asset, no securities offers.
 - **Sponsorship, not investment** whenever sponsors are discussed.
 - **Safety first** for anything touching door access, events or physical installations.

@@ -8,7 +8,7 @@ import { safeEqual } from "./security.js";
 const CSP =
   "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
-const BODY_LIMIT = 256 * 1024;
+const BODY_LIMIT = 512 * 1024;
 
 const STATIC_FILES: Record<string, string> = {
   "/": "booking.html",
@@ -21,6 +21,12 @@ const STATIC_FILES: Record<string, string> = {
   "/admin.js": "admin.js",
   "/kiosk.js": "kiosk.js",
   "/enroll.js": "enroll.js",
+  "/desk": "desk.html",
+  "/desk.js": "desk.js",
+  "/guest": "guest.html",
+  "/guest.js": "guest.js",
+  "/privacy": "privacy.html",
+  "/privacy.js": "privacy.js",
 };
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -95,9 +101,19 @@ export function readJson(req: HttpReq): unknown {
 }
 
 export function requireAdmin(req: HttpReq, adminToken: string): void {
+  if (!presentedToken(req, adminToken)) throw new AppError(401, "Admin token required");
+}
+
+export function requireStaff(req: HttpReq, adminToken: string, staffToken: string | null): void {
+  if (presentedToken(req, adminToken)) return;
+  if (staffToken && presentedToken(req, staffToken)) return;
+  throw new AppError(401, "Staff token required");
+}
+
+function presentedToken(req: HttpReq, expected: string): boolean {
   const header = req.headers.authorization;
   const token = typeof header === "string" && header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
-  if (!token || !safeEqual(token, adminToken)) throw new AppError(401, "Admin token required");
+  return Boolean(token) && safeEqual(token, expected);
 }
 
 export function listen(server: Server, port: number, host: string): Promise<void> {

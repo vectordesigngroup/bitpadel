@@ -1,0 +1,30 @@
+const params = new URLSearchParams(location.search);
+const statusEl = document.querySelector("#status");
+
+document.querySelector("#guest").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const checkin = params.get("checkin") || "";
+  const token = params.get("token") || "";
+  try {
+    const response = await fetch(`/api/checkins/${encodeURIComponent(checkin)}/guests`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        token,
+        displayName: data.get("displayName"),
+        contactKind: data.get("contactKind"),
+        contactValue: data.get("contactValue"),
+        waiverAccepted: data.get("waiverAccepted") === "on",
+        marketingConsent: data.get("marketingConsent") === "on",
+      }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || "Could not add the guest");
+    statusEl.textContent = "Guest added. A privacy link was created for this contact.";
+    if (form instanceof HTMLFormElement) form.reset();
+  } catch (error) {
+    statusEl.textContent = error.message;
+  }
+});

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guest</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <p>Club box</p>
+    <nav>
+      <a href="/">Booking</a>
+      <a href="/privacy">Privacy</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Guest check-in</h1>
+    <p class="note">The club keeps the name and contact so staff know who is on site. Marketing is a separate choice.</p>
+    <p id="status" class="status" role="status"></p>
+    <form id="guest" class="card">
+      <label>Name
+        <input name="displayName" required maxlength="80">
+      </label>
+      <label>Contact
+        <select name="contactKind">
+          <option value="email">Email</option>
+          <option value="phone">Phone</option>
+        </select>
+      </label>
+      <label>Email or phone
+        <input name="contactValue" required maxlength="200">
+      </label>
+      <label><input name="waiverAccepted" type="checkbox" required> I acknowledge the club waiver for this visit.</label>
+      <label><input name="marketingConsent" type="checkbox"> Send me club news. Leave this unchecked if you do not want that.</label>
+      <button type="submit">Add guest</button>
+    </form>
+  </main>
+  <script src="/guest.js"></script>
+</body>
+</html>
