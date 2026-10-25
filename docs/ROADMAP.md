@@ -18,5 +18,23 @@
 - [ ] Translations (Spanish first).
 - [ ] Case studies from clubs using the kit.
 
+## Next: member perks on the same identity
+Design notes for everything in this section and the next: [`lnurl-club-ideas.md`](lnurl-club-ideas.md). They reuse LNURL-auth identity (no sats move), the NFC card fallback, door `area` pulses and the booking window, plus a new allowance and tab ledger.
+- [ ] **Allowance and tab ledger.** Per-member allowances (for example 2 waters per visit), a tab settled by Lightning or card, guest items charged to the host member, and an append-only audit. Needed by vending and several ideas below.
+- [ ] **Member vending.** Scan the QR or tap a card at a locked cooler or an MDB vending machine; the item counts against the allowance or goes on the tab.
+- [ ] **Lockers.** Scan or tap to claim a locker for the visit and open it again; staff release from the admin page.
+- [ ] **Booking-gated equipment.** Court lights, the ball machine and the gear rental cabinet work only during an active booking, with staff override.
+- [ ] **Member-vouched guest passes.** A member signs to issue a one-day guest QR, within the guest cap and waiver rules.
+
+## Later / ideas
+- [ ] Signed tournament check-in and two-sided score confirmation.
+- [ ] Prizes, streak and referral rewards through LNURL-withdraw.
+- [ ] Coach tips through a Lightning address or LNURL-pay.
+- [ ] Gift cards (LNURL-withdraw or Bolt Card).
+- [ ] Member voting, one signature per member.
+- [ ] Possibly new: late-cancel and no-show compensation, pay-per-minute equipment, rewards that grow with play frequency, a kiosk partner-finder board.
+
+> Free allowances and sats rewards can have sales-tax and income-tax implications for the operator. Check with a tax advisor before turning them on.
+
 ## Ideas welcome
 Open an issue with what your club needs.
