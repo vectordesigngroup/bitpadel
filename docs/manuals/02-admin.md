@@ -10,7 +10,9 @@ Open `/admin`. Sign in with a staff username and password, or paste `ADMIN_TOKEN
 
 `STAFF_TOKEN` is optional. If it is set (at least 16 characters), the desk, the on-site list, checkout, staff photos, today's Playtomic list, and the conflict list accept the staff token, a front-desk or coach account, or the admin token. Marketing export, member edits, court prices, card issue, refunds, and Playtomic sync accept an owner, a manager, or the admin token.
 
-Roles are `owner`, `manager`, `front-desk`, and `coach`. Owners can create other owners. Managers can create managers, front desk, and coaches, and cannot create owners. Front desk and coach can use the desk and cannot open Admin. Disable an account from the API `POST /api/admin/staff/<id>/disable` or by asking an owner. Disabling deletes that account's sessions. The shared tokens are still rotated in the [security manual](06-security-incident.md). **Not yet implemented:** an audit row that names which person clicked, and a hardware-token second factor.
+Roles are `owner`, `manager`, `front-desk`, and `coach`. Owners can create other owners. Managers can create managers, front desk, and coaches, and cannot create owners. Front desk and coach can use the desk and cannot open Admin. Disable an account from the API `POST /api/admin/staff/<id>/disable` or by asking an owner. Disabling deletes that account's sessions. The shared tokens are still rotated in the [security manual](06-security-incident.md).
+
+Admin **Staff audit** lists non-GET calls under `/api/admin`: time, actor, method, path, and status. The shared admin token is recorded as `admin-token`. A named account is recorded as the display name and username. The list and the CSV are owner, manager, or admin-token only. The row does not store the token or the request body. **Not yet implemented:** a hardware-token second factor.
 
 ## Member profiles
 
@@ -54,10 +56,13 @@ Each person unlocks only with their own enrolled wallet or card. The household d
 | Access attempts | Admin **Access log** (`GET /api/admin/audit`) | Admin. Time, result, reason, area. |
 | Who is on site | `/desk` | Staff or admin. |
 | Today's Playtomic bookings and conflicts | `/desk` and Admin **Playtomic courts** | Staff or admin for the lists. Sync and mapping are admin. |
+| End of day | Admin **End of day** (`GET /api/admin/reports/daily?date=YYYY-MM-DD`) | Admin. Counts and minor-unit totals by payment method, plus refunds. **Email summary** sends that text to `DAILY_SUMMARY_EMAIL` or `NOTIFY_ADMIN_EMAIL`. |
+| Staff audit | Admin **Staff audit** and **Download audit CSV** | Admin. See above. |
+| Price rules | Admin **Price rules** | Admin. Weekdays 0–6 (Sunday first) in `CLUB_TIMEZONE`. A court id limits the rule. The court rule wins over an all-courts rule. |
 | Marketing opt-ins | Admin **Download marketing CSV** | Admin only. Columns are contact kind, contact, consent time, consent-text version, and source (`kiosk` or `playtomic`). People who did not opt in are absent. |
 | One marketing message | Admin **Send to opted-in contact** | Admin. Refuses with "That contact has not opted in to marketing" when there is no active consent. |
 
-**Not yet implemented:** tax reports and charts.
+**Not yet implemented:** tax reports and charts. The end-of-day total is not a tax filing. Card processing, refunds, and consent wording still need the club's attorney and CPA before live use.
 
 The access log is deleted after `LOG_RETENTION_DAYS` (default 90). Check-ins, imported bookings, and resolved conflicts older than `VISIT_RETENTION_DAYS` (default 30) are deleted. The sweep runs at startup and about once an hour. Marketing rows are not part of that sweep.
 

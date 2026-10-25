@@ -45,7 +45,7 @@ async function runBackup(env: Env): Promise<void> {
   const databasePath = env.DATABASE_PATH?.trim() || "./data/club.sqlite";
   const db = openDatabase(databasePath);
   try {
-    const location = await backupDatabase(db, destinationFrom(env), new Date());
+    const location = await backupDatabase(db, destinationFrom(env), new Date(), passphrase(env));
     console.log(location);
   } finally {
     db.close();
@@ -67,7 +67,7 @@ async function runRestore(args: string[], env: Env): Promise<void> {
   }
   if (!source) throw new Error("restore needs --from <file> or --name <backup>");
   try {
-    restoreDatabase(source, databasePath, force);
+    restoreDatabase(source, databasePath, force, passphrase(env));
     console.log(databasePath);
   } finally {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });
@@ -120,7 +120,16 @@ function flag(args: string[], name: string): string | null {
 }
 
 const HELP = `Commands: backup | restore --from <file> | restore --name <backup> [--force]
-Stop the server before restore. Schedule backup on the host; this app has no cron.`;
+Set BACKUP_PASSPHRASE to encrypt the file (AES-256-GCM). The same value restores it.
+Stop the server before restore. Schedule backup on the host; this app has no cron.
+Example: 15 3 * * * cd /opt/club-box && BACKUP_PASSPHRASE=... npm run backup -- backup`;
+
+function passphrase(env: Env): string | null {
+  const value = env.BACKUP_PASSPHRASE ?? "";
+  if (!value) return null;
+  if (value.length < 12) throw new Error("BACKUP_PASSPHRASE must be at least 12 characters");
+  return value;
+}
 
 const executed = process.argv[1]?.includes(`${path.sep}backup${path.sep}cli`);
 if (executed) {

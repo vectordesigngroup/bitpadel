@@ -28,6 +28,8 @@ const STATIC_FILES: Record<string, string> = {
   "/guest.js": "guest.js",
   "/privacy": "privacy.html",
   "/privacy.js": "privacy.js",
+  "/account": "account.html",
+  "/account.js": "account.js",
 };
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -153,10 +155,11 @@ export function createAppServer(options: {
   trustProxy: boolean;
   routes: Route[];
   publicDir: string;
+  onComplete?: (info: { method: string; path: string; status: number; headers: IncomingHttpHeaders }) => void;
 }): Server {
   const publicRoot = path.resolve(options.publicDir);
   return createServer((incoming, res) => {
-    void handleRequest(incoming, res, options.routes, options.trustProxy, publicRoot);
+    void handleRequest(incoming, res, options.routes, options.trustProxy, publicRoot, options.onComplete);
   });
 }
 
@@ -166,6 +169,7 @@ async function handleRequest(
   routes: Route[],
   trustProxy: boolean,
   publicRoot: string,
+  onComplete?: (info: { method: string; path: string; status: number; headers: IncomingHttpHeaders }) => void,
 ): Promise<void> {
   try {
     const method = incoming.method ?? "GET";
@@ -207,6 +211,7 @@ async function handleRequest(
       params: found.params,
       res,
     });
+    onComplete?.({ method, path: url.pathname, status: res.statusCode, headers: incoming.headers });
   } catch (error) {
     if (res.headersSent) {
       res.end();
@@ -218,6 +223,12 @@ async function handleRequest(
     }
     if (error instanceof AppError) {
       sendJson(res, error.status, { error: error.message });
+      onComplete?.({
+        method: incoming.method ?? "GET",
+        path: new URL(incoming.url ?? "/", "http://localhost").pathname,
+        status: error.status,
+        headers: incoming.headers,
+      });
       return;
     }
     if (error instanceof PaymentError) {

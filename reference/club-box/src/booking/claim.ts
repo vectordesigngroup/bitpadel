@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { immediate, isUniqueError, one } from "../db.js";
+import { quotePrice } from "./prices.js";
 
 export type ClaimInput = {
   slotId: string;
@@ -12,6 +13,9 @@ export type ClaimInput = {
   currency: string;
   expiresAt: string;
   nowIso: string;
+  /** When set, the charged amount must match the price rules for this slot. */
+  timeZone?: string;
+  member?: boolean;
 };
 
 export type ClaimResult =
@@ -41,7 +45,15 @@ export function claimOpenSlot(db: Database.Database, input: ClaimInput): ClaimRe
         input.slotId,
       );
       if (!slot || slot.status !== "open") return { ok: false, reason: "unavailable" };
-      if (slot.price_minor !== input.amountMinor || slot.currency !== input.currency) {
+      const expected = input.timeZone
+        ? quotePrice(
+            db,
+            { courtId: slot.court_id, startsAt: slot.starts_at, priceMinor: slot.price_minor },
+            input.member === true,
+            input.timeZone,
+          )
+        : slot.price_minor;
+      if (expected !== input.amountMinor || slot.currency !== input.currency) {
         return { ok: false, reason: "price-changed" };
       }
       const imported = one<{ id: string }>(

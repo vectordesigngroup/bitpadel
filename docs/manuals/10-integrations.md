@@ -15,6 +15,7 @@ Each integration is an interface plus a switch in a `create*` function. The `nev
 | Backups | `BackupDestination` in `src/backup/destination.ts` | `destinationFrom` in `src/backup/cli.ts` |
 | Doors | `DoorController` in `src/doors/types.ts` | `openDoorController` in `src/doors/index.ts` |
 | Payments | `PaymentBackend` in `src/payments/types.ts` | `createPaymentBackend` in `src/payments/index.ts` |
+| Cards | `CardProvider` in `src/payments/cards/types.ts` | `createCardSet` in `src/payments/cards/index.ts` |
 
 To add one:
 
@@ -56,7 +57,7 @@ A booking receipt is sent only when the player typed a receipt email on the book
 
 Marketing is `POST /api/admin/marketing/send` and the Admin button **Send to opted-in contact**. The contact must have a marketing row with `unsubscribed_at` empty. Otherwise the response is "That contact has not opted in to marketing".
 
-Receipts, privacy links, household notices, and admin alerts are transactional. They do not look at the marketing checkbox. They also do not send a breach notice. **Not yet implemented:** breach notification.
+Receipts, privacy links, household notices, booking reminders, login codes, the daily sales email, and admin alerts are transactional. They do not look at the marketing checkbox. A booking reminder is sent only when the player checked that box at checkout. Login codes and reminders are not marketing. They also do not send a breach notice. **Not yet implemented:** breach notification.
 
 ## Photos
 
@@ -86,7 +87,9 @@ This process does not run cron. Put the backup command in the host crontab. A da
 0 3 * * * cd /opt/club-box && npm run backup -- backup
 ```
 
-The command does not copy `PHOTO_DIR`. Copy that directory with the same schedule. **Not yet implemented:** an encrypted backup or a cron container in Compose.
+The command does not copy `PHOTO_DIR`. Copy that directory with the same schedule. **Not yet implemented:** a cron container in Compose.
+
+Set `BACKUP_PASSPHRASE` (at least 12 characters) to encrypt the snapshot with AES-256-GCM. The file name ends in `.sqlite.enc`. Restore uses the same passphrase. A missing or wrong passphrase stops the restore and does not write the database. Leave the variable empty to keep the plain SQLite copy. The passphrase is not stored in the database and is not written into the backup.
 
 The CLI does not load `ADMIN_TOKEN`. It only needs the database path and the backup destination variables.
 
@@ -105,13 +108,49 @@ Every driver implements `pulseEntry` only. There is no lock, hold-shut, or fire-
 
 `DOOR_PULSE_MS` is the pulse length, from 200 to 10000.
 
+`BOOKING_ENTRY=false` is the default. The kiosk refuses a new challenge when the area is outside `ACCESS_AREA_HOURS`. Set it to `true` and a confirmed booking also allows the entry pulse from `BOOKING_ENTRY_BEFORE_MINUTES` before the slot (default 30) through `BOOKING_ENTRY_AFTER_MINUTES` after it (default 15), including unstaffed hours. The audit reason is `booking-window`. A member created from a player email, with access scope `booking`, can use that window only. An existing member keeps area hours as well. Leaving and fire release stay on hardware. The software still only pulses entry.
+
 Fail-secure versus fail-safe is the installer's wiring choice. This software does not decide it and does not hold a pin active after the pulse.
 
 GPIO and serial need a real machine to prove the hardware. The tests prove the software sends a pulse and then idle, and that `onoff` is absent in this environment.
 
 ## Payments
 
-`PAYMENT_BACKEND` is `mock`, `btcpay`, or `lnbits`. Invoice creation is unchanged.
+`PAYMENT_BACKEND` is `mock`, `btcpay`, or `lnbits`. That choice is the Lightning backend. It stays one of those three.
+
+`CARD_PROVIDERS` is a comma list of `stripe`, `square`, or both. Empty, the default, means the booking page offers Lightning only. A player chooses Lightning or one enabled card provider. The hold stores `payment_method`. Card checkout URLs are the provider's hosted page. The booking confirms when the signed webhook arrives.
+
+| Provider | Checkout | Webhook | Refund |
+|---|---|---|---|
+| Stripe | `POST /v1/checkout/sessions` | `POST /api/webhooks/stripe`, `checkout.session.completed` with `payment_status=paid`. The header is `Stripe-Signature` (`t=`, `v1=` HMAC). | `POST /v1/refunds` using the payment intent stored from that webhook. Until the webhook arrives, the refund is "Not supported by this backend until the Stripe webhook stores the payment intent." |
+| Square | `POST /v2/online-checkout/payment-links` (`quick_pay`) | `POST /api/webhooks/square`, `payment.updated` or `payment.created` with status `COMPLETED`. The header is `x-square-hmacsha256-signature` over the notification URL plus the body. | `POST /v2/refunds` using the Square payment id from that webhook. Until then, the refund is "Not supported by this backend until the Square webhook stores the payment id." |
+
+`STRIPE_SECRET_KEY` must start with `sk_test_` unless `STRIPE_ALLOW_LIVE=true`. `SQUARE_ENV` defaults to `sandbox` (`connect.squareupsandbox.com`). `production` also requires `SQUARE_ALLOW_LIVE=true`. Optional `STRIPE_API_BASE` and `SQUARE_API_BASE` must be `https` or `http://127.0.0.1`. Do not commit keys. Public `/api/health` lists the provider names and does not call them.
+
+Stripe Checkout sessions last at least 30 minutes on Stripe's side. The club hold timer is still the one that releases the slot. A webhook that arrives after the hold expired does not book the court.
+
+Sales CSV and **End of day** include `lightning`, `stripe`, and `square`, including bookings a player later cancelled, plus refund rows.
+
+### Square Bitcoin is in-person only
+
+Square's online APIs do not create a Bitcoin or Lightning payment. This app does not add a "Bitcoin via Square" checkout option and does not send a Bitcoin flag to Square.
+
+What Square documents:
+
+- [Accept and manage bitcoin payments](https://squareup.com/help/us/en/article/8622-accept-and-manage-bitcoin-payments). Bitcoin is taken in the Square POS app (the seller shows a Lightning QR) and on Square Register (the buyer can pick Bitcoin on the customer-facing display). NFC tap is only on Square Register (2nd generation). It is not available on Square Terminal, Square Stand, or the mobile app. Eligible US businesses, not businesses or locations in New York. The processing fee is 0% until December 31, 2026, then 1%. The maximum is the bitcoin market equivalent of $600 per transaction and $20,000 per day. Refunds are issued only from the Square POS app, as a gift card for the dollar amount, not as a Lightning reversal. Bitcoin is not compatible with invoices that allow partial payments. Square does not handle disputes for these payments.
+- [Checkout API](https://developer.squareup.com/docs/checkout-api). `CreatePaymentLink` payment methods are credit and debit cards, Google Pay, Apple Pay, Afterpay, and Cash App. The same list is in the [v1 checkout migration guide](https://developer.squareup.com/docs/migrate-from-v1/guides/v1-checkout).
+- [Web Payments SDK](https://developer.squareup.com/docs/web-payments/overview). Tokens come from credit card, gift card, digital wallets, ACH, Afterpay, and Cash App Pay.
+- [Create payment](https://developer.squareup.com/reference/square/payments-api/create-payment). `source_id` is one of those tokens, or `CASH` or `EXTERNAL` for a payment taken outside Square. It does not create a Lightning invoice.
+- [LightningDetails](https://developer.squareup.com/reference/square/objects/LightningDetails). A read-only `payment_url` on a Payment that already has `source_type` WALLET and brand LIGHTNING. That is a reporting shape for a payment that already happened, not a call that creates one.
+- [International development](https://developer.squareup.com/docs/international-development). Square payment processing is available in Australia, Canada, France, Ireland, Japan, Spain, the United Kingdom, and the United States. The Bitcoin feature above is the US in-person feature, excluding New York, not a method on the online APIs.
+
+A club that wants Bitcoin at the pro-shop counter uses Square's own Register or POS app on Square hardware, in an eligible US location outside New York. Online court checkout in this app stays the club's Lightning backend or the card providers above. Square's gift-card refund for an in-person Bitcoin sale is done in the Square POS app. This app does not record or reverse that sale.
+
+Card processing and refunds need the club's attorney and CPA before live keys are turned on. Test and sandbox modes are the default.
+
+## Lightning refunds
+
+Lightning invoice creation is unchanged.
 
 Refunds are `POST /api/admin/bookings/<id>/refund` with `{ reason, bolt11? }`, or **Refund** on the booking in Admin.
 
@@ -135,7 +174,7 @@ Admin **Check Lightning balance** calls `health()`. LNbits reads the wallet bala
 
 `LOG_FILE` empty means stdout and stderr only. A path also appends JSON lines and rotates at `LOG_FILE_MAX_BYTES`, keeping `LOG_FILE_KEEP` older files.
 
-`GET /api/health` stays public. It adds `emailProvider`, `smsProvider`, `storageBackend`, and `backupDestination`. It does not include tokens, balances, or member data.
+`GET /api/health` stays public. It adds `emailProvider`, `smsProvider`, `storageBackend`, `backupDestination`, `cardProviders`, and `bookingEntry`. It does not include tokens, balances, or member data.
 
 ## What is stubbed
 

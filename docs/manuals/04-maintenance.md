@@ -49,7 +49,7 @@ Jobs the software does by itself:
 | Token rotation | Plan a rotation of `ADMIN_TOKEN`, `STAFF_TOKEN`, `DOOR_HTTP_TOKEN`, and webhook secrets if they have been shared more widely than you want. Rotation steps are in the [security manual](06-security-incident.md). |
 | NFC keys | Confirm an offline copy of the master key and the meta-read key still opens. Do not email the file. Rotating keys is below. A lost master key means you cannot diversify replacements for cards already issued. |
 | Door inspection | With the installer if you are not qualified: strike or maglock alignment, request-to-exit, fire-alarm release, and battery backup. The tests are the ones your AHJ and installer specified. This repo does not define pass/fail measurements. |
-| TLS certificate | On the proxy in front of the app. **Not yet implemented:** certificate issuance in this repository. |
+| TLS certificate | On the Caddy service in Compose, or on the proxy you already run. `SITE_ADDRESS=localhost` uses Caddy's local certificate. A public hostname is issued by Caddy for that name. This app does not run its own certificate process. |
 
 ## Annual
 
@@ -89,12 +89,12 @@ Schedule on the host. This app does not run cron. Example, with your own path:
 0 3 * * * cd /opt/club-box && npm run backup -- backup
 ```
 
-**Not yet implemented:** a cron container in Compose, or encryption of the backup file.
+Set `BACKUP_PASSPHRASE` when you want the file encrypted. Restore needs the same passphrase. **Not yet implemented:** a cron container in Compose. The schedule stays on the host.
 
 Restore drill:
 
 1. Stop the app (`docker compose stop` or end the Node process). SIGINT and SIGTERM close the database. Do not restore over a file the server still has open.
-2. `npm run backup -- restore --from /path/to/club-....sqlite --force` copies the backup onto `DATABASE_PATH` and deletes leftover `-wal` and `-shm` files. Without `--force` the command refuses when the database file already exists.
+2. `npm run backup -- restore --from /path/to/club-....sqlite --force` copies the backup onto `DATABASE_PATH` and deletes leftover `-wal` and `-shm` files. An `.sqlite.enc` file needs `BACKUP_PASSPHRASE` in the environment. Without `--force` the command refuses when the database file already exists.
 3. Copy photos back if you keep them outside the database.
 4. Start the app. Check `/api/health`, a known member, and one historical booking.
 

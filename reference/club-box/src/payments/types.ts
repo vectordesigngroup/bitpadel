@@ -40,6 +40,8 @@ export type RefundRequest = {
   reason: string;
   /** Required only when the backend pays a customer invoice instead of reversing one. */
   bolt11: string | null;
+  /** Stripe payment intent or Square payment id, when the webhook has stored one. */
+  providerPaymentId?: string | null;
 };
 
 export type RefundResult =

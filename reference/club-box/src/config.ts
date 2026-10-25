@@ -3,6 +3,8 @@ import { loadNfcKeys, type NfcKeyMaterial } from "./nfc/keys.js";
 import { isValidTimeZone } from "./time.js";
 
 export type PaymentBackendName = "mock" | "btcpay" | "lnbits";
+export type CardProviderName = "stripe" | "square";
+export type CancelRefundPolicy = "full" | "none";
 export type DoorBackendName = "mock" | "http" | "gpio" | "serial";
 export type EmailProviderName = "console" | "smtp" | "postmark";
 export type SmsProviderName = "console" | "twilio" | "webhook";
@@ -85,6 +87,21 @@ export type NfcConfig = {
   uidMode: UidMode;
 };
 
+export type StripeConfig = {
+  secretKey: string;
+  webhookSecret: string;
+  apiBase: string;
+};
+
+export type SquareConfig = {
+  accessToken: string;
+  locationId: string;
+  webhookSignatureKey: string;
+  apiBase: string;
+  /** Notification URL Square signs. The club's public webhook address. */
+  webhookUrl: string;
+};
+
 export type PlaytomicConfig = {
   baseUrl: string;
   clientId: string;
@@ -114,6 +131,9 @@ export type AppConfig = {
   satsPerMinorUnit: number | null;
   holdMinutes: number;
   paymentBackend: PaymentBackendName;
+  cardProviders: CardProviderName[];
+  stripe: StripeConfig | null;
+  square: SquareConfig | null;
   btcpay: BtcpayConfig | null;
   lnbits: LnbitsConfig | null;
   doorBackend: DoorBackendName;
@@ -157,6 +177,13 @@ export type AppConfig = {
   logFileKeep: number;
   staffBootstrap: StaffBootstrapConfig | null;
   sessionTtlHours: number;
+  bookingEntry: boolean;
+  bookingEntryBeforeMinutes: number;
+  bookingEntryAfterMinutes: number;
+  cancelWindowHours: number;
+  cancelRefund: CancelRefundPolicy;
+  reminderHoursBefore: number;
+  dailySummaryEmail: string | null;
   nfc: NfcConfig;
   playtomic: PlaytomicConfig | null;
 };
@@ -164,6 +191,8 @@ export type AppConfig = {
 export type Env = Record<string, string | undefined>;
 
 const PAYMENT_BACKENDS = ["mock", "btcpay", "lnbits"] as const;
+const CARD_PROVIDERS = ["stripe", "square"] as const;
+const CANCEL_REFUNDS = ["full", "none"] as const;
 const DOOR_BACKENDS = ["mock", "http", "gpio", "serial"] as const;
 const EMAIL_PROVIDERS = ["console", "smtp", "postmark"] as const;
 const SMS_PROVIDERS = ["console", "twilio", "webhook"] as const;
@@ -182,6 +211,7 @@ export function loadConfig(env: Env): AppConfig {
   }
   const currencyDecimals = intEnv(env, "CURRENCY_DECIMALS", null, 0, 8);
   const paymentBackend = oneOf(env.PAYMENT_BACKEND?.trim() || "mock", PAYMENT_BACKENDS, "PAYMENT_BACKEND");
+  const cardProviders = parseCardProviders(env.CARD_PROVIDERS ?? "");
   const doorBackend = oneOf(env.DOOR_BACKEND?.trim() || "mock", DOOR_BACKENDS, "DOOR_BACKEND");
   const emailProvider = oneOf(env.EMAIL_PROVIDER?.trim() || "console", EMAIL_PROVIDERS, "EMAIL_PROVIDER");
   const smsProvider = oneOf(env.SMS_PROVIDER?.trim() || "console", SMS_PROVIDERS, "SMS_PROVIDER");
@@ -207,6 +237,9 @@ export function loadConfig(env: Env): AppConfig {
     satsPerMinorUnit: optionalRate(env, "SATS_PER_MINOR_UNIT"),
     holdMinutes: intEnv(env, "HOLD_MINUTES", 15, 1, 120),
     paymentBackend,
+    cardProviders,
+    stripe: null,
+    square: null,
     btcpay: null,
     lnbits: null,
     doorBackend,
@@ -250,6 +283,13 @@ export function loadConfig(env: Env): AppConfig {
     logFileKeep: intEnv(env, "LOG_FILE_KEEP", 5, 1, 20),
     staffBootstrap: parseStaffBootstrap(env),
     sessionTtlHours: intEnv(env, "SESSION_TTL_HOURS", 12, 1, 168),
+    bookingEntry: boolEnv(env, "BOOKING_ENTRY", false),
+    bookingEntryBeforeMinutes: intEnv(env, "BOOKING_ENTRY_BEFORE_MINUTES", 30, 0, 240),
+    bookingEntryAfterMinutes: intEnv(env, "BOOKING_ENTRY_AFTER_MINUTES", 15, 0, 240),
+    cancelWindowHours: intEnv(env, "CANCEL_WINDOW_HOURS", 24, 0, 168),
+    cancelRefund: oneOf(env.CANCEL_REFUND?.trim() || "full", CANCEL_REFUNDS, "CANCEL_REFUND"),
+    reminderHoursBefore: intEnv(env, "REMINDER_HOURS_BEFORE", 24, 1, 168),
+    dailySummaryEmail: optionalEmail(env.DAILY_SUMMARY_EMAIL, "DAILY_SUMMARY_EMAIL"),
     nfc: {
       keys: loadNfcKeys(env),
       uidMode: oneOf(env.NFC_UID_MODE?.trim() || "off", UID_MODES, "NFC_UID_MODE"),
@@ -257,6 +297,8 @@ export function loadConfig(env: Env): AppConfig {
     playtomic: parsePlaytomic(env),
   };
 
+  if (cardProviders.includes("stripe")) config.stripe = parseStripe(env);
+  if (cardProviders.includes("square")) config.square = parseSquare(env, config.publicBaseUrl);
   if (paymentBackend === "btcpay") config.btcpay = parseBtcpay(env);
   if (paymentBackend === "lnbits") {
     if (config.satsPerMinorUnit == null) {
@@ -572,6 +614,64 @@ function parseS3(env: Env): S3Config {
     accessKey: required(env, "S3_ACCESS_KEY_ID"),
     secretKey: required(env, "S3_SECRET_ACCESS_KEY"),
     prefix: env.S3_PREFIX?.trim() ?? "",
+  };
+}
+
+function parseCardProviders(raw: string): CardProviderName[] {
+  const parts = raw
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length > 0);
+  const chosen: CardProviderName[] = [];
+  for (const part of parts) {
+    if (!(CARD_PROVIDERS as readonly string[]).includes(part)) {
+      throw new Error(`CARD_PROVIDERS must be a list of: ${CARD_PROVIDERS.join(", ")}`);
+    }
+    const name = part as CardProviderName;
+    if (chosen.includes(name)) throw new Error(`CARD_PROVIDERS lists "${name}" more than once`);
+    chosen.push(name);
+  }
+  return chosen;
+}
+
+function parseStripe(env: Env): StripeConfig {
+  const secretKey = required(env, "STRIPE_SECRET_KEY");
+  const webhookSecret = required(env, "STRIPE_WEBHOOK_SECRET");
+  if (webhookSecret.length < 16) throw new Error("STRIPE_WEBHOOK_SECRET must be at least 16 characters");
+  const allowLive = boolEnv(env, "STRIPE_ALLOW_LIVE", false);
+  if (!allowLive && !secretKey.startsWith("sk_test_")) {
+    throw new Error("STRIPE_SECRET_KEY must be a test key (sk_test_) unless STRIPE_ALLOW_LIVE=true");
+  }
+  const apiBase = env.STRIPE_API_BASE?.trim() || "https://api.stripe.com";
+  if (!apiBase.startsWith("https://") && !apiBase.startsWith("http://127.0.0.1")) {
+    throw new Error("STRIPE_API_BASE must be https, or http://127.0.0.1 for tests");
+  }
+  return { secretKey, webhookSecret, apiBase: apiBase.replace(/\/$/, "") };
+}
+
+function parseSquare(env: Env, publicBaseUrl: string): SquareConfig {
+  const accessToken = required(env, "SQUARE_ACCESS_TOKEN");
+  const locationId = required(env, "SQUARE_LOCATION_ID");
+  const webhookSignatureKey = required(env, "SQUARE_WEBHOOK_SIGNATURE_KEY");
+  if (webhookSignatureKey.length < 16) {
+    throw new Error("SQUARE_WEBHOOK_SIGNATURE_KEY must be at least 16 characters");
+  }
+  const mode = oneOf(env.SQUARE_ENV?.trim() || "sandbox", ["sandbox", "production"] as const, "SQUARE_ENV");
+  const allowLive = boolEnv(env, "SQUARE_ALLOW_LIVE", false);
+  if (mode === "production" && !allowLive) {
+    throw new Error("SQUARE_ENV=production requires SQUARE_ALLOW_LIVE=true. Sandbox is the default.");
+  }
+  const fallback = mode === "sandbox" ? "https://connect.squareupsandbox.com" : "https://connect.squareup.com";
+  const apiBase = env.SQUARE_API_BASE?.trim() || fallback;
+  if (!apiBase.startsWith("https://") && !apiBase.startsWith("http://127.0.0.1")) {
+    throw new Error("SQUARE_API_BASE must be https, or http://127.0.0.1 for tests");
+  }
+  return {
+    accessToken,
+    locationId,
+    webhookSignatureKey,
+    apiBase: apiBase.replace(/\/$/, ""),
+    webhookUrl: `${publicBaseUrl}/api/webhooks/square`,
   };
 }
 

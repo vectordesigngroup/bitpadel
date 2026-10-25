@@ -36,6 +36,39 @@ test("SQLite backup and restore round-trip through a local directory", async () 
   }
 });
 
+test("an encrypted backup restores only with the same passphrase", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "club-backup-enc-"));
+  const databasePath = path.join(dir, "club.sqlite");
+  const restored = path.join(dir, "restored.sqlite");
+  const db = openDatabase(databasePath);
+  const passphrase = "correct-horse-battery";
+  try {
+    db.prepare("INSERT INTO courts (id, name, active, created_at) VALUES ('court-enc', 'Sealed', 1, ?)").run(
+      "2026-06-01T00:00:00.000Z",
+    );
+    const location = await backupDatabase(
+      db,
+      destinationFrom({ BACKUP_DIR: path.join(dir, "backups") }),
+      new Date("2026-06-01T03:00:00.000Z"),
+      passphrase,
+    );
+    assert.match(location, /\.sqlite\.enc$/);
+    assert.throws(() => restoreDatabase(location, restored, true), /BACKUP_PASSPHRASE/);
+    assert.throws(() => restoreDatabase(location, restored, true, "wrong-passphrase"), /decrypt/);
+    restoreDatabase(location, restored, true, passphrase);
+  } finally {
+    db.close();
+  }
+  const copy = openDatabase(restored);
+  try {
+    const row = copy.prepare("SELECT name FROM courts WHERE id = 'court-enc'").get() as { name: string };
+    assert.equal(row.name, "Sealed");
+  } finally {
+    copy.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("the backup CLI and an S3-compatible destination store the file", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "club-backup-cli-"));
   const objects = new Map<string, Buffer>();

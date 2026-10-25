@@ -22,6 +22,29 @@ test("prices and secrets come from the environment", () => {
   assert.throws(() => loadConfig({ ...base, ADMIN_TOKEN: "short" }), /ADMIN_TOKEN/);
   assert.throws(() => loadConfig({ ...base, PAYMENT_BACKEND: "cash" }), /PAYMENT_BACKEND/);
   assert.throws(() => loadConfig({ ...base, DEFAULT_SLOT_PRICE_MINOR: "0" }), /positive/);
+  assert.throws(() => loadConfig({ ...base, CARD_PROVIDERS: "bitcoin" }), /CARD_PROVIDERS/);
+  assert.throws(
+    () =>
+      loadConfig({
+        ...base,
+        CARD_PROVIDERS: "stripe",
+        STRIPE_SECRET_KEY: "sk_live_not_for_this_repo",
+        STRIPE_WEBHOOK_SECRET: "1234567890123456",
+      }),
+    /sk_test_/,
+  );
+  assert.throws(
+    () =>
+      loadConfig({
+        ...base,
+        CARD_PROVIDERS: "square",
+        SQUARE_ACCESS_TOKEN: "token",
+        SQUARE_LOCATION_ID: "LOC",
+        SQUARE_WEBHOOK_SIGNATURE_KEY: "1234567890123456",
+        SQUARE_ENV: "production",
+      }),
+    /SQUARE_ALLOW_LIVE/,
+  );
 });
 
 test("club-local clock times convert to UTC", () => {

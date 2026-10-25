@@ -123,7 +123,8 @@ Canceled imports stop blocking the slot after the next successful sync.
 1. Tell the player the hold lasts `HOLD_MINUTES`. If they walk away, the slot opens again by itself.
 2. On BTCPay, an expired or invalid invoice releases the hold. Other webhook events are ignored.
 3. On LNbits, a notice that is still pending does not confirm the booking.
-4. If they pay after the hold expired, the app does not book the slot and does not send the sats back by itself. **Not yet implemented:** an automatic refund on expiry. A manager can request a refund for a booking that did settle: Admin **Refund** on that booking. Mock records it. BTCPay calls the store refund endpoint. LNbits pays a customer BOLT11 when you paste one, and otherwise returns "Not supported by this backend" without pretending the sats moved. Follow the club's written refund rule.
+4. If they pay after the hold expired, the app does not book the slot and does not send the money back by itself. **Not yet implemented:** an automatic refund on expiry. A manager can request a refund for a booking that did settle: Admin **Refund** on that booking. Mock records it. BTCPay calls the store refund endpoint. LNbits pays a customer BOLT11 when you paste one, and otherwise returns "Not supported by this backend" without pretending the sats moved. Stripe and Square refund the card payment after their webhook has stored the provider payment id. Follow the club's written refund rule.
+5. The booking page lists Lightning and any card provider in `CARD_PROVIDERS`. The player picks one. A card hold shows the provider's checkout link instead of a Lightning invoice. **My bookings** (`/account`) emails a one-time code. That code is transactional, not marketing. Inside `CANCEL_WINDOW_HOURS` the player can cancel. `CANCEL_REFUND=full` asks the provider to refund first and keeps the booking if the provider refuses. `0` turns self-cancel off. Reminder checkboxes are a separate opt-in from marketing.
 5. On a mock server, a manager uses **Simulate payment** in Admin. That button is absent when the backend is BTCPay or LNbits.
 6. A second settlement notice for the same invoice does not create a second booking.
 
@@ -150,8 +151,8 @@ There is no close-out button.
 
 1. **Check out** anyone who has left. Anyone still inside can stay on the list.
 2. Skim Admin **Access log** for `door-failed` and denied attempts. Rows older than `LOG_RETENTION_DAYS` (default 90) are deleted.
-3. In Admin, open **Download CSV** if the bookkeeper wants the latest 500 settled Lightning bookings. For a date range that also includes stored Playtomic payment rows, use **Download sales CSV**. Playtomic rows are ids, status, total text, dates, and product SKU. They omit payer names and tax ids.
+3. In Admin, open **Download CSV** if the bookkeeper wants the latest 500 settled bookings. For a date range that also includes stored Playtomic payment rows, use **Download sales CSV**. Playtomic rows are ids, status, total text, dates, and product SKU. They omit payer names and tax ids. **End of day** totals Lightning, Stripe, Square, and refunds for one date. **Email summary** sends that text when an owner address is set.
 4. Read desk conflicts once more and leave them for a manager if any are open.
 5. Unpaid holds expire on their own. You do not cancel them one by one unless the slot should not be sold. **Cancel slot** on an open slot removes that offering.
 
-**Not yet implemented:** a cash-up worksheet or a card-processor total.
+**Not yet implemented:** a tax worksheet. The end-of-day screen is the payment-method total, not a filing.
