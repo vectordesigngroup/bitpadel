@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 /**
  * Fixed-window counter kept in memory for one process.
  * A club box runs as a single instance; the limit resets when the process restarts.

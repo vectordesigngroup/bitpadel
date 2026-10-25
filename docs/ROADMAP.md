@@ -12,6 +12,7 @@
 - [x] **NFC member cards.** NTAG 424 DNA SUN and a DESFire proof, with enroll, revoke, and lost. UID-only mode is an explicit insecure switch and defaults off. Card programming is in [`nfc-card-programming.md`](nfc-card-programming.md).
 - [x] **Profiles and guest check-in.** Optional name, phone, email, and photo; household; on-site list; guest cap; waiver; marketing opt-in stored apart from the visit. The notice template is [`templates/privacy-notice.md`](../templates/privacy-notice.md). It is not legal advice.
 - [x] **Read-only Playtomic sync.** Optional import of bookings and payments. Imported time blocks Lightning holds. Two-way sync stays with Playtomic Connect. Scraped integrations are out of scope.
+- [x] **Staff and operator manuals.** [`docs/manuals`](manuals/README.md) covers daily operations, admin, installation, maintenance, troubleshooting, security, training, emergencies, and contributors, plus one-page desk cards. Gaps the software does not cover are marked in those pages.
 - [ ] Open workshop slide deck for the small-business Lightning curriculum.
 - [ ] Spreadsheet version of the financial model (with charts).
 - [ ] Translations (Spanish first).

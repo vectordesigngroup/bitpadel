@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { timingSafeEqual } from "node:crypto";
 
 /** Constant-time string compare. Unequal lengths still walk a buffer so they are not a fast path. */

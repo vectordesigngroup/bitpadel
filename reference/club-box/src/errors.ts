@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 /** Expected client or webhook failure with an HTTP status. */
 export class AppError extends Error {
   readonly status: number;

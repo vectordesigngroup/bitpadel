@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 type PartMap = Record<string, string>;
 
 function partsInZone(date: Date, timeZone: string): PartMap {
@@ -66,10 +69,18 @@ export function zonedLocalToUtc(ymd: string, hm: string, timeZone: string): Date
 
 /** Minutes since local midnight in the club timezone. */
 export function minutesOfDay(date: Date, timeZone: string): number {
+  return zonedClock(date, timeZone).minutes;
+}
+
+/** Civil weekday (0 Sunday) and minutes since midnight in the club timezone. */
+export function zonedClock(date: Date, timeZone: string): { weekday: number; minutes: number } {
   const parts = partsInZone(date, timeZone);
   let hour = partNumber(parts, "hour");
   if (hour === 24) hour = 0;
-  return hour * 60 + partNumber(parts, "minute");
+  const weekday = new Date(
+    Date.UTC(partNumber(parts, "year"), partNumber(parts, "month") - 1, partNumber(parts, "day")),
+  ).getUTCDay();
+  return { weekday, minutes: hour * 60 + partNumber(parts, "minute") };
 }
 
 export function isValidTimeZone(timeZone: string): boolean {

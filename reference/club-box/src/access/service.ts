@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
 import { recordArrival, publicCheckin, type CheckinPublic } from "../checkin/service.js";
@@ -5,6 +8,9 @@ import { immediate, many, one } from "../db.js";
 import { AppError, LnurlError } from "../errors.js";
 import { newId, newK1 } from "../ids.js";
 import { log } from "../log.js";
+import { entryGrant } from "./booking-entry.js";
+import { notifyAdminAlert } from "../notify/service.js";
+import type { Notifier } from "../notify/types.js";
 import type { RateLimiter } from "../rate-limit.js";
 import { minutesOfDay } from "../time.js";
 import { encodeLnurl } from "./lnurl.js";
@@ -17,6 +23,7 @@ export type AccessDeps = {
   door: DoorController;
   now: () => Date;
   callbacks: RateLimiter;
+  notifier?: Notifier;
 };
 
 export type ChallengeView = {
@@ -233,7 +240,7 @@ export function revokeKey(db: Database.Database, keyId: string, now: Date): void
 
 export function mintUnlockChallenge(deps: AccessDeps, area: string): ChallengeView {
   const now = deps.now();
-  if (!areaIsOpen(now, area, deps.config)) {
+  if (!areaIsOpen(now, area, deps.config) && !deps.config.bookingEntry) {
     throw new AppError(403, "That area is closed right now");
   }
   return insertChallenge(deps, { purpose: "unlock", area, memberId: null });
@@ -351,9 +358,18 @@ export async function finishEntry(
   },
 ): Promise<CheckinPublic> {
   if (!deps.config.areas.includes(input.area)) throw new AppError(400, "Unknown area");
-  if (!areaIsOpen(deps.now(), input.area, deps.config)) throw new AppError(403, "That area is closed right now");
   const member = one<{ status: string }>(deps.db, "SELECT status FROM members WHERE id = ?", input.memberId);
   if (!member || member.status !== "active") throw new AppError(403, "Membership is not active");
+  const grant = entryGrant(
+    deps.db,
+    deps.config,
+    input.memberId,
+    deps.now(),
+    areaIsOpen(deps.now(), input.area, deps.config),
+  );
+  if (!grant.ok) {
+    throw new AppError(403, grant.reason === "no-booking" ? "No confirmed booking covers this time." : "That area is closed right now");
+  }
   const auditId = newId("aud");
   const pulse = await deps.door.pulseEntry({
     area: input.area,
@@ -375,6 +391,13 @@ export async function finishEntry(
       credentialRef: input.credentialRef,
     });
     log("error", "entry pulse failed", { area: input.area, reason: pulse.reason });
+    if (deps.notifier) {
+      await notifyAdminAlert(
+        deps.notifier,
+        deps.config,
+        `Entry pulse failed for area ${input.area} (${pulse.reason}). People can still leave. This software does not release doors for fire.`,
+      );
+    }
     throw new AppError(502, "Entry controller did not respond. Use a fob, PIN, or staff.");
   }
   writeAudit(deps.db, {
@@ -385,7 +408,7 @@ export async function finishEntry(
     pubkey: input.pubkey,
     memberId: input.memberId,
     result: "unlocked",
-    reason: "unlocked",
+    reason: grant.reason === "booking-window" ? "booking-window" : "unlocked",
     doorResult: "pulsed",
     credentialType: input.credentialType,
     credentialRef: input.credentialRef,
@@ -524,10 +547,13 @@ function decideUnlock(deps: AccessDeps, input: { k1: string; sig: string; key: s
     deny(deps, { k1, pubkey: key, area: challenge.area, memberId: member.id, reason: "unknown-area" });
     return { ok: false, message: "That area is not available." };
   }
-  if (!areaIsOpen(deps.now(), challenge.area, deps.config)) {
-    finishChallenge(deps.db, k1, "outside-hours");
-    deny(deps, { k1, pubkey: key, area: challenge.area, memberId: member.id, reason: "outside-hours" });
-    return { ok: false, message: "That area is closed right now." };
+  const grant = entryGrant(deps.db, deps.config, member.id, deps.now(), areaIsOpen(deps.now(), challenge.area, deps.config));
+  if (!grant.ok) {
+    const reason = grant.reason === "no-booking" ? "no-booking" : "outside-hours";
+    const message = grant.reason === "no-booking" ? "No confirmed booking covers this time." : "That area is closed right now.";
+    finishChallenge(deps.db, k1, reason);
+    deny(deps, { k1, pubkey: key, area: challenge.area, memberId: member.id, reason });
+    return { ok: false, message };
   }
   return { ok: true, area: challenge.area, memberId: member.id, auditId: newId("aud") };
 }

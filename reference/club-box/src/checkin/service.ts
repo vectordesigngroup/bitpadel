@@ -1,11 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
 import { isUniqueError, many, one } from "../db.js";
 import { AppError } from "../errors.js";
 import { newId } from "../ids.js";
+import type { ObjectStorage } from "../storage/types.js";
 import { localDayBounds } from "../time.js";
 
 export type CheckinPublic = {
@@ -273,43 +276,45 @@ export function onSiteNow(db: Database.Database, config: AppConfig, now: Date): 
   return { members, guestCount, headcount: members.length + guestCount };
 }
 
-export function saveMemberPhoto(
+export async function saveMemberPhoto(
   db: Database.Database,
   config: AppConfig,
+  storage: ObjectStorage,
   memberId: string,
   bytes: Buffer,
   contentType: string,
-): void {
-  const member = one<{ id: string }>(db, "SELECT id FROM members WHERE id = ?", memberId);
+): Promise<void> {
+  const member = one<{ id: string; photo_path: string | null }>(
+    db,
+    "SELECT id, photo_path FROM members WHERE id = ?",
+    memberId,
+  );
   if (!member) throw new AppError(404, "Membership was not found");
-  if (bytes.length > 200 * 1024) throw new AppError(400, "Photo must be 200 KB or smaller");
+  if (bytes.length > config.photoMaxBytes) {
+    throw new AppError(400, `Photo must be ${config.photoMaxBytes} bytes or smaller`);
+  }
   const ext = extensionFor(bytes, contentType);
-  mkdirSync(config.photoDir, { recursive: true });
   const filename = `${memberId}.${ext}`;
-  const full = path.resolve(config.photoDir, filename);
-  if (!full.startsWith(path.resolve(config.photoDir) + path.sep)) throw new AppError(400, "Photo path is invalid");
-  writeFileSync(full, bytes);
+  await storage.put(filename, bytes, contentType);
+  if (member.photo_path && member.photo_path !== filename) {
+    await storage.delete(member.photo_path);
+  }
   db.prepare("UPDATE members SET photo_path = ? WHERE id = ?").run(filename, memberId);
 }
 
-export function readPhotoFile(
+export async function readPhotoFile(
   db: Database.Database,
-  config: AppConfig,
+  storage: ObjectStorage,
   memberId: string,
-): { bytes: Buffer; contentType: string } | null {
+): Promise<{ bytes: Buffer; contentType: string } | null> {
   const row = one<{ photo_path: string | null }>(db, "SELECT photo_path FROM members WHERE id = ?", memberId);
   if (!row?.photo_path) return null;
-  const full = path.resolve(config.photoDir, row.photo_path);
-  const root = path.resolve(config.photoDir) + path.sep;
-  if (!full.startsWith(root)) return null;
-  const ext = path.extname(full).slice(1);
+  const ext = path.extname(row.photo_path).slice(1);
   const contentType = PHOTO_TYPES[ext];
   if (!contentType) return null;
-  try {
-    return { bytes: readFileSync(full), contentType };
-  } catch {
-    return null;
-  }
+  const stored = await storage.get(row.photo_path);
+  if (!stored) return null;
+  return { bytes: stored.bytes, contentType };
 }
 
 export function memberIdForCheckin(db: Database.Database, checkinId: string, token: string): string {

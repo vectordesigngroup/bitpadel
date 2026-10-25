@@ -1,4 +1,7 @@
-export type DoorBackendName = "mock" | "http";
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
+export type DoorBackendName = "mock" | "http" | "gpio" | "serial";
 
 export type DoorPulse = {
   area: string;
@@ -12,7 +15,9 @@ export type DoorPulseResult =
 
 /**
  * Entry pulse only. Implementations must not add a lock, hold-shut, egress,
- * or life-safety command. Egress stays on hardware this software cannot reach.
+ * or life-safety command. `controlsEgress` and `controlsLifeSafety` stay false.
+ * Fire-alarm release is wired at the hardware level. This software never
+ * blocks egress and never pulses a fire-release circuit.
  */
 export interface DoorController {
   readonly name: DoorBackendName;

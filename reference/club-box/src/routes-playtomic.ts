@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { listCalendar } from "./booking/source.js";
 import { staffBookingsToday } from "./checkin/service.js";
 import type { AppDeps } from "./deps.js";
@@ -34,13 +37,13 @@ function calendar(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function maps(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendJson(req.res, 200, { maps: listCourtMaps(ctx.db) });
   return Promise.resolve();
 }
 
 function createMap(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const created = mapPlaytomicCourt(
     ctx.db,
@@ -52,34 +55,34 @@ function createMap(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function removeMap(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   deleteCourtMap(ctx.db, req.params.id ?? "");
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 async function sync(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   if (!ctx.playtomic || !ctx.config.playtomic) throw new AppError(404, "Playtomic is not configured");
   const report = await syncPlaytomic(ctx.db, ctx.config, ctx.playtomic, ctx.now());
   sendJson(req.res, 200, { report });
 }
 
 function conflicts(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireStaff(req, ctx.config.adminToken, ctx.config.staffToken);
+  requireStaff(req, ctx);
   sendJson(req.res, 200, { conflicts: listOpenConflicts(ctx.db) });
   return Promise.resolve();
 }
 
 function resolve(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireStaff(req, ctx.config.adminToken, ctx.config.staffToken);
+  requireStaff(req, ctx);
   resolveConflict(ctx.db, req.params.id ?? "", ctx.now());
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 function today(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireStaff(req, ctx.config.adminToken, ctx.config.staffToken);
+  requireStaff(req, ctx);
   sendJson(req.res, 200, { bookings: staffBookingsToday(ctx.db, ctx.config, ctx.now()) });
   return Promise.resolve();
 }

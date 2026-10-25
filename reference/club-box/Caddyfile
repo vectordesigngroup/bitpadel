@@ -1,0 +1,6 @@
+# TLS in front of the app. This process does not issue certificates.
+# SITE_ADDRESS=localhost uses Caddy's local certificate.
+# Set SITE_ADDRESS to the public hostname (for example club.example) for a public certificate.
+{$SITE_ADDRESS:localhost} {
+	reverse_proxy club-box:3000
+}

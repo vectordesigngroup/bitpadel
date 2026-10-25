@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 const statusEl = document.querySelector("#status");
 const slotsEl = document.querySelector("#slots");
 const courtsEl = document.querySelector("#courts");
@@ -29,6 +32,16 @@ function formatMinor(amount, currency, decimals) {
 
 async function load() {
   health = await getJson("/api/health");
+  const payWith = document.querySelector("#pay-with");
+  for (const name of health.cardProviders || []) {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "method";
+    input.value = name;
+    label.append(input, document.createTextNode(name === "stripe" ? " Card (Stripe)" : " Card (Square)"));
+    payWith.append(label);
+  }
   const courts = await getJson("/api/courts");
   courtsEl.replaceChildren();
   const all = document.createElement("button");
@@ -74,7 +87,11 @@ async function loadSlots() {
     const when = document.createElement("p");
     when.textContent = `${new Date(slot.startsAt).toLocaleString()} – ${new Date(slot.endsAt).toLocaleString()}`;
     const price = document.createElement("p");
-    price.textContent = formatMinor(slot.priceMinor, slot.currency, health.currencyDecimals);
+    const guest = slot.guestPriceMinor ?? slot.priceMinor;
+    const member = slot.memberPriceMinor ?? guest;
+    price.textContent = guest === member
+      ? formatMinor(guest, slot.currency, health.currencyDecimals)
+      : `Guest ${formatMinor(guest, slot.currency, health.currencyDecimals)} · Member ${formatMinor(member, slot.currency, health.currencyDecimals)}`;
     const state = document.createElement("p");
     state.className = "note";
     state.textContent = slot.blocked ? "Imported booking covers this time" : slot.status;
@@ -82,7 +99,7 @@ async function loadSlots() {
     if (slot.status === "open" && !slot.blocked) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = "Hold and get invoice";
+      button.textContent = "Hold this time";
       button.addEventListener("click", () => hold(slot.id, button));
       block.append(button);
     }
@@ -122,7 +139,14 @@ async function hold(slotId, button) {
     const data = await getJson("/api/holds", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slotId }),
+      body: JSON.stringify({
+        slotId,
+        method: document.querySelector("input[name=method]:checked")?.value || "lightning",
+        receiptEmail: document.querySelector("#receipt-email").value.trim() || undefined,
+        reminderEmail: document.querySelector("#reminder-email").checked,
+        reminderSms: document.querySelector("#reminder-sms").checked,
+        reminderPhone: document.querySelector("#reminder-phone").value.trim() || undefined,
+      }),
     });
     showInvoice(data.hold);
   } catch (error) {
@@ -133,13 +157,20 @@ async function hold(slotId, button) {
 
 function showInvoice(hold) {
   invoiceEl.hidden = false;
-  document.querySelector("#invoice-qr").src = `/api/holds/${hold.id}/qr.png`;
-  document.querySelector("#invoice-qr").alt = hold.payable ? "Lightning invoice QR" : "Mock invoice QR, not payable";
+  const card = hold.paymentMethod === "stripe" || hold.paymentMethod === "square";
+  document.querySelector("#invoice-qr").hidden = card;
+  if (!card) {
+    document.querySelector("#invoice-qr").src = `/api/holds/${hold.id}/qr.png`;
+    document.querySelector("#invoice-qr").alt = hold.payable ? "Lightning invoice QR" : "Mock invoice QR, not payable";
+  }
   document.querySelector("#invoice-amount").textContent = formatMinor(hold.amountMinor, hold.currency, health.currencyDecimals);
-  document.querySelector("#bolt11").textContent = hold.bolt11;
-  document.querySelector("#invoice-note").textContent = hold.payable
-    ? "Pay this invoice from a Lightning wallet. The booking confirms when the payment settles."
-    : "Mock backend: this invoice cannot be paid. Confirm it from the admin page. A real BTCPay or LNbits backend replaces this.";
+  document.querySelector("#bolt11").textContent = card ? hold.checkoutUrl || "" : hold.bolt11;
+  document.querySelector("#invoice-title").textContent = card ? "Card checkout" : "Lightning invoice";
+  document.querySelector("#invoice-note").textContent = card
+    ? "Continue on the card provider's page. The booking confirms when their webhook arrives. Test mode does not charge a real card."
+    : hold.payable
+      ? "Pay this invoice from a Lightning wallet. The booking confirms when the payment settles."
+      : "Mock backend: this invoice cannot be paid. Confirm it from the admin page. A real BTCPay or LNbits backend replaces this.";
   poll(hold.id);
 }
 

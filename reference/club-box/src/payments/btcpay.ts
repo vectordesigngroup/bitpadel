@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { createHmac } from "node:crypto";
 import { AppError } from "../errors.js";
 import { btcStringToSats, minorToMajorString } from "../money.js";
@@ -6,9 +9,12 @@ import { isRecord } from "../validate.js";
 import type { BtcpayConfig } from "../config.js";
 import { requestJson } from "./http.js";
 import type {
+  BackendHealth,
   InvoiceCreated,
   InvoiceRequest,
   PaymentBackend,
+  RefundRequest,
+  RefundResult,
   WebhookInput,
   WebhookInterpretation,
 } from "./types.js";
@@ -89,6 +95,48 @@ export class BtcpayPaymentBackend implements PaymentBackend {
     }
     return { kind: "ignore" };
   }
+
+  async refund(input: RefundRequest): Promise<RefundResult> {
+    const store = encodeURIComponent(this.config.storeId);
+    const invoiceId = encodeURIComponent(input.invoiceId);
+    const created = await requestJson(
+      `${this.config.url}/api/v1/stores/${store}/invoices/${invoiceId}/refund`,
+      {
+        method: "POST",
+        headers: { authorization: `token ${this.config.apiKey}` },
+        body: {
+          paymentMethod: this.config.paymentMethod,
+          name: input.reason.slice(0, 80),
+        },
+      },
+    );
+    const refundId = isRecord(created) && typeof created.id === "string" ? created.id : `btcpay_${input.invoiceId}`;
+    return { supported: true, refundId, status: "submitted" };
+  }
+
+  async health(): Promise<BackendHealth> {
+    const store = encodeURIComponent(this.config.storeId);
+    try {
+      const body = await requestJson(
+        `${this.config.url}/api/v1/stores/${store}/lightning/BTC/balance`,
+        {
+          method: "GET",
+          headers: { authorization: `token ${this.config.apiKey}` },
+        },
+      );
+      return {
+        ok: true,
+        detail: "BTCPay Lightning balance endpoint responded",
+        balanceSats: balanceSats(body),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        detail: error instanceof Error ? error.message : "BTCPay balance check failed",
+        balanceSats: null,
+      };
+    }
+  }
 }
 
 export function verifyBtcpaySignature(rawBody: Buffer, header: string | undefined, secret: string): boolean {
@@ -132,6 +180,13 @@ function bolt11Of(method: Record<string, unknown>): string | null {
   const link = stringField(method, "paymentLink").replace(/^lightning:/i, "");
   if (BOLT11.test(destination)) return destination;
   if (BOLT11.test(link)) return link;
+  return null;
+}
+
+function balanceSats(body: unknown): number | null {
+  if (!isRecord(body)) return null;
+  if (typeof body.balance === "number" && Number.isFinite(body.balance)) return Math.floor(body.balance);
+  if (typeof body.balance === "string" && /^\d+$/.test(body.balance)) return Number(body.balance);
   return null;
 }
 

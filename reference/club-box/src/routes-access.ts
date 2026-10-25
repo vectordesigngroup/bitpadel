@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import type { AccessDeps } from "./access/service.js";
 import {
   addHouseholdMember,
@@ -18,10 +21,13 @@ import {
   checkout,
 } from "./checkin/service.js";
 import type { AppDeps } from "./deps.js";
+import { one } from "./db.js";
 import { AppError } from "./errors.js";
 import { readJson, requireAdmin, requireStaff, sendBytes, sendJson, sendText, type HttpReq, type Route } from "./http.js";
+import { log } from "./log.js";
 import { issueCard, presentCard, setCardStatus } from "./nfc/entry.js";
 import type { CardPresentation } from "./nfc/reader.js";
+import { sendHouseholdNotice, sendPrivacyLink } from "./notify/service.js";
 import { asObject, assertAreaId, requiredInt, requiredString } from "./validate.js";
 
 export function accessRoutes(ctx: AppDeps): Route[] {
@@ -121,7 +127,7 @@ function guestCount(req: HttpReq, ctx: AppDeps): Promise<void> {
   return Promise.resolve();
 }
 
-function namedGuest(req: HttpReq, ctx: AppDeps): Promise<void> {
+async function namedGuest(req: HttpReq, ctx: AppDeps): Promise<void> {
   const body = asObject(readJson(req));
   const kind = requiredString(body, "contactKind", 16);
   if (kind !== "email" && kind !== "phone") throw new AppError(400, "contactKind must be email or phone");
@@ -129,16 +135,25 @@ function namedGuest(req: HttpReq, ctx: AppDeps): Promise<void> {
   if (body.marketingConsent !== undefined && typeof body.marketingConsent !== "boolean") {
     throw new AppError(400, "marketingConsent must be boolean");
   }
+  const contactValue = requiredString(body, "contactValue", 200);
   const created = addNamedGuest(ctx.db, ctx.config, req.params.id ?? "", requiredString(body, "token", 80), {
     displayName: requiredString(body, "displayName", 80),
     contactKind: kind,
-    contactValue: requiredString(body, "contactValue", 200),
+    contactValue,
     waiverAccepted: body.waiverAccepted === true,
     marketingConsent: marketing,
     now: ctx.now(),
   });
+  try {
+    await sendPrivacyLink(ctx.notifier, ctx.config, {
+      contactKind: kind,
+      to: contactValue,
+      privacyToken: created.privacyToken,
+    });
+  } catch (error) {
+    log("error", "privacy link failed", { error: error instanceof Error ? error.message : "error" });
+  }
   sendJson(req.res, 201, { guestId: created.guestId, privacyToken: created.privacyToken });
-  return Promise.resolve();
 }
 
 function removeGuest(req: HttpReq, ctx: AppDeps): Promise<void> {
@@ -154,7 +169,7 @@ function checkinPhoto(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function profile(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const guestLimit = body.guestLimit;
   let limit: number | null | undefined;
@@ -173,19 +188,25 @@ function profile(req: HttpReq, ctx: AppDeps): Promise<void> {
   return Promise.resolve();
 }
 
-function photo(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+async function photo(req: HttpReq, ctx: AppDeps): Promise<void> {
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
-  const encoded = requiredString(body, "data", 400_000);
+  const encoded = requiredString(body, "data", 2_000_000);
   const bytes = Buffer.from(encoded, "base64");
   if (bytes.length === 0) throw new AppError(400, "Photo data is empty");
-  saveMemberPhoto(ctx.db, ctx.config, req.params.id ?? "", bytes, requiredString(body, "contentType", 40));
+  await saveMemberPhoto(
+    ctx.db,
+    ctx.config,
+    ctx.storage,
+    req.params.id ?? "",
+    bytes,
+    requiredString(body, "contentType", 40),
+  );
   sendJson(req.res, 200, { ok: true });
-  return Promise.resolve();
 }
 
 function enrollCard(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const scheme = requiredString(body, "scheme", 32);
   if (scheme !== "ntag424-sun" && scheme !== "desfire" && scheme !== "uid-insecure") {
@@ -205,37 +226,59 @@ function enrollCard(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function cardStatus(req: HttpReq, ctx: AppDeps, status: "revoked" | "lost"): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   setCardStatus(ctx.db, req.params.id ?? "", status, ctx.now());
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
-function household(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+async function household(req: HttpReq, ctx: AppDeps): Promise<void> {
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
-  const created = createHousehold(
-    ctx.db,
-    requiredString(body, "label", 80),
-    requiredString(body, "primaryMemberId", 80),
-    ctx.now(),
-  );
+  const primaryMemberId = requiredString(body, "primaryMemberId", 80);
+  const created = createHousehold(ctx.db, requiredString(body, "label", 80), primaryMemberId, ctx.now());
+  try {
+    await sendHouseholdNotice(
+      ctx.db,
+      ctx.notifier,
+      primaryMemberId,
+      "A household was created and this membership is the primary contact. This notice is transactional.",
+    );
+  } catch (error) {
+    log("error", "household notice failed", { error: error instanceof Error ? error.message : "error" });
+  }
   sendJson(req.res, 201, created);
-  return Promise.resolve();
 }
 
-function householdMember(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+async function householdMember(req: HttpReq, ctx: AppDeps): Promise<void> {
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const role = requiredString(body, "role", 16);
   if (role !== "primary" && role !== "dependent") throw new AppError(400, "role must be primary or dependent");
-  addHouseholdMember(ctx.db, req.params.id ?? "", requiredString(body, "memberId", 80), role);
+  const householdId = req.params.id ?? "";
+  addHouseholdMember(ctx.db, householdId, requiredString(body, "memberId", 80), role);
+  const primary = one<{ primary_member_id: string }>(
+    ctx.db,
+    "SELECT primary_member_id FROM households WHERE id = ?",
+    householdId,
+  );
+  if (primary) {
+    try {
+      await sendHouseholdNotice(
+        ctx.db,
+        ctx.notifier,
+        primary.primary_member_id,
+        "A household membership was updated. This notice is transactional.",
+      );
+    } catch (error) {
+      log("error", "household notice failed", { error: error instanceof Error ? error.message : "error" });
+    }
+  }
   sendJson(req.res, 200, { ok: true });
-  return Promise.resolve();
 }
 
 function marketingExport(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   sendText(req.res, 200, marketingCsv(ctx.db), "text/csv; charset=utf-8", {
     "content-disposition": "attachment; filename=\"marketing.csv\"",
   });
@@ -243,7 +286,7 @@ function marketingExport(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function adminUnsubscribe(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireAdmin(req, ctx.config.adminToken);
+  requireAdmin(req, ctx);
   const body = asObject(readJson(req));
   const kind = requiredString(body, "contactKind", 16);
   if (kind !== "email" && kind !== "phone") throw new AppError(400, "contactKind must be email or phone");
@@ -253,20 +296,20 @@ function adminUnsubscribe(req: HttpReq, ctx: AppDeps): Promise<void> {
 }
 
 function onsite(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireStaff(req, ctx.config.adminToken, ctx.config.staffToken);
+  requireStaff(req, ctx);
   sendJson(req.res, 200, onSiteNow(ctx.db, ctx.config, ctx.now()));
   return Promise.resolve();
 }
 
 function staffCheckout(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireStaff(req, ctx.config.adminToken, ctx.config.staffToken);
+  requireStaff(req, ctx);
   checkout(ctx.db, req.params.id ?? "", ctx.now());
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
 }
 
 function staffPhoto(req: HttpReq, ctx: AppDeps): Promise<void> {
-  requireStaff(req, ctx.config.adminToken, ctx.config.staffToken);
+  requireStaff(req, ctx);
   return sendPhoto(req, ctx, req.params.id ?? "");
 }
 
@@ -284,11 +327,10 @@ function privacyDelete(req: HttpReq, ctx: AppDeps): Promise<void> {
   return Promise.resolve();
 }
 
-function sendPhoto(req: HttpReq, ctx: AppDeps, memberId: string): Promise<void> {
-  const photoFile = readPhotoFile(ctx.db, ctx.config, memberId);
+async function sendPhoto(req: HttpReq, ctx: AppDeps, memberId: string): Promise<void> {
+  const photoFile = await readPhotoFile(ctx.db, ctx.storage, memberId);
   if (!photoFile) throw new AppError(404, "Photo was not found");
   sendBytes(req.res, 200, photoFile.bytes, photoFile.contentType);
-  return Promise.resolve();
 }
 
 function presentationFrom(body: Record<string, unknown>, areas: readonly string[]): CardPresentation {
@@ -364,5 +406,6 @@ function accessDeps(ctx: AppDeps): AccessDeps {
     door: ctx.door,
     now: ctx.now,
     callbacks: ctx.limiters.callbacks,
+    notifier: ctx.notifier,
   };
 }
