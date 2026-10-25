@@ -32,6 +32,7 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 | [`docs/07-sponsorship-playbook.md`](docs/07-sponsorship-playbook.md) | Sponsorship (not investment) packages and how to sell them |
 | [`docs/08-treasury-policy-considerations.md`](docs/08-treasury-policy-considerations.md) | Questions to settle with a CPA and attorney before a business holds Bitcoin |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | What's done and what's next |
+| [`docs/lnurl-club-ideas.md`](docs/lnurl-club-ideas.md) | Design notes: member vending, lockers, booking-gated equipment and other LNURL ideas |
 | [`docs/manuals/`](docs/manuals/README.md) | Staff and operator manuals, including how a club plugs in its own providers |
 | [`reference/club-box`](reference/club-box) | Self-hosted Lightning booking, LNURL-auth and NFC entry, check-in, and optional read-only Playtomic sync |
 | [`templates/`](templates/) | Blank financial model (CSV with formulas), founding-member page, event run-of-show, sponsor one-pager |
