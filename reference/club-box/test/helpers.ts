@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -10,6 +13,8 @@ import { openDatabase } from "../src/db.js";
 import { createDoorController } from "../src/doors/index.js";
 import { MockDoorController } from "../src/doors/mock.js";
 import { listen } from "../src/http.js";
+import { createNotifier } from "../src/notify/index.js";
+import type { Notifier } from "../src/notify/types.js";
 import { createPaymentBackend } from "../src/payments/index.js";
 import { createClubServer } from "../src/server.js";
 
@@ -23,6 +28,7 @@ export type RunningApp = {
   db: Database.Database;
   databasePath: string;
   door: MockDoorController;
+  notifier: Notifier;
   setNow: (date: Date) => void;
   now: () => Date;
   close: () => Promise<void>;
@@ -53,11 +59,13 @@ export async function startTestApp(overrides: Env = {}): Promise<RunningApp> {
   if (!(door instanceof MockDoorController) && (overrides.DOOR_BACKEND ?? "mock") === "mock") {
     throw new Error("expected the mock door");
   }
+  const notifier = createNotifier(config);
   const server = createClubServer({
     config,
     db,
     payments,
     door,
+    notifier,
     now: () => current,
   });
   await listen(server, 0, "127.0.0.1");
@@ -70,6 +78,7 @@ export async function startTestApp(overrides: Env = {}): Promise<RunningApp> {
     db,
     databasePath,
     door: door as MockDoorController,
+    notifier,
     now: () => current,
     setNow: (date: Date) => {
       current = date;

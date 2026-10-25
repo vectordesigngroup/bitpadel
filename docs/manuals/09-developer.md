@@ -2,7 +2,7 @@
 
 How the reference app is put together, and how to change it without inventing a second product. Contributor rules are in [`CONTRIBUTING.md`](../../CONTRIBUTING.md): no personal data, no secrets in git, no investment language, and door safety stays entry-only.
 
-Docs in this folder are CC BY-SA 4.0, with the other playbooks. Code under `reference/club-box` is MIT. See the [licenses](../../README.md#license).
+Docs in this folder are CC BY-SA 4.0, with the other playbooks. Code under `reference/club-box` is AGPL-3.0-only. See the [licenses](../../README.md#license).
 
 ## Architecture
 
@@ -66,7 +66,7 @@ There is no separate test framework config and no browser test suite in the repo
 
 ## Add a payment backend
 
-The union is `PaymentBackendName` in `src/config.ts` (`mock`, `btcpay`, `lnbits`). The interface is `src/payments/types.ts`: `createInvoice` and `interpretWebhook`.
+The union is `PaymentBackendName` in `src/config.ts` (`mock`, `btcpay`, `lnbits`). The interface is `src/payments/types.ts`: `createInvoice`, `interpretWebhook`, `refund`, and `health`. A backend that cannot refund returns `{ supported: false, reason }` with a clear "not supported by this backend" reason, or throws `PaymentError` when the call itself fails.
 
 1. Add the name to the union and to the allowed-values list in `src/config.ts`.
 2. Parse any new environment variables only when that backend is selected. Do not require them for `mock`.
@@ -75,6 +75,8 @@ The union is `PaymentBackendName` in `src/config.ts` (`mock`, `btcpay`, `lnbits`
 5. Map settlement to `kind: "settled"` and expiry to `kind: "expired"`. Anything else is `ignore`. Do not confirm a booking on a pending notice.
 6. Add tests beside `test/settlement.test.ts`. Use a tiny fixture amount.
 7. Document the variables in `.env.example` and in the club-box README. Do not add a hard-coded price.
+
+Email, SMS, storage, backup destinations, and door drivers follow the same pattern. The operator steps are in [integrations](10-integrations.md). `npm run card:desfire` is a stub. DESFire personalization and a DESFire reader bridge are interfaces that throw "not implemented". NTAG 424 programming and server-side DESFire proof checks stay as they are.
 
 Webhooks must check a secret (HMAC for BTCPay, path secret for LNbits). Follow redirects nowhere on the door client. Payment HTTP helpers live in `src/payments/http.ts`.
 
@@ -86,7 +88,7 @@ Existing presentations are `sun`, `desfire`, and `uid-insecure`. The switch in `
 2. Reject the scheme unless the server has the keys it needs. UID-only stays behind `NFC_UID_MODE=insecure-dev`.
 3. Store a rolling counter if the scheme has one, and refuse replays.
 4. The programming CLI (`src/nfc/program-cli.ts`) writes NTAG 424 DNA only. A new chip needs its own programmer. Do not pretend the dry-run simulator is that chip.
-5. The reader bridge only reads an NDEF URL. A card that does not speak NDEF needs a different bridge. Say so in `docs/nfc-card-programming.md`.
+5. The reader bridge only reads an NDEF URL. A card that does not speak NDEF needs a different bridge. `DesfireReaderBridge` in `src/nfc/desfire-stub.ts` is that extension point and currently throws. Say so in `docs/nfc-card-programming.md`.
 6. Add vectors you can cite. Do not invent a certification.
 
 Door behavior stays `pulse-entry`. Do not add a lock command to make the new card "more useful."

@@ -14,19 +14,23 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test test/*.test.ts",
     "card:program": "tsx src/nfc/program-cli.ts",
-    "reader:bridge": "tsx src/nfc/bridge-cli.ts"
+    "card:desfire": "tsx src/nfc/desfire-cli.ts",
+    "reader:bridge": "tsx src/nfc/bridge-cli.ts",
+    "backup": "tsx src/backup/cli.ts"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^2.2.3",
     "bech32": "^2.0.0",
     "better-sqlite3": "^12.4.1",
+    "nodemailer": "^10.2.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.19.1",
+    "@types/nodemailer": "^6.4.24",
     "@types/qrcode": "^1.5.6",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

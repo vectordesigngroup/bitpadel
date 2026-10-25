@@ -1,0 +1,17 @@
+# Optional CLA reminder. It runs only when a maintainer starts it by hand.
+# It does not call cla-assistant.io, and it does not need a token or an app.
+# To check agreements automatically later, replace this job. Leave it on
+# workflow_dispatch so a missing external service cannot fail pull requests.
+name: CLA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notice:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Point at the agreement in the repository
+        run: |
+          echo "Contributors agree to CLA.md when they open a pull request."
+          echo "No external CLA service is enabled for this repository."

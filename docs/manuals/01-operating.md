@@ -6,14 +6,14 @@ This is not a fire or lock procedure. People leave without this app. If an exit 
 
 ## Before you start
 
-You need the staff token or the admin token. The desk accepts either. Admin pages accept only the admin token. Tokens are long secrets from the manager. They are not passwords you reset on a profile page. **Not yet implemented:** a personal login for each employee.
+You can sign in with a staff username and password, or with the staff token or the admin token. The desk accepts a front-desk account, a coach account, the staff token, or the admin token. Admin pages accept an owner, a manager, or the admin token. Passwords are stored as scrypt hashes. Session tokens are random and only their hash is stored. The legacy tokens stay in `.env` as a bootstrap path. See [integrations](10-integrations.md).
 
 Know which payment mode the club is in. `GET /api/health` includes `paymentBackend`:
 
 - `mock` is for practice. The invoice text starts with `mock-not-payable:` and cannot be paid.
 - `btcpay` or `lnbits` produces a real Lightning invoice. The booking page says the invoice is payable.
 
-Guest count stays at zero until a manager sets `GUEST_LIMIT` to a number above zero, or sets a cap on that member through the API. The kiosk still shows **More**. Pressing it past the cap shows "That is over the guest limit."
+Guest count stays at zero until a manager sets `GUEST_LIMIT` to a number above zero, or sets a cap on that member in Admin. The kiosk still shows **More**. Pressing it past the cap shows "That is over the guest limit."
 
 ## Opening checklist
 
@@ -55,7 +55,7 @@ The preferred card is an NTAG 424 DNA programmed with the club keys. A phone tha
 2. A good tap pulses entry and creates the same check-in panel as a wallet. Credential type on the desk is the card scheme (`ntag424-sun` or `desfire`).
 3. A second tap of the same counter is refused. The screen says the code or card counter was already used.
 
-DESFire EV2 or EV3 can be a credential if a reader completes the card session and posts the proof. **Not yet implemented:** DESFire personalization in `npm run card:program`, and a bridge that runs that session. The bridge only reads an NDEF web address.
+DESFire EV2 or EV3 can be a credential if a reader completes the card session and posts the proof. The server checks that proof. **Not yet implemented:** programming a DESFire card. `npm run card:desfire` exits with that message. `npm run card:program` personalizes NTAG 424 DNA. The reader bridge only reads an NDEF web address.
 
 A plain UID card is refused unless a manager turned on insecure UID mode. Leave that off.
 
@@ -66,8 +66,8 @@ A Bolt Card is a Lightning payment card. It is not a door card. Do not pay with 
 1. After a successful unlock, the member (or you, on the kiosk) presses **More** once per guest who came in with them, up to the cap.
 2. **Fewer** lowers the count. It will not go below the number of named guests already saved. Remove those names first. **Not yet implemented:** a delete-guest button on the kiosk or desk. Deletion is the privacy flow or the admin API.
 3. Press **Name a guest**. The form asks for a name, email or phone, and a waiver acknowledgement. The waiver box starts unchecked and is required.
-4. The marketing box starts unchecked. Leave it unchecked unless the guest asks to hear from the club. The app does not send email or SMS. The consent is only a row for a later export.
-5. Submit. The page says "Guest added. A privacy link was created for this contact." The server stores a privacy token on that guest row. The page does not show the token. **Not yet implemented:** showing or emailing the token, so the desk cannot hand the person a `/privacy` link from this screen. A manager who needs the token has to read it from the database. Opted-in contacts, without the token, are the marketing CSV.
+4. The marketing box starts unchecked. Leave it unchecked unless the guest asks to hear from the club. Marketing messages go only to contacts with an active opt-in. The privacy link is transactional and does not require that box.
+5. Submit. The page says "Guest added. A privacy link was created for this contact." The server stores a privacy token and, when email or SMS is a real provider, sends the `/privacy` link to the contact on the form. That send is transactional and does not require the marketing box. The page still does not show the token. With the default `console` providers, nothing is delivered; the log line redacts the address. Opted-in contacts are the marketing CSV.
 6. The desk guest count is the number on the check-in, not a second person per name. Raise the count before you add the name. If you skip that, the form says "Raise the guest count before adding another name."
 
 A guest email that matches today's Playtomic booking is linked to that booking. The public calendar still does not show the email.
@@ -76,7 +76,7 @@ A guest email that matches today's Playtomic booking is linked to that booking. 
 
 Default membership type ids are `standard` and `household` (`MEMBERSHIP_TYPES`). The desk prints the type next to the name.
 
-A household is a label plus a primary member and optional dependents. It does not set a price, a guest cap, or who may unlock. Each person still needs their own wallet or card. Creating a household is a manager API call. **Not yet implemented:** a household screen, family billing, and a rule that a dependent unlocks because the primary is present.
+A household is a label plus a primary member and optional dependents. It does not set a price, a guest cap, or who may unlock. Each person still needs their own wallet or card. In Admin, **Make household primary** creates the household, and **Add dependent** attaches another member id. If the primary has an email, the app sends a transactional household notice. **Not yet implemented:** family billing, and a rule that a dependent unlocks because the primary is present.
 
 ## Desk view
 
@@ -103,7 +103,7 @@ Holds expire after `HOLD_MINUTES` (default 15). The page then says the hold expi
 
 If the slot says "Imported booking covers this time", do not try to sell that hour on Lightning. Playtomic already has it. The hold API returns "That time is already on the imported calendar."
 
-**Not yet implemented:** emailing a confirmation, a Lightning address or LNURL-pay link, and a shop or lesson product on this page. Shop ideas stay in [Lightning integrations](../04-lightning-integrations.md).
+An optional receipt email on the booking page is sent after settlement when email is not `console`. **Not yet implemented:** a Lightning address or LNURL-pay link, and a shop or lesson product on this page. Shop ideas stay in [Lightning integrations](../04-lightning-integrations.md).
 
 ## Reading Playtomic bookings
 
@@ -123,7 +123,8 @@ Canceled imports stop blocking the slot after the next successful sync.
 1. Tell the player the hold lasts `HOLD_MINUTES`. If they walk away, the slot opens again by itself.
 2. On BTCPay, an expired or invalid invoice releases the hold. Other webhook events are ignored.
 3. On LNbits, a notice that is still pending does not confirm the booking.
-4. If they pay after the hold expired, the app does not book the slot and does not send the sats back. **Not yet implemented:** automatic refunds. Follow the club's written refund rule and the processor's own tools. Write the local-currency amount from the slot or from the bookings CSV for the bookkeeper.
+4. If they pay after the hold expired, the app does not book the slot and does not send the money back by itself. **Not yet implemented:** an automatic refund on expiry. A manager can request a refund for a booking that did settle: Admin **Refund** on that booking. Mock records it. BTCPay calls the store refund endpoint. LNbits pays a customer BOLT11 when you paste one, and otherwise returns "Not supported by this backend" without pretending the sats moved. Stripe and Square refund the card payment after their webhook has stored the provider payment id. Follow the club's written refund rule.
+5. The booking page lists Lightning and any card provider in `CARD_PROVIDERS`. The player picks one. A card hold shows the provider's checkout link instead of a Lightning invoice. **My bookings** (`/account`) emails a one-time code. That code is transactional, not marketing. Inside `CANCEL_WINDOW_HOURS` the player can cancel. `CANCEL_REFUND=full` asks the provider to refund first and keeps the booking if the provider refuses. `0` turns self-cancel off. Reminder checkboxes are a separate opt-in from marketing.
 5. On a mock server, a manager uses **Simulate payment** in Admin. That button is absent when the backend is BTCPay or LNbits.
 6. A second settlement notice for the same invoice does not create a second booking.
 
@@ -142,7 +143,7 @@ Use the [lost-card card](quick-cards/lost-card.md) at the desk, then:
 1. Read the kiosk line. "Entry controller did not respond" means the pulse failed. The app does not try again later.
 2. Let the member in with the fob, PIN, or a staff escort.
 3. Do not block the exit while you troubleshoot. This software cannot lock a door.
-4. Tell a manager. They check the relay process, `DOOR_HTTP_URL`, and `DOOR_HTTP_TOKEN` on the private network. Details are in the [troubleshooting guide](05-troubleshooting.md) and the [door-fault card](quick-cards/door-fault.md).
+4. Tell a manager. They check the relay, `DOOR_BACKEND`, and the matching URL, token, GPIO pin, or serial path. Details are in the [troubleshooting guide](05-troubleshooting.md), the [door-fault card](quick-cards/door-fault.md), and [integrations](10-integrations.md).
 
 ## End of day
 
@@ -150,8 +151,8 @@ There is no close-out button.
 
 1. **Check out** anyone who has left. Anyone still inside can stay on the list.
 2. Skim Admin **Access log** for `door-failed` and denied attempts. Rows older than `LOG_RETENTION_DAYS` (default 90) are deleted.
-3. In Admin, open **Download CSV** if the bookkeeper wants Lightning bookings. The file is the latest 500 settled bookings: court, start, end, minor-unit amount, currency, sats if the backend stored them, payment reference, and confirmed time. The download sends the admin token. It is not a public link. It is not a date filter. It does not include Playtomic payments.
+3. In Admin, open **Download CSV** if the bookkeeper wants the latest 500 settled bookings. For a date range that also includes stored Playtomic payment rows, use **Download sales CSV**. Playtomic rows are ids, status, total text, dates, and product SKU. They omit payer names and tax ids. **End of day** totals Lightning, Stripe, Square, and refunds for one date. **Email summary** sends that text when an owner address is set.
 4. Read desk conflicts once more and leave them for a manager if any are open.
 5. Unpaid holds expire on their own. You do not cancel them one by one unless the slot should not be sold. **Cancel slot** on an open slot removes that offering.
 
-**Not yet implemented:** a cash-up worksheet, a card-processor total, or a combined Lightning-plus-Playtomic revenue report. Playtomic payment rows sit in the `playtomic_payments` table (payment ids, status, total text, dates, product SKU). They omit payer names and tax ids. Nothing in the admin page lists them.
+**Not yet implemented:** a tax worksheet. The end-of-day screen is the payment-method total, not a filing.

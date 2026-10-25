@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { randomBytes } from "node:crypto";
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";

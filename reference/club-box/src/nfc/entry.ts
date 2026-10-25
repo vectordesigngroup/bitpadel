@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import type { AccessDeps } from "../access/service.js";
 import { assertAreaAvailable, finishEntry, recordAudit } from "../access/service.js";
 import { isUniqueError, one } from "../db.js";
@@ -35,7 +38,7 @@ export async function presentCard(
   ip: string,
 ): Promise<{ checkinId: string; token: string; displayName: string }> {
   if (!deps.callbacks.allow(`ip:${ip}`)) throw new AppError(429, "Too many attempts. Wait and try again.");
-  assertAreaAvailable(deps, presentation.area);
+  if (!deps.config.bookingEntry) assertAreaAvailable(deps, presentation.area);
   const card = resolveCard(deps, presentation);
   if (!deps.callbacks.allow(`card:${card.uid}`)) throw new AppError(429, "Too many attempts. Wait and try again.");
   const view = await finishEntry(deps, {

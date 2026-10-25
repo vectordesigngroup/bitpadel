@@ -15,7 +15,7 @@ Read the [disclaimer](../../DISCLAIMER.md) before you talk about Bitcoin with me
 - [ ] Hold a slot on `/` in the mode your club uses. On mock, watch a manager simulate payment. On BTCPay or LNbits, watch a small real payment until "Booked. Payment settled."
 - [ ] Find "Imported booking covers this time" if the club uses Playtomic.
 - [ ] Practice the lost-card handoff: you do not reprogram cards unless you are the manager. You call the manager and keep the old card from being used.
-- [ ] Read the refund rule your club wrote. The app will not send sats back.
+- [ ] Read the refund rule your club wrote. Admin can request a refund for a settled booking. It is not automatic, and LNbits needs a customer BOLT11.
 - [ ] Know where the AED and the posted emergency note are. Write the local emergency number on that posted note, not in this repository.
 - [ ] Complete the quiz below with a manager.
 
@@ -23,7 +23,7 @@ Coaches who do not take payment can stop after the door and guest items. They st
 
 ## Role cards
 
-**Not yet implemented:** these roles inside the app. The software only distinguishes the admin token from the optional staff token.
+The app stores these roles. Front desk and coach share the desk permission. Owners and managers use Admin. A manager cannot create an owner. Shared tokens still work: `ADMIN_TOKEN` is full admin, `STAFF_TOKEN` is desk only.
 
 ### Front desk
 

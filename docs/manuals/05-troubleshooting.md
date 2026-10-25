@@ -40,7 +40,7 @@ Start with the sentence on the screen or the JSON log line. Then use the row bel
 |---|---|---|
 | Invoice text starts with `mock-not-payable:`. | `PAYMENT_BACKEND=mock`. | Expected in practice mode. A manager uses **Simulate payment**. Switch backend only when BTCPay or LNbits is configured. |
 | "Booked. Payment settled." never appears. | Webhook did not arrive, signature failed, LNbits still `pending`, or the invoice is unpaid. | Confirm `PUBLIC_BASE_URL` is reachable from BTCPay or LNbits. Match webhook secrets. On LNbits the path includes `LNBITS_WEBHOOK_SECRET`. |
-| Hold expired and the player says they paid. | Settlement after `HOLD_MINUTES`, or a payment the webhook marked expired. | The slot is not booked. **Not yet implemented:** an automatic refund. Use the processor's tools and the club's written refund rule. |
+| Hold expired and the player says they paid. | Settlement after `HOLD_MINUTES`, or a payment the webhook marked expired. | The slot is not booked. There is no automatic refund. A settled booking can be refunded from Admin when the backend supports it. LNbits without a customer BOLT11 returns a not-supported error. |
 | "That slot is not open" or a second person cannot pay. | Slot is held, booked, or canceled. | Wait for expiry or pick another time. Concurrent holds are rejected on purpose. |
 | "That slot has already started." | Start time is in the past. | Create a later slot. |
 | "That time is already on the imported calendar." | An active mapped Playtomic booking overlaps the slot. | Do not sell it on Lightning. |
@@ -70,7 +70,7 @@ Start with the sentence on the screen or the JSON log line. Then use the row bel
 | Symptom | Likely cause | What to do |
 |---|---|---|
 | Desk name is the membership label, not the person's name. | Display name was left empty. | Save a display name in Admin if your notice allows it. |
-| Photo missing. | No photo stored, or the file was removed from `PHOTO_DIR`. | Upload through the photo API. **Not yet implemented:** an admin-page upload. |
+| Photo missing. | No photo stored, or the file was removed from `PHOTO_DIR`. | Upload a JPEG, PNG, or WebP on the member card in Admin. |
 | Guest form: "Raise the guest count before adding another name." | Named guests cannot exceed the count on the check-in. | Press **More** on the kiosk first. |
 | "That guest count is over the member's limit." | `GUEST_LIMIT` is empty (treated as 0) or the member override is lower. | A manager raises the cap and restarts if they changed `.env`. |
 | Person is on today's Playtomic list but the check-in did not link. | Email and Playtomic player id both failed to match, or the booking is outside the club-local day (`CLUB_TIMEZONE`). | Save the player id or the same email on the member, or put that email on the guest form. Sync so the booking is present. |
