@@ -36,6 +36,7 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 | [`reference/club-box`](reference/club-box) | Self-hosted Lightning booking, LNURL-auth and NFC entry, check-in, and optional read-only Playtomic sync |
 | [`templates/`](templates/) | Blank financial model (CSV with formulas), founding-member page, event run-of-show, sponsor one-pager |
 | [`brand/`](brand/) | Neutral placeholder look you should replace with your own club's brand |
+| [`media/promos/`](media/promos/) | Three 30-second promo videos (16:9 and 9:16) with posters and their Remotion source |
 
 ## Quick start
 
