@@ -12,6 +12,25 @@ services:
       - club-data:/data
     restart: unless-stopped
 
+  # HTTPS in front of the app. Port 3000 stays published for the private network.
+  # SITE_ADDRESS=localhost (the default) uses Caddy's local certificate.
+  # Set SITE_ADDRESS to a public hostname for a public certificate, and set
+  # PUBLIC_BASE_URL to that https origin and TRUST_PROXY=true.
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - club-box
+    restart: unless-stopped
+
   # Optional example entry relay. It is not published on the host.
   # docker compose --profile relay up
   # Set DOOR_BACKEND=http, DOOR_HTTP_URL=http://entry-relay:8787/pulse,
@@ -31,3 +50,5 @@ services:
 
 volumes:
   club-data:
+  caddy-data:
+  caddy-config:

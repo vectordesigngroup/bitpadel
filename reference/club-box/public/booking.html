@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (c) 2026 Daniel Solano and BitPadel contributors -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,19 +14,29 @@
     <nav>
       <a href="/" aria-current="page">Booking</a>
       <a href="/kiosk">Door kiosk</a>
+      <a href="/account">My bookings</a>
       <a href="/admin">Admin</a>
     </nav>
   </header>
   <main>
     <h1>Book a court</h1>
-    <p class="note">The price on a slot is the one your club saved in admin. This page does not choose a price.</p>
+    <p class="note">Prices follow the club's rules. Log in on <a href="/account">your bookings</a> with the email on a membership to get the member price.</p>
+    <fieldset id="pay-with">
+      <legend>Pay with</legend>
+      <label><input type="radio" name="method" value="lightning" checked> Lightning</label>
+    </fieldset>
     <label>Receipt email, optional
       <input id="receipt-email" type="email" maxlength="200" autocomplete="email">
     </label>
+    <label><input id="reminder-email" type="checkbox"> Email me a reminder before this booking</label>
+    <label>Reminder phone, only if you want a text
+      <input id="reminder-phone" type="tel" maxlength="32" autocomplete="tel">
+    </label>
+    <label><input id="reminder-sms" type="checkbox"> Text me a reminder. This is not marketing.</label>
     <div id="courts" class="row"></div>
     <div id="slots"></div>
     <section id="invoice" hidden>
-      <h2>Lightning invoice</h2>
+      <h2 id="invoice-title">Lightning invoice</h2>
       <p id="invoice-note"></p>
       <img id="invoice-qr" alt="Invoice QR" width="280" height="280">
       <p id="invoice-amount"></p>

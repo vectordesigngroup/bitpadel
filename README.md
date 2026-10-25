@@ -1,5 +1,9 @@
 # BitPadel
 
+[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
+
+> **Prototype — not yet tested with real money or real doors.**
+
 **An open "Bitcoin padel club in a box" kit.** Playbooks, templates and checklists for anyone starting a Bitcoin-friendly padel (and pickleball) club, from a single pilot court to a flagship venue.
 
 > **Status:** early draft (v0.1). Playbooks and templates, plus a self-hosted reference app for Lightning booking, LNURL-auth and NFC entry, check-in, and optional read-only Playtomic sync in [`reference/club-box`](reference/club-box). Door-hardware notes are in that app's [compatible door hardware](reference/club-box/README.md#compatible-door-hardware) section. See the [roadmap](docs/ROADMAP.md) for what is still ahead.
@@ -7,7 +11,7 @@
 
 ## The idea
 
-Padel is one of the fastest-growing racquet sports, and most cities still have few or no courts. Bitcoin adoption grows the same way padel does: one person shows a friend, then a group, then a whole community. A BitPadel club puts both in the same room.
+Padel is a racquet sport played on an enclosed court, and many cities still have few or no courts. A BitPadel club puts padel and Bitcoin in the same room: one person shows a friend, then a group, then a whole community.
 
 ### Mission: a different way to "mine" Bitcoin
 
@@ -52,6 +56,8 @@ Club founders, coaches, Bitcoin educators and Lightning developers are welcome. 
 
 ## License
 
-- Code: [MIT](LICENSE)
+- Code: [AGPL-3.0-only](LICENSE)
 - Docs, playbooks, templates and brand placeholders: [CC BY-SA 4.0](LICENSE-docs)
 - Names and logos: not licensed, see [TRADEMARKS.md](TRADEMARKS.md)
+
+Commercial or other dual licensing is available on request. This page does not list prices.

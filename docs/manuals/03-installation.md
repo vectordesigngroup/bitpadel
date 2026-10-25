@@ -20,7 +20,7 @@ No prices and no catalog numbers beyond names already used in this repo as categ
 | Fallback entry | Fob, PIN, or staff. Not implemented in this app. Required so a dead server does not trap people outside, and never required for leaving. |
 | NFC cards | NTAG 424 DNA for the programming command. Factory keys are 16 zero bytes and must be changed before the card is a credential. DESFire EV2 or EV3 can be enrolled as a scheme. This repo does not personalize them. |
 | NFC reader | A PC/SC reader on the programming computer. The card-programming doc names ACR122U-class and ACR1252-class readers as examples of that category. The server image does not include `pcscd`. A phone that opens the card URL is the other reader. |
-| Network | Internet so phones and BTCPay or LNbits can reach `PUBLIC_BASE_URL`. The relay stays on a private network. TLS is terminated in front of the app. **Not yet implemented:** a proxy container in this Compose file. |
+| Network | Internet so phones and BTCPay or LNbits can reach `PUBLIC_BASE_URL`. The relay stays on a private network. TLS is the Caddy service in this Compose file, or another proxy you already run. |
 | Playtomic | No extra hardware. A Champion or Master plan and API credentials. Optional. |
 
 ## Server setup without Docker
@@ -63,7 +63,11 @@ The example relay is profile `relay`. It is not published on the host. It runs `
 docker compose --profile relay up --build
 ```
 
-Put TLS in front (the club-box README names Caddy or nginx as examples). Set `PUBLIC_BASE_URL` to that HTTPS origin. Set `TRUST_PROXY=true` only when that proxy sets `X-Forwarded-For`.
+The Compose file also starts Caddy. It publishes ports 80 and 443 and reverse-proxies `club-box:3000`. Port 3000 stays published for the private network.
+
+`SITE_ADDRESS` defaults to `localhost`, which uses Caddy's local certificate. Browsers will warn until you trust that local CA. For a public name, set `SITE_ADDRESS` to that hostname, point DNS at the host, set `PUBLIC_BASE_URL` to `https://` that name, and set `TRUST_PROXY=true` so the app reads the forwarded client address. Caddy sets `X-Forwarded-For`. The app does not issue certificates itself and does not run its own TLS daemon.
+
+The [setup checklist](setup-checklist.md) is the short list for a first server. Card processing, refunds, and consent wording still need the club's attorney and CPA before live keys.
 
 Photos in Docker default to a `photos` directory next to `/data/club.sqlite`, which is on the same volume. Set `PHOTO_DIR` if you want a different path. The variable is read by the app and is not listed in `.env.example`.
 

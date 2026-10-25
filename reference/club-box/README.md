@@ -9,6 +9,8 @@ Both run in one Node process with SQLite. Payment processors and the door contro
 
 This is reference code, not a turnkey access-control product. Read the safety section before you connect a door.
 
+> **Prototype — not yet tested with real money or real doors.**
+
 ## Safety
 
 This process can send one command: a short **entry** pulse (`pulse-entry`).
@@ -26,7 +28,7 @@ The same sentences are on the kiosk page, so they stay visible if the API is dow
 
 ## License
 
-Code in this directory is [MIT](../../LICENSE), the same license as the rest of the kit's code. The playbooks that describe this design stay [CC BY-SA 4.0](../../LICENSE-docs).
+Code in this directory is [AGPL-3.0-only](../../LICENSE). The playbooks that describe this design stay [CC BY-SA 4.0](../../LICENSE-docs). Commercial or other dual licensing is available on request. This page does not list prices.
 
 ## What you need
 
@@ -138,7 +140,7 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 | `DEFAULT_SLOT_PRICE_MINOR` | Optional helper. Empty means every admin request must include `priceMinor`. |
 | `SATS_PER_MINOR_UNIT` | Required for LNbits. BTCPay invoices in `CURRENCY` and converts itself. |
 | `HOLD_MINUTES` | Unpaid hold lifetime. |
-| `PAYMENT_BACKEND` | `mock`, `btcpay`, or `lnbits`. |
+| `PAYMENT_BACKEND` | `mock`, `btcpay`, or `lnbits`. This is the Lightning backend only. |
 | `BTCPAY_URL`, `BTCPAY_STORE_ID`, `BTCPAY_API_KEY`, `BTCPAY_WEBHOOK_SECRET` | Greenfield. Required when the backend is `btcpay`. |
 | `BTCPAY_PAYMENT_METHOD` | Default `BTC-LN`. Some servers use `BTC-LightningNetwork`. |
 | `LNBITS_URL`, `LNBITS_INVOICE_KEY`, `LNBITS_WEBHOOK_SECRET` | Required when the backend is `lnbits`. The secret is 16–128 characters from `[A-Za-z0-9_-]` because it sits in the webhook path. |
@@ -160,7 +162,7 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 
 Admin routes expect `Authorization: Bearer <ADMIN_TOKEN>` or a staff session token. The admin page keeps that bearer token in `sessionStorage` for the browser tab. Password login also sets an `HttpOnly` cookie named `club_session`.
 
-Provider choices (email, SMS, photo storage, backups, logs, and staff bootstrap) are listed in [`.env.example`](.env.example) and [integrations](../../docs/manuals/10-integrations.md). Defaults are console mail, local files, and no GPIO.
+Provider choices (email, SMS, photo storage, backups, logs, staff bootstrap, Stripe, Square, player cancel, booking-door windows, and encrypted backups) are listed in [`.env.example`](.env.example) and [integrations](../../docs/manuals/10-integrations.md). Defaults are console mail, local files, Lightning only, and no GPIO. `CARD_PROVIDERS` stays empty until you set test or sandbox keys. Square Bitcoin is not an API method in this app.
 
 ## BTCPay Server
 

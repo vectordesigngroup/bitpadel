@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (c) 2026 Daniel Solano and BitPadel contributors -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,6 +97,33 @@
         </label>
         <button type="submit">Add staff account</button>
       </form>
+      <form id="price-form" class="card">
+        <h2>Price rules</h2>
+        <p class="note">Weekdays are 0 Sunday through 6 Saturday, in the club timezone. A court-specific rule beats an all-courts rule. Leave court blank for every court.</p>
+        <label>Label
+          <input name="label" required maxlength="80">
+        </label>
+        <label>Days, comma separated
+          <input name="days" required placeholder="1,2,3,4,5">
+        </label>
+        <label>Start
+          <input name="start" required placeholder="17:00">
+        </label>
+        <label>End
+          <input name="end" required placeholder="21:00">
+        </label>
+        <label>Member price, minor units
+          <input name="memberPriceMinor" inputmode="numeric" required>
+        </label>
+        <label>Guest price, minor units
+          <input name="guestPriceMinor" inputmode="numeric" required>
+        </label>
+        <label>Court id, optional
+          <input name="courtId">
+        </label>
+        <button type="submit">Add price rule</button>
+        <div id="price-rules"></div>
+      </form>
       <form id="sales-form" class="card">
         <h2>Sales report</h2>
         <p class="note">Lightning bookings and stored Playtomic payment rows in the date range. Playtomic amounts stay as imported text.</p>
@@ -107,6 +136,22 @@
         <button type="submit">Download sales CSV</button>
         <button type="button" id="payment-health" class="secondary">Check Lightning balance</button>
       </form>
+      <form id="daily-form" class="card">
+        <h2>End of day</h2>
+        <p class="note">Totals by Lightning, Stripe, Square, and refunds. Card totals appear after a webhook confirms the payment.</p>
+        <label>Date
+          <input name="date" type="date" required>
+        </label>
+        <button type="submit">Show summary</button>
+        <button type="button" id="daily-email" class="secondary">Email summary</button>
+        <pre id="daily-summary"></pre>
+      </form>
+      <section class="card">
+        <h2>Staff audit</h2>
+        <p class="note">Who called an admin route, and when. Owners and managers can read this. The shared admin token is recorded as admin-token.</p>
+        <p><a href="/api/admin/staff-actions.csv" id="audit-csv">Download audit CSV</a></p>
+        <div id="staff-actions"></div>
+      </section>
       <form id="marketing-form" class="card">
         <h2>Marketing message</h2>
         <p class="note">This sends only if that contact opted in. Receipts, privacy links, and household notices are transactional and use the providers in the environment.</p>
@@ -155,6 +200,9 @@
       </section>
     </div>
   </main>
+  <footer>
+    <p><strong>Prototype — not yet tested with real money or real doors.</strong></p>
+  </footer>
   <script src="/admin.js"></script>
 </body>
 </html>

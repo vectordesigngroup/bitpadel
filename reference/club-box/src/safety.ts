@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 /**
  * Fixed safety contract for this process.
  * The strings are also shown on the kiosk page so they remain visible if the API is down.

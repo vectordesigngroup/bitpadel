@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { one } from "./db.js";
 import type { AppDeps } from "./deps.js";
 import { AppError } from "./errors.js";
@@ -12,6 +15,7 @@ import {
   type Route,
 } from "./http.js";
 import { newId } from "./ids.js";
+import { refundCharge } from "./player/cancel.js";
 import { sendMarketing } from "./notify/service.js";
 import type { Channel } from "./notify/types.js";
 import { parseReportRange, salesCsv, salesRows } from "./reports/sales.js";
@@ -110,22 +114,28 @@ async function refund(req: HttpReq, ctx: AppDeps): Promise<void> {
   const reason = requiredString(body, "reason", 200);
   const bolt11 = optionalBolt11(body);
   const bookingId = req.params.id ?? "";
-  const row = one<{ invoice_id: string; amount_minor: number; currency: string }>(
+  const row = one<{
+    invoice_id: string;
+    amount_minor: number;
+    currency: string;
+    payment_method: string;
+    payment_hash: string | null;
+    bolt11: string | null;
+  }>(
     ctx.db,
-    `SELECT h.invoice_id, b.amount_minor, b.currency
+    `SELECT h.invoice_id, b.amount_minor, b.currency, b.payment_method, h.payment_hash, h.bolt11
      FROM bookings b
      JOIN holds h ON h.id = b.hold_id
      WHERE b.id = ?`,
     bookingId,
   );
   if (!row) throw new AppError(404, "Booking was not found");
-  const result = await ctx.payments.refund({
-    invoiceId: row.invoice_id,
-    amountMinor: row.amount_minor,
-    currency: row.currency,
+  const result = await refundCharge(
+    ctx.payments,
+    ctx.cards,
+    { ...row, bolt11: bolt11 ?? row.bolt11 },
     reason,
-    bolt11,
-  });
+  );
   if (!result.supported) throw new AppError(409, result.reason);
   ctx.db
     .prepare(

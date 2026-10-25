@@ -22,8 +22,6 @@ Print this page. Full lists are in the [operating manual](../01-operating.md). R
 
 1. Check out anyone who has gone.
 2. Skim the admin access log for `door-failed` if you have the admin token. Otherwise tell a manager what the kiosk said.
-3. A manager may download the bookings CSV (latest 500 settled Lightning bookings) or the date-filtered sales CSV, which also lists stored Playtomic payment rows. Neither file is a full cash-up.
+3. A manager may download the bookings CSV or the date-filtered sales CSV, which also lists stored Playtomic payment rows. **End of day** totals Lightning, Stripe, Square, and refunds. It is not a tax filing.
 4. Leave open Playtomic conflicts for the next manager.
 5. You do not shut the exit. There is no close command that locks the building.
-
-**Not yet implemented:** a cash-up screen or a card-processor total.

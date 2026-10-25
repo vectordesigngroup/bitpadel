@@ -1,11 +1,17 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
 import { immediate, one } from "../db.js";
 import { AppError } from "../errors.js";
 import { newId } from "../ids.js";
 import { zonedLocalToUtc } from "../time.js";
+import type { CardSet } from "../payments/cards/index.js";
 import { claimOpenSlot } from "./claim.js";
+import { quotePrice } from "./prices.js";
 import type { PaymentBackend, WebhookInterpretation } from "../payments/types.js";
+import { attachPlayerMember, playerIsPayingMember } from "../player/service.js";
 
 export type CourtView = {
   id: string;
@@ -20,6 +26,8 @@ export type SlotView = {
   startsAt: string;
   endsAt: string;
   priceMinor: number;
+  guestPriceMinor: number;
+  memberPriceMinor: number;
   currency: string;
   status: "open" | "held" | "booked" | "cancelled";
   holdId: string | null;
@@ -42,6 +50,8 @@ export type HoldView = {
   payable: boolean;
   expiresAt: string;
   bookingId: string | null;
+  paymentMethod: "lightning" | "stripe" | "square";
+  checkoutUrl: string | null;
 };
 
 export type BookingView = {
@@ -207,6 +217,7 @@ export function listSlots(
     includeHoldId: boolean;
   },
   now: Date,
+  timeZone?: string,
 ): SlotView[] {
   releaseExpired(db, now);
   const rows = db
@@ -235,8 +246,31 @@ export function listSlots(
       filter.includeInactiveCourts ? 1 : 0,
       filter.includeCancelled ? 1 : 0,
     ) as SlotRow[];
-  return rows.map((row) => toSlot(row, filter.includeHoldId));
+  return rows.map((row) => {
+    const slot = toSlot(row, filter.includeHoldId);
+    if (!timeZone) return slot;
+    const quote = {
+      courtId: slot.courtId,
+      startsAt: slot.startsAt,
+      priceMinor: slot.priceMinor,
+    };
+    return {
+      ...slot,
+      guestPriceMinor: quotePrice(db, quote, false, timeZone),
+      memberPriceMinor: quotePrice(db, quote, true, timeZone),
+    };
+  });
 }
+
+export type HoldOptions = {
+  receiptEmail?: string | null;
+  method?: "lightning" | "stripe" | "square";
+  playerId?: string | null;
+  reminderEmail?: boolean;
+  reminderSms?: boolean;
+  reminderPhone?: string | null;
+  cards?: CardSet | null;
+};
 
 export async function holdSlot(
   db: Database.Database,
@@ -245,6 +279,7 @@ export async function holdSlot(
   slotId: string,
   now: Date,
   receiptEmail: string | null = null,
+  options: HoldOptions = {},
 ): Promise<HoldView> {
   releaseExpired(db, now);
   const slot = loadSlot(db, slotId, false);
@@ -257,17 +292,25 @@ export async function holdSlot(
   if (slot.blocked) {
     throw new AppError(409, "That time is already on the imported calendar.");
   }
+  const method = options.method ?? "lightning";
+  const member = options.playerId ? playerIsPayingMember(db, options.playerId) : false;
+  const amountMinor = quotePrice(
+    db,
+    { courtId: slot.courtId, startsAt: slot.startsAt, priceMinor: slot.priceMinor },
+    member,
+    config.clubTimeZone,
+  );
   const holdId = newId("hold");
   const expirySeconds = config.holdMinutes * 60;
-  const invoice = await payments.createInvoice({
+  const invoice = await createCharge(config, payments, options.cards ?? null, method, {
     orderId: holdId,
-    amountMinor: slot.priceMinor,
+    amountMinor,
     currency: slot.currency,
     currencyDecimals: config.currencyDecimals,
     memo: memoFor(slot),
     expirySeconds,
     nowIso: now.toISOString(),
-    webhookUrl: lnbitsWebhook(config),
+    webhookUrl: method === "lightning" ? lnbitsWebhook(config) : config.publicBaseUrl,
   });
   const holdExpiry = new Date(now.getTime() + expirySeconds * 1000).toISOString();
   const expiresAt = invoice.expiresAt < holdExpiry ? invoice.expiresAt : holdExpiry;
@@ -278,18 +321,32 @@ export async function holdSlot(
     paymentHash: invoice.paymentHash,
     bolt11: invoice.bolt11,
     amountSats: invoice.amountSats,
-    amountMinor: slot.priceMinor,
+    amountMinor,
     currency: slot.currency,
     expiresAt,
     nowIso: now.toISOString(),
+    timeZone: config.clubTimeZone,
+    member,
   });
   if (!claimed.ok) {
     const message = holdRefusal(claimed.reason);
     throw new AppError(409, message);
   }
-  if (receiptEmail) {
-    db.prepare("UPDATE holds SET receipt_email = ? WHERE id = ?").run(receiptEmail, holdId);
-  }
+  db.prepare(
+    `UPDATE holds
+     SET receipt_email = ?, payment_method = ?, checkout_url = ?, player_id = ?,
+         reminder_email = ?, reminder_sms = ?, reminder_phone = ?
+     WHERE id = ?`,
+  ).run(
+    receiptEmail,
+    method,
+    invoice.checkoutUrl,
+    options.playerId ?? null,
+    options.reminderEmail ? 1 : 0,
+    options.reminderSms ? 1 : 0,
+    options.reminderPhone ?? null,
+    holdId,
+  );
   const hold = getHold(db, holdId, now);
   if (!hold) throw new Error("hold missing after it was created");
   return hold;
@@ -301,7 +358,7 @@ export function getHold(db: Database.Database, holdId: string, now: Date): HoldV
     db,
     `SELECT h.id, h.slot_id, s.court_id, c.name AS court_name, s.starts_at, s.ends_at,
             h.status, h.amount_minor, h.currency, h.amount_sats, h.bolt11, h.expires_at,
-            b.id AS booking_id
+            h.payment_method, h.checkout_url, b.id AS booking_id
      FROM holds h
      JOIN slots s ON s.id = h.slot_id
      JOIN courts c ON c.id = s.court_id
@@ -311,6 +368,7 @@ export function getHold(db: Database.Database, holdId: string, now: Date): HoldV
   );
   if (!row) return null;
   if (!HOLD_STATUSES.has(row.status)) throw new Error("hold status is invalid");
+  const paymentMethod = paymentMethodOf(row.payment_method);
   return {
     id: row.id,
     slotId: row.slot_id,
@@ -323,9 +381,12 @@ export function getHold(db: Database.Database, holdId: string, now: Date): HoldV
     currency: row.currency,
     amountSats: row.amount_sats,
     bolt11: row.bolt11,
-    payable: row.status === "pending" && !row.bolt11.startsWith("mock-not-payable:"),
+    payable:
+      paymentMethod === "lightning" && row.status === "pending" && !row.bolt11.startsWith("mock-not-payable:"),
     expiresAt: row.expires_at,
     bookingId: row.booking_id,
+    paymentMethod,
+    checkoutUrl: row.checkout_url,
   };
 }
 
@@ -523,6 +584,8 @@ function toSlot(row: SlotRow, includeHoldId: boolean): SlotView {
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     priceMinor: row.price_minor,
+    guestPriceMinor: row.price_minor,
+    memberPriceMinor: row.price_minor,
     currency: row.currency,
     status: row.status as SlotView["status"],
     holdId: includeHoldId ? row.hold_id : null,
@@ -569,6 +632,8 @@ type HoldJoin = {
   bolt11: string;
   expires_at: string;
   booking_id: string | null;
+  payment_method: string | null;
+  checkout_url: string | null;
 };
 
 type HoldPayRow = {
@@ -615,10 +680,16 @@ function confirmByInvoice(
       .run(event.settledAt, event.paymentHash ?? hold.payment_hash, hold.id);
     if (paid.changes !== 1) return { outcome: "ignored", bookingId: null };
     const bookingId = newId("bk");
+    const holdMeta = one<{ payment_method: string | null; player_id: string | null }>(
+      db,
+      "SELECT payment_method, player_id FROM holds WHERE id = ?",
+      hold.id,
+    );
     db.prepare(
       `INSERT INTO bookings (
-        id, slot_id, hold_id, confirmed_at, payment_ref, amount_minor, currency, amount_sats
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, slot_id, hold_id, confirmed_at, payment_ref, amount_minor, currency, amount_sats,
+        payment_method, player_id, member_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       bookingId,
       hold.slot_id,
@@ -628,6 +699,9 @@ function confirmByInvoice(
       hold.amount_minor,
       hold.currency,
       hold.amount_sats,
+      holdMeta?.payment_method ?? "lightning",
+      holdMeta?.player_id ?? null,
+      holdMeta?.player_id ? linkedMemberId(db, holdMeta.player_id, now) : null,
     );
     const booked = db
       .prepare("UPDATE slots SET status = 'booked' WHERE id = ? AND status = 'held'")
@@ -655,4 +729,70 @@ function expireByInvoice(db: Database.Database, invoiceId: string): PaymentApply
 function csvCell(value: string): string {
   if (/[",\n\r]/.test(value)) return `"${value.replaceAll("\"", "\"\"")}"`;
   return value;
+}
+
+type Charge = {
+  invoiceId: string;
+  paymentHash: string | null;
+  bolt11: string;
+  amountSats: number | null;
+  expiresAt: string;
+  checkoutUrl: string | null;
+};
+
+async function createCharge(
+  config: AppConfig,
+  payments: PaymentBackend,
+  cards: CardSet | null,
+  method: "lightning" | "stripe" | "square",
+  input: {
+    orderId: string;
+    amountMinor: number;
+    currency: string;
+    currencyDecimals: number;
+    memo: string;
+    expirySeconds: number;
+    nowIso: string;
+    webhookUrl: string | null;
+  },
+): Promise<Charge> {
+  switch (method) {
+    case "lightning": {
+      const invoice = await payments.createInvoice(input);
+      return { ...invoice, checkoutUrl: null };
+    }
+    case "stripe":
+    case "square": {
+      const provider = cards?.get(method);
+      if (!provider) throw new AppError(400, "That payment method is not enabled");
+      const checkout = await provider.createCheckout(input);
+      return {
+        invoiceId: checkout.invoiceId,
+        paymentHash: null,
+        bolt11: `card:${method}:${checkout.invoiceId}`,
+        amountSats: null,
+        expiresAt: checkout.expiresAt,
+        checkoutUrl: checkout.checkoutUrl,
+      };
+    }
+    default: {
+      const unknown: never = method;
+      throw new AppError(400, `Unknown payment method ${String(unknown)}`);
+    }
+  }
+}
+
+function paymentMethodOf(value: string | null): "lightning" | "stripe" | "square" {
+  switch (value) {
+    case "stripe":
+    case "square":
+    case "lightning":
+      return value;
+    default:
+      return "lightning";
+  }
+}
+
+function linkedMemberId(db: Database.Database, playerId: string, now: Date): string | null {
+  return attachPlayerMember(db, playerId, now);
 }

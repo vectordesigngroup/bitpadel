@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 const statusEl = document.querySelector("#status");
 const appEl = document.querySelector("#app");
 let token = sessionStorage.getItem("club-box-admin-token") || "";
@@ -63,6 +66,65 @@ document.querySelector("#marketing-csv").addEventListener("click", async (event)
   try {
     const csv = await api("/api/admin/marketing.csv");
     downloadText(csv, "marketing.csv");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#price-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const days = form.days.value.split(",").map((part) => Number(part.trim())).filter((day) => Number.isInteger(day));
+  try {
+    await api("/api/admin/price-rules", {
+      method: "POST",
+      body: JSON.stringify({
+        label: form.label.value,
+        days,
+        start: form.start.value,
+        end: form.end.value,
+        memberPriceMinor: Number(form.memberPriceMinor.value),
+        guestPriceMinor: Number(form.guestPriceMinor.value),
+        courtId: form.courtId.value.trim() || null,
+      }),
+    });
+    form.reset();
+    await refresh();
+    setStatus("Price rule saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#daily-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const date = event.currentTarget.date.value;
+  try {
+    const body = await api(`/api/admin/reports/daily?date=${encodeURIComponent(date)}`);
+    document.querySelector("#daily-summary").textContent = JSON.stringify(body.summary, null, 2);
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#daily-email").addEventListener("click", async () => {
+  const date = document.querySelector("#daily-form").date.value;
+  try {
+    await api("/api/admin/reports/daily/email", {
+      method: "POST",
+      body: JSON.stringify({ date }),
+    });
+    setStatus("Summary emailed.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#audit-csv").addEventListener("click", async (event) => {
+  event.preventDefault();
+  try {
+    const csv = await api("/api/admin/staff-actions.csv");
+    downloadText(csv, "staff-actions.csv");
   } catch (error) {
     setStatus(error.message);
   }
@@ -212,7 +274,32 @@ async function refresh() {
   const audit = await api("/api/admin/audit?limit=20");
   renderAudit(audit.audit);
   await renderPlaytomic(courts.courts);
+  await renderPriceRules();
+  await renderStaffActions();
   setStatus("");
+}
+
+async function renderPriceRules() {
+  const root = document.querySelector("#price-rules");
+  const data = await api("/api/admin/price-rules");
+  root.replaceChildren();
+  for (const rule of data.rules) {
+    const line = document.createElement("p");
+    line.textContent = `${rule.label}: days ${rule.days} ${rule.startMin}-${rule.endMin} member ${rule.memberPriceMinor} guest ${rule.guestPriceMinor}`;
+    root.append(line);
+  }
+}
+
+async function renderStaffActions() {
+  const root = document.querySelector("#staff-actions");
+  const data = await api("/api/admin/staff-actions");
+  root.replaceChildren();
+  for (const action of data.actions.slice(0, 12)) {
+    const line = document.createElement("p");
+    line.className = "note";
+    line.textContent = `${action.at} ${action.actorLabel} ${action.method} ${action.path} ${action.status}`;
+    root.append(line);
+  }
 }
 
 function renderSlots(slots) {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import {
   applyPaymentEvent,
   bookingsCsv,
@@ -37,6 +40,8 @@ import { sendReceipt } from "./notify/service.js";
 import { pngQr } from "./qr.js";
 import { accessRoutes } from "./routes-access.js";
 import { opsRoutes } from "./routes-ops.js";
+import { pilotRoutes } from "./routes-pilot.js";
+import { playerFromRequest } from "./player/service.js";
 import { playtomicRoutes } from "./routes-playtomic.js";
 import { SAFETY } from "./safety.js";
 import {
@@ -89,6 +94,7 @@ export function buildRoutes(ctx: AppDeps): Route[] {
     ...accessRoutes(ctx),
     ...playtomicRoutes(ctx),
     ...opsRoutes(ctx),
+    ...pilotRoutes(ctx),
   ];
 }
 
@@ -111,6 +117,8 @@ function health(req: HttpReq, ctx: AppDeps): Promise<void> {
     smsProvider: ctx.config.smsProvider,
     storageBackend: ctx.config.storageBackend,
     backupDestination: ctx.config.backupDestination,
+    cardProviders: ctx.config.cardProviders,
+    bookingEntry: ctx.config.bookingEntry,
     ...SAFETY,
   });
   return Promise.resolve();
@@ -133,7 +141,15 @@ async function createHold(req: HttpReq, ctx: AppDeps): Promise<void> {
   const body = asObject(readJson(req));
   const slotId = requiredString(body, "slotId", 80);
   const receiptEmail = optionalReceiptEmail(body);
-  const hold = await holdSlot(ctx.db, ctx.config, ctx.payments, slotId, ctx.now(), receiptEmail);
+  const player = playerFromRequest(ctx.db, req.headers, ctx.now());
+  const hold = await holdSlot(ctx.db, ctx.config, ctx.payments, slotId, ctx.now(), receiptEmail, {
+    method: paymentChoice(body, ctx),
+    playerId: player?.id ?? null,
+    reminderEmail: body.reminderEmail === true,
+    reminderSms: body.reminderSms === true,
+    reminderPhone: optionalPhone(body),
+    cards: ctx.cards,
+  });
   sendJson(req.res, 201, { hold });
 }
 
@@ -435,6 +451,7 @@ function slotsFor(req: HttpReq, ctx: AppDeps, admin: boolean) {
       includeHoldId: admin,
     },
     ctx.now(),
+    ctx.config.clubTimeZone,
   );
 }
 
@@ -464,6 +481,26 @@ function accessDeps(ctx: AppDeps) {
     callbacks: ctx.limiters.callbacks,
     notifier: ctx.notifier,
   };
+}
+
+function paymentChoice(body: Record<string, unknown>, ctx: AppDeps): "lightning" | "stripe" | "square" {
+  if (body.method === undefined || body.method === null || body.method === "" || body.method === "lightning") {
+    return "lightning";
+  }
+  if (body.method === "stripe" || body.method === "square") {
+    if (!ctx.config.cardProviders.includes(body.method)) {
+      throw new AppError(400, "That payment method is not enabled");
+    }
+    return body.method;
+  }
+  throw new AppError(400, "method must be lightning, stripe, or square");
+}
+
+function optionalPhone(body: Record<string, unknown>): string | null {
+  if (typeof body.reminderPhone !== "string" || body.reminderPhone.trim() === "") return null;
+  const phone = body.reminderPhone.trim();
+  if (phone.length > 32) throw new AppError(400, "reminderPhone is too long");
+  return phone;
 }
 
 function optionalReceiptEmail(body: Record<string, unknown>): string | null {

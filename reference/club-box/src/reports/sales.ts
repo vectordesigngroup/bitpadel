@@ -1,8 +1,11 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import type Database from "better-sqlite3";
 import { AppError } from "../errors.js";
 
 export type SalesRow = {
-  source: "lightning" | "playtomic";
+  source: "lightning" | "stripe" | "square" | "playtomic" | "refund";
   id: string;
   status: string;
   amount: string;
@@ -14,7 +17,7 @@ export type SalesRow = {
 export function salesRows(db: Database.Database, fromIso: string, toIso: string): SalesRow[] {
   const lightning = db
     .prepare(
-      `SELECT b.id, b.amount_minor, b.currency, b.confirmed_at, c.name AS court_name
+      `SELECT b.id, b.amount_minor, b.currency, b.confirmed_at, b.payment_method, c.name AS court_name
        FROM bookings b
        JOIN slots s ON s.id = b.slot_id
        JOIN courts c ON c.id = s.court_id
@@ -26,6 +29,7 @@ export function salesRows(db: Database.Database, fromIso: string, toIso: string)
     amount_minor: number;
     currency: string;
     confirmed_at: string;
+    payment_method: string | null;
     court_name: string;
   }>;
   const imported = db
@@ -44,8 +48,23 @@ export function salesRows(db: Database.Database, fromIso: string, toIso: string)
     product_sku: string | null;
     occurred_at: string;
   }>;
+  const refunds = db
+    .prepare(
+      `SELECT id, status, amount_minor, currency, created_at, reason
+       FROM refunds
+       WHERE created_at >= ? AND created_at <= ?
+       ORDER BY created_at ASC`,
+    )
+    .all(fromIso, toIso) as Array<{
+    id: string;
+    status: string;
+    amount_minor: number | null;
+    currency: string;
+    created_at: string;
+    reason: string;
+  }>;
   const rows: SalesRow[] = lightning.map((row) => ({
-    source: "lightning",
+    source: saleSource(row.payment_method),
     id: row.id,
     status: "booked",
     amount: String(row.amount_minor),
@@ -64,8 +83,30 @@ export function salesRows(db: Database.Database, fromIso: string, toIso: string)
       detail: row.product_sku ?? "",
     });
   }
+  for (const row of refunds) {
+    rows.push({
+      source: "refund",
+      id: row.id,
+      status: row.status,
+      amount: row.amount_minor == null ? "" : String(row.amount_minor),
+      currency: row.currency,
+      occurredAt: row.created_at,
+      detail: row.reason,
+    });
+  }
   rows.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   return rows;
+}
+
+function saleSource(method: string | null): "lightning" | "stripe" | "square" {
+  switch (method) {
+    case "stripe":
+    case "square":
+    case "lightning":
+      return method;
+    default:
+      return "lightning";
+  }
 }
 
 export function salesCsv(rows: SalesRow[]): string {

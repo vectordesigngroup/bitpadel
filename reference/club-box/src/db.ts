@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 
 export type SqlValue = string | number | bigint | Buffer | null;
 
-const SCHEMA_VERSION = "3";
+const SCHEMA_VERSION = "4";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -266,6 +269,82 @@ CREATE TABLE IF NOT EXISTS refunds (
   reason TEXT NOT NULL,
   created_at TEXT NOT NULL
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS players (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  phone TEXT,
+  member_id TEXT,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS player_codes (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS player_sessions (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS price_rules (
+  id TEXT PRIMARY KEY,
+  court_id TEXT,
+  label TEXT NOT NULL,
+  days TEXT NOT NULL,
+  start_min INTEGER NOT NULL,
+  end_min INTEGER NOT NULL,
+  member_price_minor INTEGER NOT NULL CHECK (member_price_minor > 0),
+  guest_price_minor INTEGER NOT NULL CHECK (guest_price_minor > 0),
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS staff_actions (
+  id TEXT PRIMARY KEY,
+  at TEXT NOT NULL,
+  actor_kind TEXT NOT NULL,
+  actor_label TEXT NOT NULL,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS staff_actions_at ON staff_actions (at);
+
+CREATE TABLE IF NOT EXISTS reminder_log (
+  booking_id TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  sent_at TEXT NOT NULL,
+  PRIMARY KEY (booking_id, channel)
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS summary_log (
+  club_date TEXT PRIMARY KEY,
+  sent_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS cancelled_bookings (
+  id TEXT PRIMARY KEY,
+  slot_id TEXT NOT NULL,
+  hold_id TEXT NOT NULL,
+  confirmed_at TEXT NOT NULL,
+  cancelled_at TEXT NOT NULL,
+  payment_ref TEXT NOT NULL,
+  payment_method TEXT NOT NULL,
+  amount_minor INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  amount_sats INTEGER,
+  player_id TEXT,
+  reason TEXT NOT NULL
+) STRICT;
 `;
 
 function migrate(db: Database.Database): void {
@@ -292,6 +371,41 @@ function migrate(db: Database.Database): void {
   ensureColumn(db, "access_audit", "credential_ref", "ALTER TABLE access_audit ADD COLUMN credential_ref TEXT");
   ensureColumn(db, "challenges", "checkin_id", "ALTER TABLE challenges ADD COLUMN checkin_id TEXT");
   ensureColumn(db, "holds", "receipt_email", "ALTER TABLE holds ADD COLUMN receipt_email TEXT");
+  ensureColumn(
+    db,
+    "holds",
+    "payment_method",
+    "ALTER TABLE holds ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'lightning'",
+  );
+  ensureColumn(db, "holds", "checkout_url", "ALTER TABLE holds ADD COLUMN checkout_url TEXT");
+  ensureColumn(db, "holds", "player_id", "ALTER TABLE holds ADD COLUMN player_id TEXT");
+  ensureColumn(
+    db,
+    "holds",
+    "reminder_email",
+    "ALTER TABLE holds ADD COLUMN reminder_email INTEGER NOT NULL DEFAULT 0",
+  );
+  ensureColumn(
+    db,
+    "holds",
+    "reminder_sms",
+    "ALTER TABLE holds ADD COLUMN reminder_sms INTEGER NOT NULL DEFAULT 0",
+  );
+  ensureColumn(db, "holds", "reminder_phone", "ALTER TABLE holds ADD COLUMN reminder_phone TEXT");
+  ensureColumn(
+    db,
+    "bookings",
+    "payment_method",
+    "ALTER TABLE bookings ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'lightning'",
+  );
+  ensureColumn(db, "bookings", "player_id", "ALTER TABLE bookings ADD COLUMN player_id TEXT");
+  ensureColumn(db, "bookings", "member_id", "ALTER TABLE bookings ADD COLUMN member_id TEXT");
+  ensureColumn(
+    db,
+    "members",
+    "access_scope",
+    "ALTER TABLE members ADD COLUMN access_scope TEXT NOT NULL DEFAULT 'member'",
+  );
   db.exec(EXTRA_SCHEMA);
   const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'version'").get() as
     | { value: string }
@@ -300,7 +414,7 @@ function migrate(db: Database.Database): void {
     db.prepare("INSERT INTO schema_meta (key, value) VALUES ('version', ?)").run(SCHEMA_VERSION);
     return;
   }
-  if (row.value === "1" || row.value === "2" || row.value === SCHEMA_VERSION) {
+  if (row.value === "1" || row.value === "2" || row.value === "3" || row.value === SCHEMA_VERSION) {
     db.prepare("UPDATE schema_meta SET value = ? WHERE key = 'version'").run(SCHEMA_VERSION);
     return;
   }

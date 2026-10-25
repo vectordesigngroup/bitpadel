@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { releaseExpired } from "./booking/service.js";
 import { expireStaleCheckins } from "./checkin/service.js";
 import { loadConfig } from "./config.js";
@@ -12,6 +15,8 @@ import { PlaytomicClient } from "./playtomic/client.js";
 import { syncPlaytomic } from "./playtomic/sync.js";
 import { createClubServer } from "./server.js";
 import { bootstrapStaff } from "./staff/service.js";
+import { runDueReminders } from "./player/reminders.js";
+import { maybeSendDailySummary } from "./reports/daily.js";
 import { createStorage } from "./storage/index.js";
 
 try {
@@ -61,6 +66,12 @@ try {
   const retentionSweep = setInterval(() => {
     try {
       purgeOldRows(db, config.logRetentionDays, now(), config.visitRetentionDays);
+      runDueReminders(db, notifier, config, now()).catch((error: unknown) => {
+        log("error", "reminders failed", { error: error instanceof Error ? error.message : "error" });
+      });
+      maybeSendDailySummary(db, notifier, config, now()).catch((error: unknown) => {
+        log("error", "daily summary failed", { error: error instanceof Error ? error.message : "error" });
+      });
     } catch (error) {
       log("error", "retention sweep failed", { error: error instanceof Error ? error.message : "error" });
     }
