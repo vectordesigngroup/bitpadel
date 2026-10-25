@@ -56,6 +56,11 @@ test("enrolled active member unlocks once, and a bad signature does not burn the
     assert.equal(enroll.status, 201);
     const enrollChallenge = enroll.body.challenge as { k1: string; lnurl: string; httpsUrl: string };
     assert.equal(decodeLnurl(enrollChallenge.lnurl), enrollChallenge.httpsUrl);
+    // LUD-04: the decoded URL itself carries tag=login, k1 and the callback path.
+    const loginUrl = new URL(decodeLnurl(enrollChallenge.lnurl));
+    assert.equal(loginUrl.searchParams.get("tag"), "login");
+    assert.equal(loginUrl.searchParams.get("k1"), enrollChallenge.k1);
+    assert.equal(loginUrl.pathname, "/api/access/enroll/callback");
 
     const signer = await freshKey();
     const enrollSig = await signK1(signer.privateKey, enrollChallenge.k1);

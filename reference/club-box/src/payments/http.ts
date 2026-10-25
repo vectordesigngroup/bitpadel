@@ -25,12 +25,24 @@ export async function requestJson(
   }
   const text = await response.text();
   if (!response.ok) {
-    throw new PaymentError(`Payment backend returned HTTP ${response.status}`);
+    throw new PaymentError(`Payment backend returned HTTP ${response.status}${backendDetail(text)}`);
   }
   if (!text) return null;
   try {
     return JSON.parse(text) as unknown;
   } catch {
     throw new PaymentError("Payment backend returned invalid JSON");
+  }
+}
+
+/** Short, single-line reason from a backend error body such as LNbits' {"detail": "..."}. */
+function backendDetail(text: string): string {
+  try {
+    const parsed = JSON.parse(text) as { detail?: unknown };
+    if (typeof parsed.detail !== "string") return "";
+    const clean = parsed.detail.replace(/\s+/g, " ").trim().slice(0, 160);
+    return clean ? `: ${clean}` : "";
+  } catch {
+    return "";
   }
 }

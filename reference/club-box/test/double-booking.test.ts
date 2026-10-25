@@ -104,8 +104,9 @@ async function courtIdOf(baseUrl: string, slotId: string): Promise<string> {
 
 function claimInWorker(databasePath: string, claim: ClaimInput): Promise<ClaimResult> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("./claim-worker.ts", import.meta.url), {
-      execArgv: process.execArgv,
+    // Boot through tsx's API: worker threads do not reliably inherit the tsx loader,
+    // so "../src/x.js" imports inside a .ts worker would fail to resolve.
+    const worker = new Worker(new URL("./claim-worker-boot.mjs", import.meta.url), {
       workerData: { databasePath, claim },
     });
     worker.once("message", (message: ClaimResult) => resolve(message));

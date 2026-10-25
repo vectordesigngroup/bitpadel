@@ -153,11 +153,38 @@ async function createHold(req: HttpReq, ctx: AppDeps): Promise<void> {
   sendJson(req.res, 201, { hold });
 }
 
-function readHold(req: HttpReq, ctx: AppDeps): Promise<void> {
-  const hold = getHold(ctx.db, req.params.id ?? "", ctx.now());
+async function readHold(req: HttpReq, ctx: AppDeps): Promise<void> {
+  let hold = getHold(ctx.db, req.params.id ?? "", ctx.now());
   if (!hold) throw new AppError(404, "Hold not found");
+  if (hold.status === "pending" && ctx.payments.lookupInvoice) {
+    // Fallback for a missed webhook: the booking page polls this route, so ask the
+    // backend directly. Errors here are not fatal; the webhook may still arrive.
+    const invoiceId = holdInvoiceId(ctx, hold.id);
+    if (invoiceId && ctx.limiters.callbacks.allow(`hold-lookup:${hold.id}`)) {
+      try {
+        const event = await ctx.payments.lookupInvoice(invoiceId, ctx.now().toISOString());
+        const result = applyPaymentEvent(ctx.db, event, ctx.now());
+        if (result.outcome !== "ignored") {
+          log("info", "payment lookup", { backend: ctx.payments.name, outcome: result.outcome });
+        }
+        if (result.outcome === "confirmed" && result.bookingId) await deliverReceipt(ctx, result.bookingId);
+        hold = getHold(ctx.db, hold.id, ctx.now()) ?? hold;
+      } catch (error) {
+        log("error", "payment lookup failed", { error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+  }
   sendJson(req.res, 200, { hold });
-  return Promise.resolve();
+}
+
+function holdInvoiceId(ctx: AppDeps, holdId: string): string | null {
+  const row = one<{ invoice_id: string; payment_method: string | null }>(
+    ctx.db,
+    "SELECT invoice_id, payment_method FROM holds WHERE id = ?",
+    holdId,
+  );
+  if (!row || (row.payment_method && row.payment_method !== "lightning")) return null;
+  return row.invoice_id;
 }
 
 async function holdQr(req: HttpReq, ctx: AppDeps): Promise<void> {

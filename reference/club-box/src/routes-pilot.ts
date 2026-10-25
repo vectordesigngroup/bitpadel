@@ -8,6 +8,7 @@ import { newId } from "./ids.js";
 import { readJson, requireAdmin, sendJson, sendText, type HttpReq, type Route } from "./http.js";
 import { applyPaymentEvent } from "./booking/service.js";
 import { cancelPlayerBooking } from "./player/cancel.js";
+import { optionalBolt11 } from "./routes-ops.js";
 import {
   normalizeEmail,
   openPlayerSession,
@@ -136,6 +137,7 @@ function playerBookings(req: HttpReq, ctx: AppDeps): Promise<void> {
 async function playerCancel(req: HttpReq, ctx: AppDeps): Promise<void> {
   const player = playerFromRequest(ctx.db, req.headers, ctx.now());
   if (!player) throw new AppError(401, "Player login required");
+  const body = req.rawBody.length === 0 ? {} : asObject(readJson(req));
   const result = await cancelPlayerBooking(
     ctx.db,
     ctx.config,
@@ -144,6 +146,7 @@ async function playerCancel(req: HttpReq, ctx: AppDeps): Promise<void> {
     player.id,
     req.params.id ?? "",
     ctx.now(),
+    optionalBolt11(body),
   );
   sendJson(req.res, 200, result);
 }

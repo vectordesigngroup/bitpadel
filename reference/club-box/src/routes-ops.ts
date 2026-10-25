@@ -120,10 +120,10 @@ async function refund(req: HttpReq, ctx: AppDeps): Promise<void> {
     currency: string;
     payment_method: string;
     payment_hash: string | null;
-    bolt11: string | null;
+    amount_sats: number | null;
   }>(
     ctx.db,
-    `SELECT h.invoice_id, b.amount_minor, b.currency, b.payment_method, h.payment_hash, h.bolt11
+    `SELECT h.invoice_id, b.amount_minor, b.currency, b.payment_method, h.payment_hash, b.amount_sats
      FROM bookings b
      JOIN holds h ON h.id = b.hold_id
      WHERE b.id = ?`,
@@ -133,7 +133,8 @@ async function refund(req: HttpReq, ctx: AppDeps): Promise<void> {
   const result = await refundCharge(
     ctx.payments,
     ctx.cards,
-    { ...row, bolt11: bolt11 ?? row.bolt11 },
+    // Only a customer-provided invoice. The hold's own BOLT11 is the club's invoice.
+    { ...row, bolt11 },
     reason,
   );
   if (!result.supported) throw new AppError(409, result.reason);
@@ -201,7 +202,7 @@ function assigner(actor: Actor): { kind: "legacy-admin" } | { kind: "account"; r
   }
 }
 
-function optionalBolt11(body: Record<string, unknown>): string | null {
+export function optionalBolt11(body: Record<string, unknown>): string | null {
   if (typeof body.bolt11 !== "string" || body.bolt11.trim().length === 0) return null;
   const bolt11 = body.bolt11.trim();
   if (bolt11.length > 2000 || !/^(lnbc|lntb|lnbcrt|lnsb)/i.test(bolt11)) {

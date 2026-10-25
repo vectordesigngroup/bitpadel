@@ -26,6 +26,8 @@ export type LnbitsConfig = {
   url: string;
   invoiceKey: string;
   webhookSecret: string;
+  /** Optional. Only needed to send refunds; LNbits rejects outgoing payments made with an invoice key. */
+  adminKey?: string | null;
 };
 
 export type DoorHttpConfig = {
@@ -549,6 +551,7 @@ function parseLnbits(env: Env): LnbitsConfig {
     url: parseHttpUrl(required(env, "LNBITS_URL"), "LNBITS_URL"),
     invoiceKey: required(env, "LNBITS_INVOICE_KEY"),
     webhookSecret,
+    adminKey: env.LNBITS_ADMIN_KEY?.trim() || null,
   };
 }
 
