@@ -22,7 +22,7 @@ Thanks for helping more people start Bitcoin-friendly padel clubs.
 - Cite sources for factual claims where you can.
 
 ## Licensing of contributions
-By contributing, you agree that code you contribute is licensed under the [MIT License](LICENSE) and documentation and other content under [CC BY-SA 4.0](LICENSE-docs).
+By contributing, you agree to the [Individual Contributor License Agreement](CLA.md). Code you contribute is licensed under the [GNU Affero General Public License v3.0 only](LICENSE). Documentation and other content are licensed under [CC BY-SA 4.0](LICENSE-docs). The agreement also gives the copyright holder the right to relicense contributions.
 
 ## Conduct
 This project follows the [Code of Conduct](CODE_OF_CONDUCT.md).

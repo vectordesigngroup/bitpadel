@@ -2,7 +2,7 @@
 
 This is the procedure for personalizing an **NTAG 424 DNA** access card for the club-box reference app. It is an example procedure, not a certification, and not a product endorsement. A MIFARE DESFire EV2 or EV3 card can be an access credential too. The command below personalizes NTAG 424 DNA. DESFire personalization stays on a tool that speaks full EV2 to that card.
 
-Code in the app is MIT. This document is CC BY-SA, with the rest of the playbooks.
+Code in the app is AGPL-3.0-only. This document is CC BY-SA, with the rest of the playbooks.
 
 ## What you need
 

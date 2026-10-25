@@ -9,6 +9,8 @@ Both run in one Node process with SQLite. Payment processors and the door contro
 
 This is reference code, not a turnkey access-control product. Read the safety section before you connect a door.
 
+> **Prototype — not yet tested with real money or real doors.**
+
 ## Safety
 
 This process can send one command: a short **entry** pulse (`pulse-entry`).
@@ -26,7 +28,7 @@ The same sentences are on the kiosk page, so they stay visible if the API is dow
 
 ## License
 
-Code in this directory is [MIT](../../LICENSE), the same license as the rest of the kit's code. The playbooks that describe this design stay [CC BY-SA 4.0](../../LICENSE-docs).
+Code in this directory is [AGPL-3.0-only](../../LICENSE). The playbooks that describe this design stay [CC BY-SA 4.0](../../LICENSE-docs). Commercial or other dual licensing is available on request. This page does not list prices.
 
 ## What you need
 

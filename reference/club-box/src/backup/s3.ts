@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { createHash, createHmac } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import type { S3Config } from "../config.js";

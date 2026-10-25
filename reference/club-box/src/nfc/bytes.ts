@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 export function fromHex(hex: string): Buffer {
   const text = hex.trim().toLowerCase();
   if (text.length % 2 !== 0 || !/^[0-9a-f]*$/.test(text)) {

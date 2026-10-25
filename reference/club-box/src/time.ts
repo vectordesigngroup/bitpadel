@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 type PartMap = Record<string, string>;
 
 function partsInZone(date: Date, timeZone: string): PartMap {
