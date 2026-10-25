@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { listCalendar } from "./booking/source.js";
 import { staffBookingsToday } from "./checkin/service.js";
 import type { AppDeps } from "./deps.js";

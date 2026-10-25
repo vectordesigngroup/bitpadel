@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { aesCbcDecrypt, aesCbcEncrypt, aesCmac, equalBytes, truncateMac } from "./aes.js";
 import { fromHex, toHex } from "./bytes.js";
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import type { AppConfig } from "../config.js";
 import { GpioDoorController, openOnoffPin } from "./gpio.js";
 import { HttpDoorController } from "./http-relay.js";

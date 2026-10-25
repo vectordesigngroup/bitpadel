@@ -2,7 +2,7 @@
 
 How the reference app is put together, and how to change it without inventing a second product. Contributor rules are in [`CONTRIBUTING.md`](../../CONTRIBUTING.md): no personal data, no secrets in git, no investment language, and door safety stays entry-only.
 
-Docs in this folder are CC BY-SA 4.0, with the other playbooks. Code under `reference/club-box` is MIT. See the [licenses](../../README.md#license).
+Docs in this folder are CC BY-SA 4.0, with the other playbooks. Code under `reference/club-box` is AGPL-3.0-only. See the [licenses](../../README.md#license).
 
 ## Architecture
 

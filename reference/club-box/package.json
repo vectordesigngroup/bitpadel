@@ -18,13 +18,13 @@
     "reader:bridge": "tsx src/nfc/bridge-cli.ts",
     "backup": "tsx src/backup/cli.ts"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^2.2.3",
     "bech32": "^2.0.0",
     "better-sqlite3": "^12.4.1",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^10.2.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

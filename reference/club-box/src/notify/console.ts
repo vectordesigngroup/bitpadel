@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { randomBytes } from "node:crypto";
 import { log } from "../log.js";
 import type { Channel, MessageProvider, OutboundMessage } from "./types.js";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 /**
  * How a door learns that a card was presented.
  * The server never trusts a bare UID unless the operator turned on the insecure dev switch.

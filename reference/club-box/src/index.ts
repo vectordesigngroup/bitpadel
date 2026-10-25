@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { releaseExpired } from "./booking/service.js";
 import { expireStaleCheckins } from "./checkin/service.js";
 import { loadConfig } from "./config.js";

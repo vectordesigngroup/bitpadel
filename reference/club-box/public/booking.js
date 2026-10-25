@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 const statusEl = document.querySelector("#status");
 const slotsEl = document.querySelector("#slots");
 const courtsEl = document.querySelector("#courts");

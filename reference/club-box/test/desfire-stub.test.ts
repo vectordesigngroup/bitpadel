@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import assert from "node:assert/strict";
 import test from "node:test";
 import { UnimplementedDesfirePersonalizer, UnimplementedDesfireReaderBridge } from "../src/nfc/desfire-stub.js";

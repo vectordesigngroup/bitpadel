@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 /** Format an integer minor-unit amount as a major-unit decimal string. No currency symbol. */
 export function minorToMajorString(amountMinor: number, decimals: number): string {
   if (!Number.isInteger(amountMinor) || amountMinor < 0) {

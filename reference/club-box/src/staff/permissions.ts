@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 export const STAFF_ROLES = ["owner", "manager", "front-desk", "coach"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 

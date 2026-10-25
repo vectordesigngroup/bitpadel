@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Daniel Solano and BitPadel contributors
+
 import { createHmac } from "node:crypto";
 import { PaymentError } from "../../errors.js";
 import { safeEqual } from "../../security.js";
