@@ -139,6 +139,10 @@ test("the booking page is served with the schedule assets and day windows stay b
     assert.match(html, /id="calendar"/);
     assert.match(html, /id="slot-sheet"/);
     assert.match(html, /booking\.css/);
+    assert.match(html, /brand\.css/);
+    assert.match(html, /brand\.js/);
+    assert.match(html, /brand-name-text/);
+    assert.match(html, /brand-footer-text/);
     assert.match(html, /type="module"/);
     assert.equal(html.includes("minor units"), false);
 

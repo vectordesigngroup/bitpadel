@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 /* Copyright (c) 2026 Daniel Solano and BitPadel contributors */
 
-/* Member booking schedule. Colors come from the variables in styles.css. */
+/* Member booking schedule. Colors come from styles.css, then /brand.css. */
 
 .booking-schedule {
   width: min(1100px, calc(100% - 32px));
