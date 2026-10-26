@@ -7,10 +7,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Club admin</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/brand.css">
+  <link id="brand-preview-css" rel="stylesheet" href="/brand/preview.css">
 </head>
 <body>
   <header>
-    <p>Club box</p>
+    <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
     <nav>
       <a href="/">Booking</a>
       <a href="/kiosk">Door kiosk</a>
@@ -39,6 +41,112 @@
         <h2>Server</h2>
         <p id="server" class="note"></p>
       </section>
+      <form id="brand-form" class="card">
+        <h2>Branding</h2>
+        <p class="note">The name, logo, and colors members see on the booking page, the kiosk, receipts, and email.</p>
+        <p id="brand-placeholder-note" class="note"></p>
+        <label>Club name
+          <input name="clubName" required maxlength="80">
+        </label>
+        <label>Short name
+          <input name="shortName" required maxlength="40">
+        </label>
+        <p class="note">Shown in the page header and at the start of email subjects.</p>
+        <div class="color-row">
+          <label>Primary
+            <input id="primary-picker" type="color" value="#14b8a6">
+          </label>
+          <label>Primary hex
+            <input id="primary-hex" name="primaryColor" value="#14b8a6" maxlength="7" spellcheck="false">
+          </label>
+        </div>
+        <div class="color-row">
+          <label>Accent
+            <input id="accent-picker" type="color" value="#d9f99d">
+          </label>
+          <label>Accent hex
+            <input id="accent-hex" name="accentColor" value="#d9f99d" maxlength="7" spellcheck="false">
+          </label>
+        </div>
+        <div class="color-row">
+          <label>Background
+            <input id="background-picker" type="color" value="#0f172a">
+          </label>
+          <label>Background hex
+            <input id="background-hex" name="backgroundColor" value="#0f172a" maxlength="7" spellcheck="false">
+          </label>
+        </div>
+        <div class="color-row">
+          <label>Text
+            <input id="text-picker" type="color" value="#f8fafc">
+          </label>
+          <label>Text hex
+            <input id="text-hex" name="textColor" value="#f8fafc" maxlength="7" spellcheck="false">
+          </label>
+        </div>
+        <label>Font
+          <select name="fontKey">
+            <option value="system">System sans</option>
+            <option value="serif">Serif</option>
+            <option value="humanist">Humanist sans</option>
+            <option value="readable">Large screen sans</option>
+          </select>
+        </label>
+        <p class="note">Fonts already on the computer. This app does not load a font from another site.</p>
+        <label>Contact line
+          <textarea name="contactText" maxlength="400"></textarea>
+        </label>
+        <label>Footer
+          <textarea name="footerText" maxlength="500"></textarea>
+        </label>
+        <fieldset>
+          <legend>Footer links</legend>
+          <p class="note">Optional. Use an http or https address for your club's own page.</p>
+          <div class="row">
+            <label>Label <input name="linkLabel" maxlength="40"></label>
+            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+          </div>
+          <div class="row">
+            <label>Label <input name="linkLabel" maxlength="40"></label>
+            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+          </div>
+          <div class="row">
+            <label>Label <input name="linkLabel" maxlength="40"></label>
+            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+          </div>
+          <div class="row">
+            <label>Label <input name="linkLabel" maxlength="40"></label>
+            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+          </div>
+        </fieldset>
+        <div id="brand-preview" class="brand-preview">
+          <p class="brand-preview-name"></p>
+          <p>Book a court</p>
+          <p><a href="#brand-preview">Sample link</a></p>
+          <p><span class="button">Sample button</span></p>
+          <p class="brand-preview-footer"></p>
+        </div>
+        <p id="brand-contrast" class="danger" role="status"></p>
+        <button type="submit">Save branding</button>
+      </form>
+      <form id="brand-logo-form" class="card">
+        <h2>Logo and favicon</h2>
+        <p class="note">PNG, JPG, or SVG, up to 512 KB. SVG files that contain a script are refused. Do not upload the BitPadel placeholder logo.</p>
+        <p><img id="brand-logo-current" alt="" hidden></p>
+        <label>Logo
+          <input id="brand-logo-file" type="file" accept="image/png,image/jpeg,image/svg+xml,.svg,.png,.jpg,.jpeg">
+        </label>
+        <button type="submit">Upload logo</button>
+        <button type="button" id="brand-logo-clear" class="secondary">Remove logo</button>
+      </form>
+      <form id="brand-favicon-form" class="card">
+        <p><img id="brand-favicon-current" alt="" hidden width="32" height="32"></p>
+        <label>Favicon, PNG, JPG, SVG, or ICO
+          <input id="brand-favicon-file" type="file" accept="image/png,image/jpeg,image/svg+xml,.svg,.ico,.png,.jpg,.jpeg">
+        </label>
+        <button type="submit">Upload favicon</button>
+        <button type="button" id="brand-favicon-clear" class="secondary">Remove favicon</button>
+      </form>
       <form id="court-form" class="card">
         <h2>Add a court</h2>
         <label>Court name
@@ -228,7 +336,13 @@
   </main>
   <footer>
     <p><strong>Prototype — not yet tested with real money or real doors.</strong></p>
+    <div class="brand-footer">
+      <p class="brand-footer-text">This look is a placeholder. Give your club its own name and logo. The BitPadel name and logo are not your club's brand.</p>
+      <p class="brand-contact"></p>
+      <p class="brand-links"></p>
+    </div>
   </footer>
+  <script src="/brand.js"></script>
   <script src="/admin.js"></script>
 </body>
 </html>

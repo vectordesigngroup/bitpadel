@@ -309,6 +309,7 @@ async function refresh() {
   await renderStaffActions();
   await renderAllowances();
   await renderLedger();
+  await renderBrand();
   setStatus("");
 }
 
@@ -885,6 +886,255 @@ document.querySelector("#sync").addEventListener("click", async () => {
     const result = await api("/api/admin/playtomic/sync", { method: "POST" });
     setStatus(`Synced ${result.report.bookings} bookings.`);
     await refresh();
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+const BRAND_COLORS = ["primary", "accent", "background", "text"];
+
+function normalizeHex(value) {
+  const trimmed = String(value || "").trim().toLowerCase();
+  const withHash = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  return /^#[0-9a-f]{6}$/.test(withHash) ? withHash : null;
+}
+
+function channelLuminance(value) {
+  const scaled = value / 255;
+  return scaled <= 0.04045 ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(hex) {
+  const body = hex.slice(1);
+  const red = Number.parseInt(body.slice(0, 2), 16);
+  const green = Number.parseInt(body.slice(2, 4), 16);
+  const blue = Number.parseInt(body.slice(4, 6), 16);
+  return 0.2126 * channelLuminance(red) + 0.7152 * channelLuminance(green) + 0.0722 * channelLuminance(blue);
+}
+
+function contrastRatio(left, right) {
+  const lighter = Math.max(relativeLuminance(left), relativeLuminance(right));
+  const darker = Math.min(relativeLuminance(left), relativeLuminance(right));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function contrastMessages(draft) {
+  const warnings = [];
+  const text = contrastRatio(draft.textColor, draft.backgroundColor);
+  if (text < 4.5) warnings.push(`Text on the background is ${text.toFixed(2)}:1. Aim for 4.5:1 or higher.`);
+  const button = contrastRatio(draft.backgroundColor, draft.primaryColor);
+  if (button < 4.5) warnings.push(`Button text on the primary color is ${button.toFixed(2)}:1. Aim for 4.5:1 or higher.`);
+  const links = contrastRatio(draft.accentColor, draft.backgroundColor);
+  if (links < 4.5) warnings.push(`Links on the background are ${links.toFixed(2)}:1. Aim for 4.5:1 or higher.`);
+  return warnings;
+}
+
+function readBrandDraft() {
+  const form = document.querySelector("#brand-form");
+  return {
+    clubName: form.clubName.value.trim(),
+    shortName: form.shortName.value.trim(),
+    primaryColor: normalizeHex(form.primaryColor.value),
+    accentColor: normalizeHex(form.accentColor.value),
+    backgroundColor: normalizeHex(form.backgroundColor.value),
+    textColor: normalizeHex(form.textColor.value),
+    fontKey: form.fontKey.value,
+    footerText: form.footerText.value.trim(),
+    contactText: form.contactText.value.trim(),
+  };
+}
+
+function brandLinks(form) {
+  const labels = [...form.querySelectorAll("[name=linkLabel]")];
+  const urls = [...form.querySelectorAll("[name=linkUrl]")];
+  const links = [];
+  for (let index = 0; index < labels.length; index += 1) {
+    const label = labels[index].value.trim();
+    const url = urls[index].value.trim();
+    if (!label && !url) continue;
+    links.push({ label, url });
+  }
+  return links;
+}
+
+let brandPreviewTimer = 0;
+
+function scheduleBrandPreview() {
+  window.clearTimeout(brandPreviewTimer);
+  brandPreviewTimer = window.setTimeout(updateBrandPreview, 80);
+}
+
+function updateBrandPreview() {
+  const draft = readBrandDraft();
+  const preview = document.querySelector("#brand-preview");
+  preview.querySelector(".brand-preview-name").textContent = draft.clubName || draft.shortName || "Your club";
+  preview.querySelector(".brand-preview-footer").textContent = draft.footerText;
+  const warnings = document.querySelector("#brand-contrast");
+  if (!draft.primaryColor || !draft.accentColor || !draft.backgroundColor || !draft.textColor) {
+    warnings.textContent = "Enter 6-digit hex colors, such as #14b8a6.";
+    return;
+  }
+  const params = new URLSearchParams({
+    background: draft.backgroundColor,
+    text: draft.textColor,
+    primary: draft.primaryColor,
+    accent: draft.accentColor,
+    font: draft.fontKey,
+  });
+  document.querySelector("#brand-preview-css").href = `/brand/preview.css?${params}`;
+  warnings.textContent = contrastMessages(draft).join(" ");
+}
+
+function setBrandColor(name, value) {
+  const hex = normalizeHex(value) || value;
+  document.querySelector(`#${name}-hex`).value = hex;
+  const normalized = normalizeHex(value);
+  if (normalized) document.querySelector(`#${name}-picker`).value = normalized;
+}
+
+async function renderBrand() {
+  const brand = await api("/api/admin/brand");
+  const form = document.querySelector("#brand-form");
+  form.clubName.value = brand.clubName;
+  form.shortName.value = brand.shortName;
+  setBrandColor("primary", brand.primaryColor);
+  setBrandColor("accent", brand.accentColor);
+  setBrandColor("background", brand.backgroundColor);
+  setBrandColor("text", brand.textColor);
+  form.fontKey.value = brand.fontKey;
+  form.footerText.value = brand.footerText;
+  form.contactText.value = brand.contactText;
+  const labels = [...form.querySelectorAll("[name=linkLabel]")];
+  const urls = [...form.querySelectorAll("[name=linkUrl]")];
+  labels.forEach((input, index) => {
+    input.value = brand.links[index] ? brand.links[index].label : "";
+    urls[index].value = brand.links[index] ? brand.links[index].url : "";
+  });
+  document.querySelector("#brand-placeholder-note").textContent = brand.usingPlaceholder ? brand.placeholderNote : "";
+  const logo = document.querySelector("#brand-logo-current");
+  if (brand.hasLogo) {
+    logo.hidden = false;
+    logo.src = `/brand/logo?v=${encodeURIComponent(brand.updatedAt || "")}`;
+  } else {
+    logo.hidden = true;
+    logo.removeAttribute("src");
+  }
+  const favicon = document.querySelector("#brand-favicon-current");
+  if (brand.hasFavicon) {
+    favicon.hidden = false;
+    favicon.src = `/brand/favicon?v=${encodeURIComponent(brand.updatedAt || "")}`;
+  } else {
+    favicon.hidden = true;
+    favicon.removeAttribute("src");
+  }
+  updateBrandPreview();
+}
+
+async function postBrandFile(pathname, file) {
+  const response = await fetch(pathname, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: file,
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  return body;
+}
+
+for (const name of BRAND_COLORS) {
+  const picker = document.querySelector(`#${name}-picker`);
+  const hex = document.querySelector(`#${name}-hex`);
+  picker.addEventListener("input", () => {
+    hex.value = picker.value;
+    scheduleBrandPreview();
+  });
+  hex.addEventListener("input", () => {
+    const normalized = normalizeHex(hex.value);
+    if (normalized) picker.value = normalized;
+    scheduleBrandPreview();
+  });
+}
+
+document.querySelector("#brand-form").addEventListener("input", scheduleBrandPreview);
+document.querySelector("#brand-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const draft = readBrandDraft();
+  if (!draft.primaryColor || !draft.accentColor || !draft.backgroundColor || !draft.textColor) {
+    setStatus("Enter 6-digit hex colors, such as #14b8a6.");
+    return;
+  }
+  try {
+    const saved = await api("/api/admin/brand", {
+      method: "POST",
+      body: JSON.stringify({
+        clubName: draft.clubName,
+        shortName: draft.shortName,
+        primaryColor: draft.primaryColor,
+        accentColor: draft.accentColor,
+        backgroundColor: draft.backgroundColor,
+        textColor: draft.textColor,
+        fontKey: draft.fontKey,
+        footerText: draft.footerText,
+        contactText: draft.contactText,
+        links: brandLinks(form),
+      }),
+    });
+    await refresh();
+    const warning = saved.contrastWarnings && saved.contrastWarnings.length ? ` ${saved.contrastWarnings.join(" ")}` : "";
+    setStatus(`Branding saved.${warning}`);
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-logo-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = document.querySelector("#brand-logo-file").files[0];
+  if (!file) {
+    setStatus("Choose a logo file.");
+    return;
+  }
+  try {
+    await postBrandFile("/api/admin/brand/logo", file);
+    await refresh();
+    setStatus("Logo saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-logo-clear").addEventListener("click", async () => {
+  try {
+    await api("/api/admin/brand/logo/clear", { method: "POST" });
+    await refresh();
+    setStatus("Logo removed.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-favicon-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = document.querySelector("#brand-favicon-file").files[0];
+  if (!file) {
+    setStatus("Choose a favicon file.");
+    return;
+  }
+  try {
+    await postBrandFile("/api/admin/brand/favicon", file);
+    await refresh();
+    setStatus("Favicon saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-favicon-clear").addEventListener("click", async () => {
+  try {
+    await api("/api/admin/brand/favicon/clear", { method: "POST" });
+    await refresh();
+    setStatus("Favicon removed.");
   } catch (error) {
     setStatus(error.message);
   }

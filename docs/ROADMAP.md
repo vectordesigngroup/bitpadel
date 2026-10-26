@@ -13,13 +13,22 @@
 - [x] **Profiles and guest check-in.** Optional name, phone, email, and photo; household; on-site list; guest cap; waiver; marketing opt-in stored apart from the visit. The notice template is [`templates/privacy-notice.md`](../templates/privacy-notice.md). It is not legal advice.
 - [x] **Read-only Playtomic sync.** Optional import of bookings and payments. Imported time blocks Lightning holds. Two-way sync stays with Playtomic Connect. Scraped integrations are out of scope.
 - [x] **Staff and operator manuals.** [`docs/manuals`](manuals/README.md) covers daily operations, admin, installation, maintenance, troubleshooting, security, training, emergencies, and contributors, plus one-page desk cards. Gaps the software does not cover are marked in those pages.
+- [x] **Club branding.** An owner or manager sets the club name, logo, favicon, colors, font, and footer on the admin page. Member pages, receipts, and email use it. The default stays the neutral placeholder and does not use the BitPadel name as the club's own. See [`brand/README.md`](../brand/README.md).
+- [ ] **Tournaments.** Socials (Americano, Mexicano), round robins, brackets and leagues on the CourtHive [competition-factory](https://github.com/CourtHive/competition-factory) engine (MIT). Draws reserve courts so they block booking slots; players register with LNURL-auth, a card or the desk; entry fees by Lightning or card with refunds on withdrawal; signed kiosk check-in; a score counts only when both sides sign it; [TMX](https://github.com/CourtHive/TMX) as an optional desk for big events. Prizes (sats or fiat) come last and stay off until an attorney and a CPA have reviewed them. Plan: [`tournaments.md`](tournaments.md).
 - [ ] Open workshop slide deck for the small-business Lightning curriculum.
 - [ ] Spreadsheet version of the financial model (with charts).
 - [ ] Translations (Spanish first).
 - [ ] Case studies from clubs using the kit.
+- [ ] **Padel and pickleball CRM.** One player page on the members, guests, bookings, and consent the app already stores, plus a lead list, tags, and campaigns on the existing email and SMS path. Plan: [`crm.md`](crm.md).
+- [ ] **Digital waivers.** Players sign a liability waiver online before the first visit, and staff can see who has not signed. A Florida attorney must approve the waiver text; today's guest form only stores a version and a time, and members are not asked to sign.
+- [ ] **Open play and leagues.** Drop-in sessions grouped by skill level, plus ladders and leagues that show standings. Skill uses the CRM player fields; event tournaments stay in the tournaments item above.
+- [ ] **Coaches and lessons.** Coaches set times they can teach; a player books a lesson and pays by card or Lightning. A report lists those lesson payments, in the club's currency, so the club can pay the coach.
+- [ ] **Peak and off-peak pricing.** The club types peak and off-peak prices on the weekday and time-window rules the admin page already stores (a member amount and a guest amount). The kit includes no sample prices.
+- [ ] **Rentals.** Staff check out paddles, balls, and the ball machine, and charge by card or Lightning, or to the member tab once that ledger exists. Rental amounts are the club's to set.
+- [ ] **Phone-friendly member app.** A page a member can add to their phone home screen, with court booking, door check-in, and the member tab in one place. The tab waits on the allowance and tab ledger; the app has no installable phone page today.
 
 ## Next: member perks on the same identity
-Design notes for everything in this section and the next: [`lnurl-club-ideas.md`](lnurl-club-ideas.md). They reuse LNURL-auth identity (no sats move), the NFC card fallback, door `area` pulses and the booking window, plus a new allowance and tab ledger.
+Design notes for everything in this section and the next: [`lnurl-club-ideas.md`](lnurl-club-ideas.md). They reuse LNURL-auth identity (no sats move), the NFC card fallback, door `area` pulses and the booking window, plus the allowance and tab ledger.
 - [x] **Allowance and tab ledger.** Per-member allowances (for example 2 waters per visit — an example, not a price), a tab settled by Lightning or card, guest items charged to the host member, and an append-only audit. Implemented in [`reference/club-box`](../reference/club-box). Design and the CPA / Florida attorney note: [`allowance-and-tab.md`](allowance-and-tab.md).
 - [ ] **Member vending hardware.** The club-box device API can already charge a member by NFC card or LNURL at `/api/devices/vending/*`. Still open: a controller for a locked cooler or an MDB vending machine that calls that API.
 - [ ] **Lockers.** Scan or tap to claim a locker for the visit and open it again; staff release from the admin page.
@@ -27,8 +36,7 @@ Design notes for everything in this section and the next: [`lnurl-club-ideas.md`
 - [ ] **Member-vouched guest passes.** A member signs to issue a one-day guest QR, within the guest cap and waiver rules.
 
 ## Later / ideas
-- [ ] Signed tournament check-in and two-sided score confirmation.
-- [ ] Prizes, streak and referral rewards through LNURL-withdraw.
+- [ ] Streak and referral rewards through LNURL-withdraw. (Signed tournament check-in, two-sided score confirmation and tournament prizes moved to **Tournaments** under Next.)
 - [ ] Coach tips through a Lightning address or LNURL-pay.
 - [ ] Gift cards (LNURL-withdraw or Bolt Card).
 - [ ] Member voting, one signature per member.

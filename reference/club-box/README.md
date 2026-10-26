@@ -111,6 +111,14 @@ Without a wallet you can still confirm the kiosk renders, rotates, and states th
 
 Revoke a member or a single key from Admin. A revoked member or key does not unlock. Restore returns a member to active; revoked keys stay revoked until the member enrolls again.
 
+## Branding
+
+Owners and managers set the club name, short name, logo, favicon, colors, font, contact line, and footer on **Admin**. The values are stored in the SQLite database, not in an environment variable. Member pages, the booking page, receipts, and outgoing email use them.
+
+`GET /brand.css` publishes the colors as the CSS variables in `public/styles.css` (`--bg`, `--surface`, `--text`, `--muted`, `--primary`, `--accent`, `--danger`, `--line`, `--font`). Until someone saves a brand, those variables stay the neutral placeholder and the pages say **Your club**. BitPadel is the name of this kit, not a club brand. The form rejects that name and rejects an SVG that contains it. See [`brand/README.md`](../../brand/README.md) and [`TRADEMARKS.md`](../../TRADEMARKS.md).
+
+Logo and favicon files are PNG, JPG, or SVG, at most 512 KB. A favicon may also be ICO. The server checks the file bytes. SVG is rewritten to a plain drawing; a file with a script is refused. Files use the same storage adapter as member photos.
+
 ## Tests
 
 ```bash
@@ -124,6 +132,7 @@ The suite covers:
 - Invoice settlement for the mock backend, BTCPay Greenfield webhooks (HMAC, settled, expired), and LNbits webhooks (path secret, pending vs paid)
 - Slot double-booking, including two concurrent claims, plus a price that changed under a player
 - The example HTTP relay: it pulses on `pulse-entry` and rejects lock, fire, and egress commands
+- Club branding: name and color validation, SVG rejection, page HTML, and receipt email
 
 Tests use an ephemeral SQLite file and a fixture price of one minor unit. That number is not a club price.
 

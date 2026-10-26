@@ -14,6 +14,22 @@ Roles are `owner`, `manager`, `front-desk`, and `coach`. Owners can create other
 
 Admin **Staff audit** lists non-GET calls under `/api/admin`: time, actor, method, path, and status. The shared admin token is recorded as `admin-token`. A named account is recorded as the display name and username. The list and the CSV are owner, manager, or admin-token only. The row does not store the token or the request body. **Not yet implemented:** a hardware-token second factor.
 
+## Branding
+
+Owners and managers set the club look on Admin, in **Branding**. Front desk and coach accounts cannot open that form. Each save is a `POST /api/admin/brand` (or a logo or favicon upload under that path) and shows up in **Staff audit**. The audit row stores the path, not the uploaded file.
+
+Until someone saves a brand, pages say **Your club** and use the neutral placeholder colors. That default is not the BitPadel name. BitPadel is the name of this kit. Do not save "BitPadel" as the club name, and do not upload the BitPadel placeholder logo. The form refuses both.
+
+What you can set:
+
+1. **Club name** and **short name**. The short name is the header and the start of email subjects. The club name is the receipt heading and the footer.
+2. **Logo** and **favicon**. PNG, JPG, or SVG, up to 512 KB. A favicon may also be ICO. The app checks the file type from the bytes. An SVG that contains a script is refused. The file is stored with member photos (`PHOTO_DIR`, or a `photos` folder next to the database). A database backup includes the name and colors. Copy the photo folder as well if you need the logo file after a restore.
+3. **Primary, accent, background, and text colors.** The preview updates as you change them. A contrast note appears when text, buttons, or links would be hard to read. You can still save. The pages keep working because the colors are published as the same CSS variables the stylesheet already uses (`--bg`, `--surface`, `--text`, `--muted`, `--primary`, `--accent`, `--danger`, `--line`, `--font`).
+4. **Font**, from the list on the form. The list is fonts already on the computer. The app does not load a font from another website.
+5. **Contact line**, **footer**, and up to four **http or https links**.
+
+Booking, the member's bookings page, the kiosk, enrollment, the desk, the guest form, the privacy page, and Admin itself show the saved name. Receipts and other email from the configured email provider use the same name, colors, and footer. Leave the email provider on `console` and nothing is delivered. See [integrations](10-integrations.md).
+
 ## Member profiles
 
 1. **Add a member.** The label is a membership number or similar handle. The new member is active.
