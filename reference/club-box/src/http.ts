@@ -22,6 +22,8 @@ const STATIC_FILES: Record<string, string> = {
   "/enroll": "enroll.html",
   "/styles.css": "styles.css",
   "/booking.js": "booking.js",
+  "/booking.css": "booking.css",
+  "/booking-schedule.js": "booking-schedule.js",
   "/admin.js": "admin.js",
   "/kiosk.js": "kiosk.js",
   "/enroll.js": "enroll.js",
