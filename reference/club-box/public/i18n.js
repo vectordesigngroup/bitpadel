@@ -56,6 +56,10 @@
       const key = el.getAttribute("data-i18n-alt");
       if (key) el.alt = t(key);
     });
+    scope.querySelectorAll("[data-i18n-aria]").forEach(function (el) {
+      const key = el.getAttribute("data-i18n-aria");
+      if (key) el.setAttribute("aria-label", t(key));
+    });
     const titleKey = document.body && document.body.getAttribute("data-i18n-title");
     if (titleKey && typeof messages[titleKey] === "string") document.title = t(titleKey);
     document.documentElement.lang = boot.locale;
@@ -78,7 +82,7 @@
   }
 
   function formatNumber(value) {
-    return new Intl.NumberFormat(boot.locale, { maximumFractionDigits: 0 }).format(value);
+    return new Intl.NumberFormat(boot.locale, { maximumFractionDigits: 0, useGrouping: "always" }).format(value);
   }
 
   function formatMoney(amountMinor, currency, decimals) {
@@ -90,11 +94,13 @@
         currency: currency,
         minimumFractionDigits: scale,
         maximumFractionDigits: scale,
+        useGrouping: "always",
       }).format(major);
     } catch {
       const number = new Intl.NumberFormat(boot.locale, {
         minimumFractionDigits: scale,
         maximumFractionDigits: scale,
+        useGrouping: "always",
       }).format(major);
       return `${number} ${currency}`;
     }

@@ -1,6 +1,6 @@
 # Translations
 
-The club-box reference app can show pages, receipts, and outgoing email and texts in English, Spanish, French, Italian, and Brazilian Portuguese.
+The club-box reference app can show pages, receipts, and outgoing email and texts in English, Spanish, French, Italian, and Brazilian Portuguese. That includes the booking calendar and the daily court grid.
 
 Spanish (`es`), French (`fr`), Italian (`it`), and Brazilian Portuguese (`pt-BR`) are **machine drafts**. A native speaker should review them before a club relies on the wording. They are a starting point, not a finished translation.
 

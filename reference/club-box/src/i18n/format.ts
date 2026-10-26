@@ -18,7 +18,7 @@ export function formatTime(date: Date, locale: LocaleId, timeZone: string): stri
 }
 
 export function formatNumber(value: number, locale: LocaleId): string {
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0, useGrouping: "always" }).format(value);
 }
 
 /**
@@ -33,11 +33,13 @@ export function formatMoney(amountMinor: number, currency: string, decimals: num
       currency,
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
+      useGrouping: "always",
     }).format(major);
   } catch {
     const number = new Intl.NumberFormat(locale, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
+      useGrouping: "always",
     }).format(major);
     return `${number} ${currency}`;
   }

@@ -21,7 +21,7 @@ export function applyCatalogHtml(html: string, locale: LocaleId): string {
     /(<[^>]*\sdata-i18n="([^"]+)"[^>]*>)([^<]*)/g,
     (_full, open: string, key: string) => `${open}${escapeHtml(translate(locale, key))}`,
   );
-  return applyAlt(applyTitle(translated, locale), locale);
+  return applyAria(applyAlt(applyTitle(translated, locale), locale), locale);
 }
 
 export function selectLocaleOption(html: string, locale: LocaleId): string {
@@ -65,6 +65,14 @@ function applyAlt(html: string, locale: LocaleId): string {
     const alt = escapeHtml(translate(locale, key));
     if (/alt="[^"]*"/.test(tag)) return tag.replace(/alt="[^"]*"/, `alt="${alt}"`);
     return tag.replace("<img", `<img alt="${alt}"`);
+  });
+}
+
+function applyAria(html: string, locale: LocaleId): string {
+  return html.replace(/<[^>]*\sdata-i18n-aria="([^"]+)"[^>]*>/g, (tag, key: string) => {
+    const label = escapeHtml(translate(locale, key));
+    if (/aria-label="[^"]*"/.test(tag)) return tag.replace(/aria-label="[^"]*"/, `aria-label="${label}"`);
+    return tag.replace(/<([^>\s]+)/, `<$1 aria-label="${label}"`);
   });
 }
 
