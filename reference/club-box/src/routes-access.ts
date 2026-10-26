@@ -24,6 +24,10 @@ import type { AppDeps } from "./deps.js";
 import { one } from "./db.js";
 import { AppError } from "./errors.js";
 import { readJson, requireAdmin, requireStaff, sendBytes, sendJson, sendText, type HttpReq, type Route } from "./http.js";
+import { translate } from "./i18n/catalog.js";
+import { localeFromRequest } from "./i18n/request.js";
+import { localeForRecipient } from "./i18n/preference.js";
+import { canonicalizeLocale, type LocaleId } from "./i18n/locales.js";
 import { log } from "./log.js";
 import { issueCard, presentCard, setCardStatus } from "./nfc/entry.js";
 import type { CardPresentation } from "./nfc/reader.js";
@@ -65,7 +69,12 @@ async function tap(req: HttpReq, ctx: AppDeps): Promise<void> {
   const cmac = req.url.searchParams.get("c") ?? req.url.searchParams.get("cmac") ?? "";
   const result = await presentCard(accessDeps(ctx), { kind: "sun", piccDataHex: picc, cmacHex: cmac, area }, req.ip);
   if (wantsHtml(req)) {
-    sendText(req.res, 200, tapPage(result.displayName, result.checkinId, result.token), "text/html; charset=utf-8");
+    sendText(
+      req.res,
+      200,
+      tapPage(ctx, req, result.displayName, result.checkinId, result.token),
+      "text/html; charset=utf-8",
+    );
     return;
   }
   sendJson(req.res, 200, { checkin: result });
@@ -152,6 +161,7 @@ async function namedGuest(req: HttpReq, ctx: AppDeps): Promise<void> {
         contactKind: kind,
         to: contactValue,
         privacyToken: created.privacyToken,
+        hintLocale: localeFromRequest(ctx.db, req.headers, req.url, ctx.now()).locale,
       },
       ctx.db,
     );
@@ -188,6 +198,7 @@ function profile(req: HttpReq, ctx: AppDeps): Promise<void> {
     membershipType: body.membershipType === undefined ? undefined : requiredString(body, "membershipType", 40),
     guestLimit: limit,
     playtomicPlayerId: optionalClearable(body, "playtomicPlayerId", 80),
+    preferredLocale: readPreferredLocale(body.preferredLocale),
   });
   sendJson(req.res, 200, { ok: true });
   return Promise.resolve();
@@ -243,13 +254,7 @@ async function household(req: HttpReq, ctx: AppDeps): Promise<void> {
   const primaryMemberId = requiredString(body, "primaryMemberId", 80);
   const created = createHousehold(ctx.db, requiredString(body, "label", 80), primaryMemberId, ctx.now());
   try {
-    await sendHouseholdNotice(
-      ctx.db,
-      ctx.notifier,
-      primaryMemberId,
-      "A household was created and this membership is the primary contact. This notice is transactional.",
-      ctx.config.publicBaseUrl,
-    );
+    await sendHouseholdNotice(ctx.db, ctx.notifier, primaryMemberId, "created", ctx.config.publicBaseUrl);
   } catch (error) {
     log("error", "household notice failed", { error: error instanceof Error ? error.message : "error" });
   }
@@ -270,13 +275,7 @@ async function householdMember(req: HttpReq, ctx: AppDeps): Promise<void> {
   );
   if (primary) {
     try {
-      await sendHouseholdNotice(
-        ctx.db,
-        ctx.notifier,
-        primary.primary_member_id,
-        "A household membership was updated. This notice is transactional.",
-        ctx.config.publicBaseUrl,
-      );
+      await sendHouseholdNotice(ctx.db, ctx.notifier, primary.primary_member_id, "updated", ctx.config.publicBaseUrl);
     } catch (error) {
       log("error", "household notice failed", { error: error instanceof Error ? error.message : "error" });
     }
@@ -396,10 +395,22 @@ function publicFields(checkin: { id: string; token: string; displayName: string;
   return checkin;
 }
 
-function tapPage(name: string, checkinId: string, token: string): string {
+function tapPage(ctx: AppDeps, req: HttpReq, name: string, checkinId: string, token: string): string {
+  const member = one<{ id: string }>(ctx.db, "SELECT member_id AS id FROM checkins WHERE id = ?", checkinId);
+  const hint = localeFromRequest(ctx.db, req.headers, req.url, ctx.now()).locale;
+  const locale = localeForRecipient(ctx.db, { memberId: member?.id ?? null, hint });
   const safeName = escapeHtml(name);
   const href = `/guest?checkin=${encodeURIComponent(checkinId)}&token=${encodeURIComponent(token)}`;
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Checked in</title><link rel="stylesheet" href="/styles.css"></head><body><main><h1>Checked in</h1><p>${safeName}</p><p><a href="${href}">Add guests</a></p><p class="safety">This service can pulse an entry lock only. Leaving does not use this page.</p></main></body></html>`;
+  return `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(translate(locale, "tap.title"))}</title><link rel="stylesheet" href="/styles.css"></head><body><main><h1>${escapeHtml(translate(locale, "tap.heading"))}</h1><p>${safeName}</p><p><a href="${href}">${escapeHtml(translate(locale, "tap.addGuests"))}</a></p><p class="safety">${escapeHtml(translate(locale, "tap.safety"))}</p></main></body></html>`;
+}
+
+function readPreferredLocale(value: unknown): LocaleId | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string") throw new AppError(400, "preferredLocale is not a supported language");
+  const locale = canonicalizeLocale(value);
+  if (!locale) throw new AppError(400, "preferredLocale is not a supported language");
+  return locale;
 }
 
 function escapeHtml(value: string): string {

@@ -2,10 +2,25 @@
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
 const statusEl = document.querySelector("#status");
+const i18n = window.clubI18n;
 let email = sessionStorage.getItem("club-player-email") || "";
+
+function t(key, vars) {
+  return i18n.t(key, vars);
+}
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function money(amountMinor, currency) {
+  return i18n.formatMoney(amountMinor, currency, i18n.currencyDecimals);
+}
+
+function periodName(period) {
+  const key = `account.period.${period}`;
+  const label = t(key);
+  return label === key ? String(period) : label;
 }
 
 async function api(pathname, options = {}) {
@@ -13,7 +28,7 @@ async function api(pathname, options = {}) {
   if (options.body) headers.set("content-type", "application/json");
   const response = await fetch(pathname, { ...options, headers, credentials: "same-origin" });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  if (!response.ok) throw new Error(body.error || t("common.failed", { status: response.status }));
   return body;
 }
 
@@ -23,7 +38,7 @@ document.querySelector("#code-form").addEventListener("submit", async (event) =>
   sessionStorage.setItem("club-player-email", email);
   try {
     await api("/api/player/code", { method: "POST", body: JSON.stringify({ email }) });
-    setStatus("Code sent. Check your email.");
+    setStatus(t("account.codeSent"));
   } catch (error) {
     setStatus(error.message);
   }
@@ -47,22 +62,30 @@ async function load() {
   document.querySelector("#bookings").hidden = false;
   const upcoming = document.querySelector("#upcoming");
   upcoming.replaceChildren();
-  if (data.upcoming.length === 0) upcoming.textContent = "No upcoming bookings.";
+  if (data.upcoming.length === 0) upcoming.textContent = t("account.noneUpcoming");
   for (const booking of data.upcoming) {
     const block = document.createElement("article");
     block.className = "slot";
     const title = document.createElement("h3");
     title.textContent = booking.courtName;
     const when = document.createElement("p");
-    when.textContent = `${new Date(booking.startsAt).toLocaleString()} · ${booking.paymentMethod} · ${booking.amountMinor} ${booking.currency} minor units`;
+    when.textContent = t("account.whenLine", {
+      when: i18n.formatDateTime(booking.startsAt),
+      method: booking.paymentMethod,
+      amount: money(booking.amountMinor, booking.currency),
+    });
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "secondary";
-    cancel.textContent = "Cancel booking";
+    cancel.textContent = t("account.cancel");
     cancel.addEventListener("click", async () => {
       try {
         const result = await api(`/api/player/bookings/${booking.id}/cancel`, { method: "POST" });
-        setStatus(result.refundStatus ? `Cancelled. Refund ${result.refundStatus}.` : "Cancelled.");
+        setStatus(
+          result.refundStatus
+            ? t("account.cancelledRefund", { status: result.refundStatus })
+            : t("account.cancelled"),
+        );
         await load();
       } catch (error) {
         setStatus(error.message);
@@ -73,13 +96,20 @@ async function load() {
   }
   const past = document.querySelector("#past");
   past.replaceChildren();
-  if (data.past.length === 0) past.textContent = "No past bookings.";
+  if (data.past.length === 0) past.textContent = t("account.nonePast");
   for (const booking of data.past) {
     const line = document.createElement("p");
-    line.textContent = `${booking.courtName} ${new Date(booking.startsAt).toLocaleString()}${booking.cancelledAt ? " cancelled" : ""}`;
+    const key = booking.cancelledAt ? "account.pastCancelled" : "account.pastLine";
+    line.textContent = t(key, { court: booking.courtName, when: i18n.formatDateTime(booking.startsAt) });
     past.append(line);
   }
-  setStatus(`Logged in as ${data.player.email}. Cancel at least ${data.cancelWindowHours} hours ahead. Refunds: ${data.cancelRefund}.`);
+  setStatus(
+    t("account.loggedIn", {
+      email: data.player.email,
+      hours: String(data.cancelWindowHours),
+      refund: data.cancelRefund,
+    }),
+  );
   await loadTab();
 }
 
@@ -94,7 +124,7 @@ async function loadTab() {
     for (const method of methods) {
       const option = document.createElement("option");
       option.value = method;
-      option.textContent = method;
+      option.textContent = method === "lightning" ? t("booking.lightning") : method === "stripe" ? t("booking.cardStripe") : method === "square" ? t("booking.cardSquare") : method;
       option.selected = method === chosen;
       select.append(option);
     }
@@ -102,19 +132,30 @@ async function loadTab() {
     section.hidden = false;
     const balance = data.balance;
     const allowance = balance.allowance
-      ? `Allowance left: ${balance.allowance.remainingMinor} of ${balance.allowance.configuredMinor} minor units (${balance.allowance.remainingMajor} ${balance.currency}) for this ${balance.allowance.period}.`
-      : "This membership has no allowance set.";
-    document.querySelector("#tab-summary").textContent =
-      `${allowance} Tab owed: ${balance.tab.openMinor} minor units (${balance.tab.openMajor} ${balance.currency}).${balance.tab.frozen ? " The tab is frozen. Ask the desk." : ""}`;
+      ? t("account.allowanceLeft", {
+          remaining: money(balance.allowance.remainingMinor, balance.currency),
+          configured: money(balance.allowance.configuredMinor, balance.currency),
+          period: periodName(balance.allowance.period),
+        })
+      : t("account.noAllowance");
+    const frozen = balance.tab.frozen ? t("account.tabFrozen") : "";
+    document.querySelector("#tab-summary").textContent = `${allowance} ${t("account.tabOwed", {
+      amount: money(balance.tab.openMinor, balance.currency),
+    })}${frozen}`;
     const lines = document.querySelector("#tab-lines");
     lines.replaceChildren();
     if (balance.recent.length === 0) {
-      lines.textContent = "No charges yet.";
+      lines.textContent = t("account.noCharges");
     }
     for (const entry of balance.recent) {
       const line = document.createElement("p");
-      const guest = entry.guestLabel ? ` for ${entry.guestLabel}` : "";
-      line.textContent = `${new Date(entry.at).toLocaleString()} · ${entry.description}${guest} · tab ${entry.tabMinor} ${entry.currency} minor units`;
+      const guest = entry.guestLabel ? t("account.forGuest", { name: entry.guestLabel }) : "";
+      line.textContent = t("account.chargeLine", {
+        when: i18n.formatDateTime(entry.at),
+        description: entry.description,
+        guest,
+        amount: money(entry.tabMinor, entry.currency),
+      });
       lines.append(line);
     }
     const waiting = balance.pendingMinor == null ? balance.tab.pendingMinor : balance.pendingMinor;
@@ -122,7 +163,9 @@ async function loadTab() {
     document.querySelector("#settle-form").hidden = !canSettle;
     if (balance.tab.pendingMinor > 0) {
       const waitingLine = document.createElement("p");
-      waitingLine.textContent = `${balance.tab.pendingMinor} minor units already have a payment waiting.`;
+      waitingLine.textContent = t("account.paymentWaiting", {
+        amount: money(balance.tab.pendingMinor, balance.currency),
+      });
       lines.append(waitingLine);
     }
   } catch (error) {
@@ -146,13 +189,17 @@ document.querySelector("#settle-form").addEventListener("submit", async (event) 
     pay.replaceChildren();
     const settlement = result.settlement;
     const intro = document.createElement("span");
-    const sats = settlement.amountSats == null ? "" : ` (${settlement.amountSats} sats)`;
-    intro.textContent = `Pay ${settlement.amountMinor} minor units${sats} before ${new Date(settlement.expiresAt).toLocaleString()}. `;
+    const sats = settlement.amountSats == null ? "" : t("account.satsParen", { amount: i18n.formatSats(settlement.amountSats) });
+    intro.textContent = t("account.payBefore", {
+      amount: money(settlement.amountMinor, settlement.currency),
+      sats,
+      when: i18n.formatDateTime(settlement.expiresAt),
+    });
     pay.append(intro);
     if (settlement.checkoutUrl) {
       const link = document.createElement("a");
       link.href = settlement.checkoutUrl;
-      link.textContent = "Open card checkout";
+      link.textContent = t("account.openCheckout");
       pay.append(link);
     } else {
       const invoice = document.createElement("span");
@@ -162,11 +209,11 @@ document.querySelector("#settle-form").addEventListener("submit", async (event) 
     const check = document.createElement("button");
     check.type = "button";
     check.className = "secondary";
-    check.textContent = "Check payment";
+    check.textContent = t("account.checkPayment");
     check.addEventListener("click", async () => {
       try {
         const latest = await api(`/api/player/tab/settlements/${settlement.id}`);
-        setStatus(latest.settlement.status === "paid" ? "Tab payment settled." : `Payment is ${latest.settlement.status}.`);
+        setStatus(latest.settlement.status === "paid" ? t("account.tabSettled") : t("account.paymentStatus", { status: latest.settlement.status }));
         await loadTab();
       } catch (error) {
         setStatus(error.message);
@@ -180,5 +227,5 @@ document.querySelector("#settle-form").addEventListener("submit", async (event) 
 });
 
 load().catch(() => {
-  setStatus("Enter your email to get a code.");
+  setStatus(t("account.enterEmail"));
 });

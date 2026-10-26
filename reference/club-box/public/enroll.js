@@ -5,6 +5,7 @@ const params = new URLSearchParams(location.search);
 const k1 = params.get("k1") || "";
 const statusEl = document.querySelector("#status");
 const qrEl = document.querySelector("#qr");
+const i18n = window.clubI18n;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -12,30 +13,30 @@ function setStatus(text) {
 
 async function start() {
   if (!/^[0-9a-f]{64}$/i.test(k1)) {
-    setStatus("Open the enrollment link from the admin page.");
+    setStatus(i18n.t("enroll.openFromAdmin"));
     return;
   }
   qrEl.hidden = false;
   qrEl.src = `/api/access/challenges/${k1}/qr.png`;
-  setStatus("Scan with the wallet that should open the door.");
+  setStatus(i18n.t("enroll.scan"));
   const timer = window.setInterval(async () => {
     try {
       const response = await fetch(`/api/access/challenges/${k1}`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setStatus(body.error || "This code is no longer available.");
+        setStatus(body.error || i18n.t("enroll.unavailable"));
         window.clearInterval(timer);
         return;
       }
       if (body.challenge.status === "enrolled") {
-        setStatus("Wallet enrolled. You can close this page.");
+        setStatus(i18n.t("enroll.done"));
         window.clearInterval(timer);
       } else if (body.challenge.status === "denied" || body.challenge.status === "expired") {
-        setStatus("Enrollment did not finish. Ask staff for a new code.");
+        setStatus(i18n.t("enroll.failed"));
         window.clearInterval(timer);
       }
     } catch {
-      setStatus("Cannot reach the club server.");
+      setStatus(i18n.t("enroll.offline"));
     }
   }, 1500);
 }

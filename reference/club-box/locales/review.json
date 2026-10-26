@@ -1,0 +1,32 @@
+{
+  "machineDraftLocales": ["es", "fr", "it", "pt-BR"],
+  "note": "es, fr, it, and pt-BR are machine drafts. A native speaker should review them before a club relies on the wording. Keys in legalReviewKeys are waivers, disclaimers, consent, opt-out, or safety wording. A qualified reviewer in each country must approve them before use. A translation is not that approval.",
+  "legalReviewKeys": [
+    "kiosk.safetyEntry",
+    "kiosk.safetyFallback",
+    "kiosk.noscript",
+    "kiosk.unreachable",
+    "kiosk.entryPulsed",
+    "kiosk.reason.door-failed",
+    "kiosk.reason.default",
+    "guest.note",
+    "guest.waiver",
+    "guest.marketing",
+    "privacy.disclaimer",
+    "privacy.body",
+    "desk.safety",
+    "tap.safety",
+    "admin.allowanceNote",
+    "admin.membersNote",
+    "admin.marketingNote",
+    "booking.reminderSms",
+    "account.note",
+    "email.receipt.text",
+    "email.login.text",
+    "email.privacy.subject",
+    "email.privacy.text",
+    "email.reminder.text",
+    "email.household.created",
+    "email.household.updated"
+  ]
+}

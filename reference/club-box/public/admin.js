@@ -10,6 +10,10 @@ function setStatus(text) {
   statusEl.textContent = text;
 }
 
+function t(key, vars) {
+  return window.clubI18n.t(key, vars);
+}
+
 async function api(pathname, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("authorization", `Bearer ${token}`);
@@ -518,10 +522,23 @@ function renderMembers(members) {
     const profile = document.createElement("button");
     profile.type = "button";
     profile.className = "secondary";
-    profile.textContent = "Save profile";
-    const name = field("Display name", member.displayName || "");
-    const email = field("Email", member.email || "");
-    const phone = field("Phone", member.phone || "");
+    profile.textContent = t("admin.saveProfile");
+    const name = field(t("admin.displayName"), member.displayName || "");
+    const email = field(t("admin.email"), member.email || "");
+    const phone = field(t("admin.phone"), member.phone || "");
+    const language = document.createElement("select");
+    language.setAttribute("aria-label", t("admin.memberLanguage"));
+    const blankLanguage = document.createElement("option");
+    blankLanguage.value = "";
+    blankLanguage.textContent = t("admin.memberLanguageBlank");
+    language.append(blankLanguage);
+    for (const choice of window.clubI18n.locales) {
+      const option = document.createElement("option");
+      option.value = choice.id;
+      option.textContent = choice.name;
+      option.selected = choice.id === member.preferredLocale;
+      language.append(option);
+    }
     profile.addEventListener("click", async () => {
       try {
         await api(`/api/admin/members/${member.id}/profile`, {
@@ -533,15 +550,16 @@ function renderMembers(members) {
             playtomicPlayerId: player.value || null,
             membershipType: membership.value,
             guestLimit: guests.value.trim() === "" ? null : Number(guests.value),
+            preferredLocale: language.value === "" ? null : language.value,
           }),
         });
         await refresh();
-        setStatus("Profile saved.");
+        setStatus(t("admin.profileSaved"));
       } catch (error) {
         setStatus(error.message);
       }
     });
-    const player = field("Playtomic player id", member.playtomicPlayerId || "");
+    const player = field(t("admin.playtomicId"), member.playtomicPlayerId || "");
     const membership = document.createElement("select");
     membership.setAttribute("aria-label", "Membership type");
     for (const type of config.membershipTypes || []) {
@@ -551,7 +569,7 @@ function renderMembers(members) {
       option.selected = type === member.membershipType;
       membership.append(option);
     }
-    const guests = field("Guest cap, blank uses the club default", member.guestLimit == null ? "" : String(member.guestLimit));
+    const guests = field(t("admin.guestCap"), member.guestLimit == null ? "" : String(member.guestLimit));
     const photo = document.createElement("input");
     photo.type = "file";
     photo.accept = "image/jpeg,image/png,image/webp";
@@ -644,7 +662,7 @@ function renderMembers(members) {
         setStatus(error.message);
       }
     });
-    block.append(name, email, phone, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue, showTab, tabPanel);
+    block.append(name, email, phone, language, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue, showTab, tabPanel);
     for (const card of member.cards || []) {
       const line = document.createElement("p");
       line.className = "mono note";
@@ -941,6 +959,7 @@ function readBrandDraft() {
     fontKey: form.fontKey.value,
     footerText: form.footerText.value.trim(),
     contactText: form.contactText.value.trim(),
+    defaultLocale: form.defaultLocale.value,
   };
 }
 
@@ -971,7 +990,7 @@ function updateBrandPreview() {
   preview.querySelector(".brand-preview-footer").textContent = draft.footerText;
   const warnings = document.querySelector("#brand-contrast");
   if (!draft.primaryColor || !draft.accentColor || !draft.backgroundColor || !draft.textColor) {
-    warnings.textContent = "Enter 6-digit hex colors, such as #14b8a6.";
+    warnings.textContent = t("admin.hexHint");
     return;
   }
   const params = new URLSearchParams({
@@ -1002,6 +1021,7 @@ async function renderBrand() {
   setBrandColor("background", brand.backgroundColor);
   setBrandColor("text", brand.textColor);
   form.fontKey.value = brand.fontKey;
+  form.defaultLocale.value = brand.defaultLocale || "en";
   form.footerText.value = brand.footerText;
   form.contactText.value = brand.contactText;
   const labels = [...form.querySelectorAll("[name=linkLabel]")];
@@ -1061,7 +1081,7 @@ document.querySelector("#brand-form").addEventListener("submit", async (event) =
   const form = event.currentTarget;
   const draft = readBrandDraft();
   if (!draft.primaryColor || !draft.accentColor || !draft.backgroundColor || !draft.textColor) {
-    setStatus("Enter 6-digit hex colors, such as #14b8a6.");
+    setStatus(t("admin.hexHint"));
     return;
   }
   try {
@@ -1078,11 +1098,12 @@ document.querySelector("#brand-form").addEventListener("submit", async (event) =
         footerText: draft.footerText,
         contactText: draft.contactText,
         links: brandLinks(form),
+        defaultLocale: draft.defaultLocale,
       }),
     });
     await refresh();
     const warning = saved.contrastWarnings && saved.contrastWarnings.length ? ` ${saved.contrastWarnings.join(" ")}` : "";
-    setStatus(`Branding saved.${warning}`);
+    setStatus(`${t("admin.savedBranding")}${warning}`);
   } catch (error) {
     setStatus(error.message);
   }
@@ -1092,7 +1113,7 @@ document.querySelector("#brand-logo-form").addEventListener("submit", async (eve
   event.preventDefault();
   const file = document.querySelector("#brand-logo-file").files[0];
   if (!file) {
-    setStatus("Choose a logo file.");
+    setStatus(t("admin.chooseLogo"));
     return;
   }
   try {
@@ -1118,7 +1139,7 @@ document.querySelector("#brand-favicon-form").addEventListener("submit", async (
   event.preventDefault();
   const file = document.querySelector("#brand-favicon-file").files[0];
   if (!file) {
-    setStatus("Choose a favicon file.");
+    setStatus(t("admin.chooseFavicon"));
     return;
   }
   try {

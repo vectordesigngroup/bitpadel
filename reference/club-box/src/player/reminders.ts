@@ -3,6 +3,9 @@
 
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
+import { translate } from "../i18n/catalog.js";
+import { formatDateTime } from "../i18n/format.js";
+import { localeForRecipient } from "../i18n/preference.js";
 import type { Notifier } from "../notify/types.js";
 import { sendTransactional } from "../notify/service.js";
 import { log } from "../log.js";
@@ -20,8 +23,8 @@ export async function runDueReminders(
   const horizon = new Date(now.getTime() + config.reminderHoursBefore * 3_600_000).toISOString();
   const rows = db
     .prepare(
-      `SELECT b.id, s.starts_at, c.name AS court_name, h.reminder_email, h.reminder_sms,
-              h.reminder_phone, h.receipt_email, p.email AS player_email
+      `SELECT b.id, b.player_id, s.starts_at, c.name AS court_name, h.reminder_email, h.reminder_sms,
+              h.reminder_phone, h.receipt_email, h.locale, p.email AS player_email
        FROM bookings b
        JOIN slots s ON s.id = b.slot_id
        JOIN courts c ON c.id = s.court_id
@@ -31,24 +34,30 @@ export async function runDueReminders(
     )
     .all(now.toISOString(), horizon) as Array<{
     id: string;
+    player_id: string | null;
     starts_at: string;
     court_name: string;
     reminder_email: number;
     reminder_sms: number;
     reminder_phone: string | null;
     receipt_email: string | null;
+    locale: string | null;
     player_email: string | null;
   }>;
   let sent = 0;
   for (const row of rows) {
-    const when = new Date(row.starts_at).toISOString();
-    const text = `Reminder: ${row.court_name} starts at ${when}. This is a booking reminder, not marketing.`;
+    const locale = localeForRecipient(db, {
+      playerId: row.player_id,
+      email: row.player_email || row.receipt_email,
+      phone: row.reminder_phone,
+      hint: row.locale,
+    });
+    const when = formatDateTime(new Date(row.starts_at), locale, config.clubTimeZone);
+    const text = translate(locale, "email.reminder.text", { court: row.court_name, when });
+    const subject = translate(locale, "email.reminder.subject", { court: row.court_name });
     if (row.reminder_email === 1) {
       const to = row.player_email || row.receipt_email;
-      if (
-        to &&
-        (await sendOnce(db, notifier, row.id, "email", to, `Reminder for ${row.court_name}`, text, now, config.publicBaseUrl))
-      ) {
+      if (to && (await sendOnce(db, notifier, row.id, "email", to, subject, text, now, config.publicBaseUrl))) {
         sent += 1;
       }
     }

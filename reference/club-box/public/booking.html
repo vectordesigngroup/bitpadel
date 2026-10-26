@@ -9,37 +9,50 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="booking.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/" aria-current="page">Booking</a>
-      <a href="/kiosk">Door kiosk</a>
-      <a href="/account">My bookings</a>
-      <a href="/admin">Admin</a>
+      <a href="/" aria-current="page" data-i18n="nav.booking">Booking</a>
+      <a href="/kiosk" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/account" data-i18n="nav.account">My bookings</a>
+      <a href="/admin" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main>
-    <h1>Book a court</h1>
-    <p class="note">Prices follow the club's rules. Log in on <a href="/account">your bookings</a> with the email on a membership to get the member price.</p>
+    <h1 data-i18n="booking.heading">Book a court</h1>
+    <p class="note"><span data-i18n="booking.note">Prices follow the club's rules. Log in with the email on a membership to get the member price.</span> <a href="/account" data-i18n="nav.account">My bookings</a></p>
     <fieldset id="pay-with">
-      <legend>Pay with</legend>
-      <label><input type="radio" name="method" value="lightning" checked> Lightning</label>
+      <legend data-i18n="booking.payWith">Pay with</legend>
+      <label><input type="radio" name="method" value="lightning" checked> <span data-i18n="booking.lightning">Lightning</span></label>
     </fieldset>
-    <label>Receipt email, optional
+    <label><span data-i18n="booking.receiptEmail">Receipt email, optional</span>
       <input id="receipt-email" type="email" maxlength="200" autocomplete="email">
     </label>
-    <label><input id="reminder-email" type="checkbox"> Email me a reminder before this booking</label>
-    <label>Reminder phone, only if you want a text
+    <label><input id="reminder-email" type="checkbox"> <span data-i18n="booking.reminderEmail">Email me a reminder before this booking</span></label>
+    <label><span data-i18n="booking.reminderPhone">Reminder phone, only if you want a text</span>
       <input id="reminder-phone" type="tel" maxlength="32" autocomplete="tel">
     </label>
-    <label><input id="reminder-sms" type="checkbox"> Text me a reminder. This is not marketing.</label>
+    <label><input id="reminder-sms" type="checkbox"> <span data-i18n="booking.reminderSms">Text me a reminder. This is not marketing.</span></label>
     <div id="courts" class="row"></div>
     <div id="slots"></div>
     <section id="invoice" hidden>
-      <h2 id="invoice-title">Lightning invoice</h2>
+      <h2 id="invoice-title" data-i18n="booking.invoiceTitle">Lightning invoice</h2>
       <p id="invoice-note"></p>
-      <img id="invoice-qr" alt="Invoice QR" width="280" height="280">
+      <img id="invoice-qr" alt="Invoice QR" data-i18n-alt="booking.qrAlt" width="280" height="280">
       <p id="invoice-amount"></p>
       <p id="bolt11" class="mono"></p>
       <p id="invoice-status" role="status"></p>
@@ -51,6 +64,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/booking.js"></script>
 </body>

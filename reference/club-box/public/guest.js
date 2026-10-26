@@ -3,6 +3,7 @@
 
 const params = new URLSearchParams(location.search);
 const statusEl = document.querySelector("#status");
+const i18n = window.clubI18n;
 
 document.querySelector("#guest").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -24,8 +25,8 @@ document.querySelector("#guest").addEventListener("submit", async (event) => {
       }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || "Could not add the guest");
-    statusEl.textContent = "Guest added. A privacy link was created for this contact.";
+    if (!response.ok) throw new Error(body.error || i18n.t("guest.failed"));
+    statusEl.textContent = i18n.t("guest.added");
     if (form instanceof HTMLFormElement) form.reset();
   } catch (error) {
     statusEl.textContent = error.message;

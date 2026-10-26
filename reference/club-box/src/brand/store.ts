@@ -3,6 +3,7 @@
 
 import type Database from "better-sqlite3";
 import { one } from "../db.js";
+import { canonicalizeLocale } from "../i18n/locales.js";
 import { AppError } from "../errors.js";
 import type { ObjectStorage } from "../storage/types.js";
 import { assertNoReservedMark, assetKey, sniffBrandAsset, type BrandAssetKind } from "./assets.js";
@@ -37,6 +38,7 @@ type BrandRow = {
   logo_type: string | null;
   favicon_key: string | null;
   favicon_type: string | null;
+  default_locale: string | null;
   updated_at: string;
 };
 
@@ -45,7 +47,7 @@ export function loadClubBrand(db: Database.Database): ClubBrand {
     db,
     `SELECT club_name, short_name, primary_color, accent_color, background_color, text_color,
             font_key, footer_text, contact_text, links_json, logo_key, logo_type,
-            favicon_key, favicon_type, updated_at
+            favicon_key, favicon_type, default_locale, updated_at
      FROM club_branding WHERE id = 1`,
   );
   if (!row) return defaultClubBrand();
@@ -63,6 +65,7 @@ export function loadClubBrand(db: Database.Database): ClubBrand {
     links: parseLinks(row.links_json),
     logo: asset(row.logo_key, row.logo_type),
     favicon: asset(row.favicon_key, row.favicon_type),
+    defaultLocale: canonicalizeLocale(row.default_locale) ?? "en",
     updatedAt: row.updated_at,
   };
 }
@@ -83,6 +86,7 @@ export function toPublicBrand(brand: ClubBrand): PublicBrand {
     hasLogo: brand.logo !== null,
     hasFavicon: brand.favicon !== null,
     updatedAt: brand.updatedAt,
+    defaultLocale: brand.defaultLocale,
     usingPlaceholder: isPlaceholderBrand(brand),
     placeholderNote: PLACEHOLDER_NOTE,
     contrastWarnings: contrastWarnings(brand),
@@ -96,7 +100,8 @@ export function saveClubBrandText(db: Database.Database, fields: BrandFields, no
     db.prepare(
       `UPDATE club_branding
        SET club_name = ?, short_name = ?, primary_color = ?, accent_color = ?, background_color = ?,
-           text_color = ?, font_key = ?, footer_text = ?, contact_text = ?, links_json = ?, updated_at = ?
+           text_color = ?, font_key = ?, footer_text = ?, contact_text = ?, links_json = ?,
+           default_locale = ?, updated_at = ?
        WHERE id = 1`,
     ).run(
       fields.clubName,
@@ -109,6 +114,7 @@ export function saveClubBrandText(db: Database.Database, fields: BrandFields, no
       fields.footerText,
       fields.contactText,
       JSON.stringify(fields.links),
+      fields.defaultLocale ?? loadClubBrand(db).defaultLocale,
       updatedAt,
     );
   });

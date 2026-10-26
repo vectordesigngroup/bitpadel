@@ -8,6 +8,11 @@ import type Database from "better-sqlite3";
 import { injectBrandHtml } from "./brand/html.js";
 import { loadClubBrand, toPublicBrand } from "./brand/store.js";
 import type { AppConfig } from "./config.js";
+import { localeCookie } from "./i18n/cookie.js";
+import { allCatalogs } from "./i18n/catalog.js";
+import { applyCatalogHtml, injectLocaleBoot, preserveQueryOnLocaleForm, selectLocaleOption } from "./i18n/html.js";
+import { canonicalizeLocale, localeChoices } from "./i18n/locales.js";
+import { localeFromRequest } from "./i18n/request.js";
 import type { DoorController } from "./doors/types.js";
 import { createAppServer } from "./http.js";
 import type { PaymentBackend } from "./payments/types.js";
@@ -65,9 +70,29 @@ export function createClubServer(options: {
     trustProxy: options.config.trustProxy,
     routes,
     publicDir,
-    transformHtml: (_pathname, html) => {
+    transformHtml: (_pathname, html, request) => {
       try {
-        return injectBrandHtml(html, toPublicBrand(loadClubBrand(options.db)));
+        const choice = localeFromRequest(options.db, request.headers, request.url, now());
+        const brand = loadClubBrand(options.db);
+        const localized = selectLocaleOption(
+          preserveQueryOnLocaleForm(applyCatalogHtml(html, choice.locale), request.url.searchParams),
+          choice.locale,
+        );
+        const page = injectLocaleBoot(localized, {
+          locale: choice.locale,
+          source: choice.source,
+          timeZone: options.config.clubTimeZone,
+          currency: options.config.currency,
+          currencyDecimals: options.config.currencyDecimals,
+          locales: localeChoices(),
+          messages: allCatalogs()[choice.locale],
+        });
+        const branded = injectBrandHtml(page, toPublicBrand(brand));
+        const requested = canonicalizeLocale(request.url.searchParams.get("lang"));
+        const extraHeaders = requested
+          ? { "set-cookie": localeCookie(requested, options.config.publicBaseUrl.startsWith("https://")) }
+          : undefined;
+        return { html: branded, extraHeaders };
       } catch {
         return html;
       }

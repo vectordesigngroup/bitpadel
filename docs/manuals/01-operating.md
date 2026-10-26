@@ -15,6 +15,8 @@ Know which payment mode the club is in. `GET /api/health` includes `paymentBacke
 
 Guest count stays at zero until a manager sets `GUEST_LIMIT` to a number above zero, or sets a cap on that member in Admin. The kiosk still shows **More**. Pressing it past the cap shows "That is over the guest limit."
 
+The **Language** menu is at the top of the booking page, My bookings, the kiosk, the guest form, and the desk. It changes the labels on this browser until the browser closes. After a member logs in on My bookings, that choice is saved for them, and their receipts, reminders, and login codes use it. A manager sets the club's usual language in Admin under Branding. Spanish, French, Italian, and Brazilian Portuguese in this kit are drafts. Waiver and door-safety lines still need a lawyer or other qualified reviewer in the club's country. See [translations](../translations.md).
+
 ## Opening checklist
 
 1. Open the kiosk page (`/kiosk`). You should see the club's short name at the top and the two safety lines: the service only pulses entry, and leaving does not use the screen. **Your club** means a manager has not saved a name in Admin **Branding** yet. If the page says the access server is unreachable, the app is down. Use the fob, PIN, or staff path, and tell a manager. Those fallbacks are physical. **Not yet implemented:** fob or PIN logic inside this app.

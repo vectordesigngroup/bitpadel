@@ -513,6 +513,15 @@ function migrate(db: Database.Database): void {
     "ALTER TABLE members ADD COLUMN access_scope TEXT NOT NULL DEFAULT 'member'",
   );
   db.exec(EXTRA_SCHEMA);
+  ensureColumn(
+    db,
+    "club_branding",
+    "default_locale",
+    "ALTER TABLE club_branding ADD COLUMN default_locale TEXT NOT NULL DEFAULT 'en'",
+  );
+  ensureColumn(db, "players", "preferred_locale", "ALTER TABLE players ADD COLUMN preferred_locale TEXT");
+  ensureColumn(db, "members", "preferred_locale", "ALTER TABLE members ADD COLUMN preferred_locale TEXT");
+  ensureColumn(db, "holds", "locale", "ALTER TABLE holds ADD COLUMN locale TEXT");
   const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'version'").get() as
     | { value: string }
     | undefined;

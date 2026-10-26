@@ -9,19 +9,32 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="enroll.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/kiosk">Door kiosk</a>
-      <a href="/admin">Admin</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/kiosk" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/admin" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main class="kiosk-main">
-    <h1>Enroll a Lightning wallet</h1>
-    <p class="note">Staff create this code in admin and show it to the member. The wallet's linking key is stored. No name, email, or balance is requested.</p>
-    <img id="qr" alt="Enrollment LNURL-auth QR" hidden width="360" height="360">
+    <h1 data-i18n="enroll.heading">Enroll a Lightning wallet</h1>
+    <p class="note" data-i18n="enroll.note">Staff create this code in admin and show it to the member. The wallet's linking key is stored. No name, email, or balance is requested.</p>
+    <img id="qr" alt="Enrollment LNURL-auth QR" data-i18n-alt="enroll.qrAlt" hidden width="360" height="360">
     <p id="status" class="status" role="status"></p>
   </main>
   <footer class="brand-footer">
@@ -29,6 +42,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/enroll.js"></script>
 </body>

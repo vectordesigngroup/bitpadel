@@ -34,6 +34,7 @@ const STATIC_FILES: Record<string, string> = {
   "/account": "account.html",
   "/account.js": "account.js",
   "/brand.js": "brand.js",
+  "/i18n.js": "i18n.js",
 };
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -155,11 +156,13 @@ export function listen(server: Server, port: number, host: string): Promise<void
   });
 }
 
+export type HtmlTransformResult = string | { html: string; extraHeaders?: Record<string, string> };
+
 export function createAppServer(options: {
   trustProxy: boolean;
   routes: Route[];
   publicDir: string;
-  transformHtml?: (pathname: string, html: string) => string;
+  transformHtml?: (pathname: string, html: string, request: { headers: IncomingHttpHeaders; url: URL }) => HtmlTransformResult;
   onComplete?: (info: { method: string; path: string; status: number; headers: IncomingHttpHeaders }) => void;
 }): Server {
   const publicRoot = path.resolve(options.publicDir);
@@ -183,7 +186,7 @@ async function handleRequest(
   trustProxy: boolean,
   publicRoot: string,
   onComplete?: (info: { method: string; path: string; status: number; headers: IncomingHttpHeaders }) => void,
-  transformHtml?: (pathname: string, html: string) => string,
+  transformHtml?: (pathname: string, html: string, request: { headers: IncomingHttpHeaders; url: URL }) => HtmlTransformResult,
 ): Promise<void> {
   try {
     const method = incoming.method ?? "GET";
@@ -214,7 +217,10 @@ async function handleRequest(
         return;
       }
       if (transformHtml && file.contentType.startsWith("text/html")) {
-        sendText(res, 200, transformHtml(url.pathname, body.toString("utf8")), file.contentType);
+        const rendered = transformHtml(url.pathname, body.toString("utf8"), { headers: incoming.headers, url });
+        const html = typeof rendered === "string" ? rendered : rendered.html;
+        const extra = typeof rendered === "string" ? undefined : rendered.extraHeaders;
+        sendText(res, 200, html, file.contentType, extra);
         return;
       }
       sendBytes(res, 200, body, file.contentType);

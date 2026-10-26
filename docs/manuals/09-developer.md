@@ -37,6 +37,8 @@ The double-booking guard is a transaction on one SQLite file. Do not run two pro
 | `templates/` | Financial model, founding-member page, run-of-show, sponsor one-pager, privacy notice. |
 | `brand/` | Placeholder look for the kit. Club-box reads its own saved brand from the database. |
 | `reference/club-box/src/brand/` | Club name, logo, colors, CSS variables, and email branding. |
+| `reference/club-box/src/i18n/` | Locale choice, catalogs, and `Intl` dates, money, and sats. |
+| `reference/club-box/locales/` | Message catalogs. `en.json` is the source. See [`docs/translations.md`](../translations.md). |
 | `reference/club-box/src/routes.ts` | Health, courts, slots, holds, webhooks, LNURL-auth, admin courts and members. |
 | `reference/club-box/src/routes-access.ts` | NFC taps, check-in, guests, photos, cards, households, marketing, privacy. |
 | `reference/club-box/src/routes-playtomic.ts` | Calendar blocks, maps, sync, conflicts, today's staff list. |
@@ -45,7 +47,7 @@ The double-booking guard is a transaction on one SQLite file. Do not run two pro
 | `reference/club-box/src/nfc/` | AES-CMAC, SUN, EV2 framing, NDEF, simulator, programmer, bridge. |
 | `reference/club-box/src/playtomic/` | Token cache, GET bookings, GET payments, upserts. |
 | `reference/club-box/src/checkin/` | Visits, guests, consent, on-site list. |
-| `reference/club-box/public/` | Booking, admin, kiosk, desk, guest, privacy, enroll. `brand.js` fills the header from `/api/brand`. |
+| `reference/club-box/public/` | Booking, admin, kiosk, desk, guest, privacy, enroll. `i18n.js` formats dates and money. `brand.js` fills the header from `/api/brand`. |
 | `reference/club-box/examples/http-relay/` | Contract relay. No GPIO. |
 | `reference/club-box/test/` | Node's test runner via `tsx`. |
 

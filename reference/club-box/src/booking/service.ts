@@ -269,6 +269,7 @@ export type HoldOptions = {
   reminderEmail?: boolean;
   reminderSms?: boolean;
   reminderPhone?: string | null;
+  locale?: string | null;
   cards?: CardSet | null;
 };
 
@@ -335,7 +336,7 @@ export async function holdSlot(
   db.prepare(
     `UPDATE holds
      SET receipt_email = ?, payment_method = ?, checkout_url = ?, player_id = ?,
-         reminder_email = ?, reminder_sms = ?, reminder_phone = ?
+         reminder_email = ?, reminder_sms = ?, reminder_phone = ?, locale = ?
      WHERE id = ?`,
   ).run(
     receiptEmail,
@@ -345,6 +346,7 @@ export async function holdSlot(
     options.reminderEmail ? 1 : 0,
     options.reminderSms ? 1 : 0,
     options.reminderPhone ?? null,
+    options.locale ?? null,
     holdId,
   );
   const hold = getHold(db, holdId, now);

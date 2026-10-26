@@ -8,6 +8,10 @@ import { loadClubBrand } from "../brand/store.js";
 import type { AppConfig } from "../config.js";
 import { one } from "../db.js";
 import { AppError } from "../errors.js";
+import { formatMoney } from "../i18n/format.js";
+import { clubLocale, localeForRecipient } from "../i18n/preference.js";
+import { translate } from "../i18n/catalog.js";
+import type { LocaleId } from "../i18n/locales.js";
 import { log } from "../log.js";
 import type { Channel, MessageKind, Notifier, OutboundMessage } from "./types.js";
 
@@ -61,6 +65,7 @@ export async function notifyAdminAlert(
 ): Promise<void> {
   const source = db ? { db, publicBaseUrl: config.publicBaseUrl } : undefined;
   const jobs: Array<Promise<unknown>> = [];
+  const alertLocale = db ? clubLocale(db) : "en";
   if (config.notifyAdminEmail) {
     jobs.push(
       sendTransactional(
@@ -69,7 +74,7 @@ export async function notifyAdminAlert(
           channel: "email",
           kind: "transactional",
           to: config.notifyAdminEmail,
-          subject: "Club alert",
+          subject: translate(alertLocale, "email.alert.subject"),
           text,
         },
         source,
@@ -98,17 +103,25 @@ export async function notifyAdminAlert(
 
 export async function sendReceipt(
   notifier: Notifier,
-  input: { to: string; bookingId: string; amountMinor: number; currency: string },
+  input: {
+    to: string;
+    bookingId: string;
+    amountMinor: number;
+    currency: string;
+    currencyDecimals: number;
+    locale: LocaleId;
+  },
   source?: EmailBrandSource,
 ): Promise<void> {
+  const amount = formatMoney(input.amountMinor, input.currency, input.currencyDecimals, input.locale);
   await sendTransactional(
     notifier,
     {
       channel: "email",
       kind: "transactional",
       to: input.to,
-      subject: "Court booking receipt",
-      text: `Booking ${input.bookingId} is paid. Amount ${input.amountMinor} ${input.currency} minor units. This receipt is transactional.`,
+      subject: translate(input.locale, "email.receipt.subject"),
+      text: translate(input.locale, "email.receipt.text", { bookingId: input.bookingId, amount }),
     },
     source,
   );
@@ -117,19 +130,26 @@ export async function sendReceipt(
 export async function sendPrivacyLink(
   notifier: Notifier,
   config: AppConfig,
-  input: { contactKind: "email" | "phone"; to: string; privacyToken: string },
+  input: { contactKind: "email" | "phone"; to: string; privacyToken: string; hintLocale?: string | null },
   db?: Database.Database,
 ): Promise<void> {
   const url = `${config.publicBaseUrl}/privacy?token=${encodeURIComponent(input.privacyToken)}`;
   const channel: Channel = input.contactKind === "email" ? "email" : "sms";
+  const locale = db
+    ? localeForRecipient(db, {
+        email: input.contactKind === "email" ? input.to : null,
+        phone: input.contactKind === "phone" ? input.to : null,
+        hint: input.hintLocale,
+      })
+    : "en";
   await sendTransactional(
     notifier,
     {
       channel,
       kind: "transactional",
       to: input.to,
-      subject: channel === "email" ? "Your privacy choices" : null,
-      text: `Privacy choices for this visit: ${url}`,
+      subject: channel === "email" ? translate(locale, "email.privacy.subject") : null,
+      text: translate(locale, "email.privacy.text", { url }),
     },
     db ? { db, publicBaseUrl: config.publicBaseUrl } : undefined,
   );
@@ -139,20 +159,22 @@ export async function sendHouseholdNotice(
   db: Database.Database,
   notifier: Notifier,
   primaryMemberId: string,
-  text: string,
+  kind: "created" | "updated",
   publicBaseUrl?: string,
 ): Promise<void> {
   const row = one<{ email: string | null }>(db, "SELECT email FROM members WHERE id = ?", primaryMemberId);
   const email = row?.email?.trim() ?? "";
   if (!email) return;
+  const locale = localeForRecipient(db, { memberId: primaryMemberId });
+  const textKey = kind === "created" ? "email.household.created" : "email.household.updated";
   await sendTransactional(
     notifier,
     {
       channel: "email",
       kind: "transactional",
       to: email,
-      subject: "Household update",
-      text,
+      subject: translate(locale, "email.household.subject"),
+      text: translate(locale, textKey),
     },
     { db, publicBaseUrl },
   );
