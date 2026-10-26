@@ -331,6 +331,25 @@ CREATE TABLE IF NOT EXISTS summary_log (
   sent_at TEXT NOT NULL
 ) STRICT;
 
+CREATE TABLE IF NOT EXISTS club_branding (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  club_name TEXT NOT NULL,
+  short_name TEXT NOT NULL,
+  primary_color TEXT NOT NULL,
+  accent_color TEXT NOT NULL,
+  background_color TEXT NOT NULL,
+  text_color TEXT NOT NULL,
+  font_key TEXT NOT NULL,
+  footer_text TEXT NOT NULL,
+  contact_text TEXT NOT NULL,
+  links_json TEXT NOT NULL,
+  logo_key TEXT,
+  logo_type TEXT,
+  favicon_key TEXT,
+  favicon_type TEXT,
+  updated_at TEXT NOT NULL
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS cancelled_bookings (
   id TEXT PRIMARY KEY,
   slot_id TEXT NOT NULL,

@@ -41,6 +41,8 @@ Providers do not check marketing consent. `sendMarketing` in `src/notify/service
 
 A booking receipt is sent only when the player typed a receipt email on the booking page. The hold stores that address. No address means no receipt.
 
+Email uses the club brand saved in Admin: the subject starts with the short name, and the message includes the club name, contact line, and footer. The HTML version uses the saved colors. Until a manager saves a brand, messages use the placeholder name "Your club". SMS is unchanged. The provider does not choose the colors. `sendTransactional` and `sendMarketing` add them before the provider sends.
+
 ## SMS
 
 `SMS_PROVIDER` is `console`, `twilio`, or `webhook`.

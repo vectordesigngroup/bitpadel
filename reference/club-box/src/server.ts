@@ -5,6 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Server } from "node:http";
 import type Database from "better-sqlite3";
+import { injectBrandHtml } from "./brand/html.js";
+import { loadClubBrand, toPublicBrand } from "./brand/store.js";
 import type { AppConfig } from "./config.js";
 import type { DoorController } from "./doors/types.js";
 import { createAppServer } from "./http.js";
@@ -63,6 +65,13 @@ export function createClubServer(options: {
     trustProxy: options.config.trustProxy,
     routes,
     publicDir,
+    transformHtml: (_pathname, html) => {
+      try {
+        return injectBrandHtml(html, toPublicBrand(loadClubBrand(options.db)));
+      } catch {
+        return html;
+      }
+    },
     onComplete: (info) => {
       recordStaffAction(options.db, options.config, { ...info, now: now() });
     },
