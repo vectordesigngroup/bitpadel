@@ -4,6 +4,9 @@
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
 import { AppError } from "../errors.js";
+import { translate } from "../i18n/catalog.js";
+import type { LocaleId } from "../i18n/locales.js";
+import { clubLocale } from "../i18n/preference.js";
 import { log } from "../log.js";
 import type { Notifier } from "../notify/types.js";
 import { sendTransactional } from "../notify/service.js";
@@ -48,13 +51,23 @@ export function dailySummary(db: Database.Database, config: AppConfig, date: str
   };
 }
 
-export function summaryText(summary: DailySummary): string {
-  const lines = [`Sales for ${summary.date} (${summary.currency} minor units)`];
-  if (summary.methods.length === 0) lines.push("No payments.");
+export function summaryText(summary: DailySummary, locale: LocaleId = "en"): string {
+  const lines = [
+    translate(locale, "email.daily.heading", { date: summary.date, currency: summary.currency }),
+  ];
+  if (summary.methods.length === 0) lines.push(translate(locale, "email.daily.none"));
   for (const row of summary.methods) {
-    lines.push(`${row.method}: ${row.count} payment(s), ${row.amountMinor}`);
+    lines.push(
+      translate(locale, "email.daily.method", {
+        method: row.method,
+        count: row.count,
+        amount: row.amountMinor,
+      }),
+    );
   }
-  lines.push(`Refunds: ${summary.refunds.count}, ${summary.refunds.amountMinor}`);
+  lines.push(
+    translate(locale, "email.daily.refunds", { count: summary.refunds.count, amount: summary.refunds.amountMinor }),
+  );
   return lines.join("\n");
 }
 
@@ -73,6 +86,7 @@ export async function maybeSendDailySummary(
     | undefined;
   if (existing) return false;
   const summary = dailySummary(db, config, date);
+  const locale = clubLocale(db);
   try {
     await sendTransactional(
       notifier,
@@ -80,8 +94,8 @@ export async function maybeSendDailySummary(
         channel: "email",
         kind: "transactional",
         to: config.dailySummaryEmail,
-        subject: `Daily sales ${date}`,
-        text: summaryText(summary),
+        subject: translate(locale, "email.daily.subject", { date }),
+        text: summaryText(summary, locale),
       },
       { db, publicBaseUrl: config.publicBaseUrl },
     );

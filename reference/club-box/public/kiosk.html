@@ -9,36 +9,49 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="kiosk.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/kiosk" aria-current="page">Door kiosk</a>
-      <a href="/admin">Admin</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/kiosk" aria-current="page" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/admin" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main class="kiosk-main">
-    <h1>Member entry</h1>
-    <p class="safety">This service can pulse an entry lock only. It cannot lock a door shut, block an exit, or control fire or other life-safety systems.</p>
-    <p class="safety">If this screen cannot reach the club server, use a fob, a PIN, or staff. Leaving does not use this service.</p>
+    <h1 data-i18n="kiosk.heading">Member entry</h1>
+    <p class="safety" data-i18n="kiosk.safetyEntry">This service can pulse an entry lock only. It cannot lock a door shut, block an exit, or control fire or other life-safety systems.</p>
+    <p class="safety" data-i18n="kiosk.safetyFallback">If this screen cannot reach the club server, use a fob, a PIN, or staff. Leaving does not use this service.</p>
     <div id="areas" class="row center"></div>
-    <p id="uid-warning" class="note" hidden>UID-only cards are clonable. This mode is for development and is not an access control.</p>
-    <img id="qr" alt="LNURL-auth QR" hidden width="360" height="360">
+    <p id="uid-warning" class="note" data-i18n="kiosk.uidWarning" hidden>UID-only cards are clonable. This mode is for development and is not an access control.</p>
+    <img id="qr" alt="LNURL-auth QR" data-i18n-alt="kiosk.qrAlt" hidden width="360" height="360">
     <section id="checkin" class="card" hidden>
       <h2 id="checkin-name"></h2>
-      <img id="checkin-photo" alt="" hidden width="160" height="160">
-      <p>Guests with you</p>
+      <img id="checkin-photo" alt="" data-i18n-alt="kiosk.photoAlt" hidden width="160" height="160">
+      <p data-i18n="kiosk.guestsWithYou">Guests with you</p>
       <div class="row center">
-        <button type="button" id="guest-down" class="secondary">Fewer</button>
+        <button type="button" id="guest-down" class="secondary" data-i18n="kiosk.fewer">Fewer</button>
         <p id="guest-count">0</p>
-        <button type="button" id="guest-up">More</button>
+        <button type="button" id="guest-up" data-i18n="kiosk.more">More</button>
       </div>
-      <p><a id="guest-link" href="/guest">Name a guest</a></p>
+      <p><a id="guest-link" href="/guest" data-i18n="kiosk.nameGuest">Name a guest</a></p>
     </section>
     <p id="status" class="status" role="status"></p>
     <noscript>
-      <p>Wallet sign-in needs this page's script and the local server. Use a fob, a PIN, or staff. Exits do not use this screen.</p>
+      <p data-i18n="kiosk.noscript">Wallet sign-in needs this page's script and the local server. Use a fob, a PIN, or staff. Exits do not use this screen.</p>
     </noscript>
   </main>
   <footer class="brand-footer">
@@ -46,6 +59,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/kiosk.js"></script>
 </body>

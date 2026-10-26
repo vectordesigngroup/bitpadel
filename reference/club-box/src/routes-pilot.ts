@@ -18,6 +18,9 @@ import {
 } from "./player/service.js";
 import { dailySummary, summaryText } from "./reports/daily.js";
 import { sendTransactional } from "./notify/service.js";
+import { translate } from "./i18n/catalog.js";
+import { clubLocale } from "./i18n/preference.js";
+import { localeFromRequest } from "./i18n/request.js";
 import { listStaffActions, staffActionsCsv } from "./staff/audit.js";
 import { asObject, requiredInt, requiredString } from "./validate.js";
 
@@ -45,7 +48,8 @@ async function playerCode(req: HttpReq, ctx: AppDeps): Promise<void> {
   }
   const body = asObject(readJson(req));
   const email = normalizeEmail(requiredString(body, "email", 200));
-  await requestPlayerCode(ctx.db, ctx.notifier, ctx.config, email, ctx.now());
+  const hint = localeFromRequest(ctx.db, req.headers, req.url, ctx.now()).locale;
+  await requestPlayerCode(ctx.db, ctx.notifier, ctx.config, email, ctx.now(), hint);
   sendJson(req.res, 200, { sent: true });
 }
 
@@ -244,14 +248,15 @@ async function dailyEmail(req: HttpReq, ctx: AppDeps): Promise<void> {
   const to = ctx.config.dailySummaryEmail ?? ctx.config.notifyAdminEmail;
   if (!to) throw new AppError(400, "Set DAILY_SUMMARY_EMAIL or NOTIFY_ADMIN_EMAIL");
   const summary = dailySummary(ctx.db, ctx.config, date);
+  const locale = clubLocale(ctx.db);
   await sendTransactional(
     ctx.notifier,
     {
       channel: "email",
       kind: "transactional",
       to,
-      subject: `Daily sales ${summary.date}`,
-      text: summaryText(summary),
+      subject: translate(locale, "email.daily.subject", { date: summary.date }),
+      text: summaryText(summary, locale),
     },
     { db: ctx.db, publicBaseUrl: ctx.config.publicBaseUrl },
   );

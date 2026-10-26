@@ -28,8 +28,45 @@ import {
   sportOf,
   stateLabel,
   upcomingDays,
+  setScheduleCopy,
   weekdayHeaders,
 } from "./booking-schedule.js";
+
+const i18n = window.clubI18n;
+
+function t(key, vars) {
+  return i18n.t(key, vars);
+}
+
+setScheduleCopy({
+  locale: i18n.locale,
+  today: t("booking.today"),
+  tomorrow: t("booking.tomorrow"),
+  oneHour: t("booking.oneHour"),
+  hours: (count) => t("booking.hours", { count: String(count) }),
+  hourAndMin: (hours, minutes) =>
+    hours === 1
+      ? t("booking.hourMin", { minutes: String(minutes) })
+      : t("booking.hoursMin", { hours: String(hours), minutes: String(minutes) }),
+  minutes: (count) => t("booking.minutes", { count: String(count) }),
+  guest: t("booking.guest"),
+  member: t("booking.memberWord"),
+  openTime: (count) => {
+    if (count === 1) return t("booking.openTimesOne");
+    if (count > 1) return t("booking.openTimesMany", { count: String(count) });
+    return t("booking.openTimesNone");
+  },
+  until: (time) => t("booking.until", { time }),
+  state: {
+    open: t("booking.legendOpen"),
+    held: t("booking.legendHeld"),
+    booked: t("booking.legendBooked"),
+    unavailable: t("booking.legendUnavailable"),
+    past: t("booking.state.ended"),
+    empty: t("booking.state.notOffered"),
+    continued: t("booking.state.continues"),
+  },
+});
 
 const statusEl = document.querySelector("#status");
 const scheduleEl = document.querySelector("#schedule");
@@ -67,7 +104,7 @@ function setStatus(text) {
 async function getJson(url, options) {
   const response = await fetch(url, options);
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  if (!response.ok) throw new Error(body.error || t("common.failed", { status: response.status }));
   return body;
 }
 
@@ -96,7 +133,10 @@ function addPaymentMethods(providers) {
     input.type = "radio";
     input.name = "method";
     input.value = name;
-    label.append(input, document.createTextNode(name === "stripe" ? " Card (Stripe)" : " Card (Square)"));
+    const english = name === "stripe" ? "Card (Stripe)" : name === "square" ? "Card (Square)" : name;
+    const key = name === "stripe" ? "booking.cardStripe" : name === "square" ? "booking.cardSquare" : "";
+    const translated = key ? t(key) : english;
+    label.append(input, document.createTextNode(` ${translated === key ? english : translated}`));
     payWith.append(label);
   }
 }
@@ -107,7 +147,7 @@ function fillCourtFilter() {
   select.replaceChildren();
   const all = document.createElement("option");
   all.value = "";
-  all.textContent = "All courts";
+  all.textContent = t("booking.allCourts");
   select.append(all);
   for (const court of view.courts) {
     const option = document.createElement("option");
@@ -125,7 +165,7 @@ function fillSportFilter() {
   select.replaceChildren();
   const all = document.createElement("option");
   all.value = "";
-  all.textContent = "All sports";
+  all.textContent = t("booking.allSports");
   select.append(all);
   for (const sport of sports) {
     const option = document.createElement("option");
@@ -151,7 +191,7 @@ function fillDurationFilter() {
   select.replaceChildren();
   const any = document.createElement("option");
   any.value = "";
-  any.textContent = "Any length";
+  any.textContent = t("booking.anyLength");
   select.append(any);
   for (const minutes of choices) {
     const option = document.createElement("option");
@@ -261,14 +301,20 @@ function currentSchedule() {
 }
 
 function stateText(cell) {
-  if (cell.state === "continued" && cell.slot) return `Until ${formatClock(cell.slot.endsAt, view.timeZone)}`;
+  if (cell.state === "continued" && cell.slot) return t("booking.until", { time: formatClock(cell.slot.endsAt, view.timeZone) });
   return stateLabel(cell.state);
 }
 
 function slotButtonLabel(slot) {
   const when = formatTimeRange(slot.startsAt, slot.endsAt, view.timeZone);
   const length = formatDuration(durationMinutesOf(slot));
-  return `${slot.courtName}, ${when}, ${length}, ${priceLabel(slot, view.decimals)}, open`;
+  return t("booking.slotAria", {
+    court: slot.courtName,
+    when,
+    length,
+    price: priceLabel(slot, view.decimals),
+    open: t("booking.status.open"),
+  });
 }
 
 function appendPrice(parent, slot) {
@@ -280,7 +326,7 @@ function appendPrice(parent, slot) {
   if (guest !== member) {
     const memberLine = document.createElement("span");
     memberLine.className = "booking-member";
-    memberLine.textContent = `Member ${formatPrice(member, slot.currency, view.decimals)}`;
+    memberLine.textContent = t("booking.memberPriceLine", { amount: formatPrice(member, slot.currency, view.decimals) });
     parent.append(memberLine);
   }
 }
@@ -292,7 +338,7 @@ function renderSchedule() {
   const note = document.querySelector("#schedule-note");
   if (view.dayTruncated) {
     note.hidden = false;
-    note.textContent = "This day has more times than the page can load. Ask the club if a time you need is missing.";
+    note.textContent = t("booking.truncated");
   } else {
     note.hidden = true;
     note.textContent = "";
@@ -301,13 +347,13 @@ function renderSchedule() {
   const schedule = currentSchedule();
   if (view.daySlots.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No times on this day. Pick another date.";
+    empty.textContent = t("booking.noTimes");
     scheduleEl.append(empty);
     return;
   }
   if (schedule.rows.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No times match these filters.";
+    empty.textContent = t("booking.noFilterMatch");
     scheduleEl.append(empty);
     return;
   }
@@ -328,7 +374,7 @@ function renderGrid(schedule) {
   head.className = "booking-grid-head";
   const timeHead = document.createElement("div");
   timeHead.role = "columnheader";
-  timeHead.textContent = "Time";
+  timeHead.textContent = t("booking.time");
   head.append(timeHead);
   for (const court of schedule.courts) {
     const cell = document.createElement("div");
@@ -357,7 +403,10 @@ function gridCell(cell, startsAt) {
   const item = document.createElement("div");
   item.role = "gridcell";
   if (!cell.slot || cell.state === "empty") {
-    item.setAttribute("aria-label", `${cell.court.name}, ${formatClock(startsAt, view.timeZone)}, not offered`);
+    item.setAttribute("aria-label", t("booking.notOfferedAria", {
+      court: cell.court.name,
+      time: formatClock(startsAt, view.timeZone),
+    }));
     const dash = document.createElement("span");
     dash.className = "booking-state is-empty";
     dash.textContent = "—";
@@ -378,7 +427,11 @@ function gridCell(cell, startsAt) {
   const label = stateText(cell);
   item.setAttribute(
     "aria-label",
-    `${cell.court.name}, ${formatTimeRange(cell.slot.startsAt, cell.slot.endsAt, view.timeZone)}, ${label}`,
+    t("booking.cellAria", {
+      court: cell.court.name,
+      when: formatTimeRange(cell.slot.startsAt, cell.slot.endsAt, view.timeZone),
+      state: label,
+    }),
   );
   const state = document.createElement("span");
   state.className = `booking-state is-${cell.state}`;
@@ -422,7 +475,7 @@ function listItem(cell) {
     button.type = "button";
     button.className = "booking-list-item is-open";
     button.setAttribute("aria-label", slotButtonLabel(slot));
-    button.append(listBody(slot, "Open"));
+    button.append(listBody(slot, stateLabel("open")));
     button.addEventListener("click", () => openSheet(slot));
     item.append(button);
     return item;
@@ -501,7 +554,7 @@ async function loadDay() {
   scheduleEl.replaceChildren();
   scheduleEl.setAttribute("aria-busy", "true");
   const loading = document.createElement("p");
-  loading.textContent = "Loading times…";
+  loading.textContent = t("booking.loading");
   scheduleEl.append(loading);
   try {
     const bounds = dayBoundsIso(ymd, view.timeZone);
@@ -546,18 +599,18 @@ function openSheet(slot) {
     price.append(line);
   } else {
     const guestLine = document.createElement("p");
-    guestLine.textContent = `You pay ${formatPrice(guest, slot.currency, view.decimals)}`;
+    guestLine.textContent = t("booking.youPay", { amount: formatPrice(guest, slot.currency, view.decimals) });
     const memberLine = document.createElement("p");
-    memberLine.textContent = `Member price ${formatPrice(member, slot.currency, view.decimals)}`;
+    memberLine.textContent = t("booking.memberPrice", { amount: formatPrice(member, slot.currency, view.decimals) });
     const memberNote = document.createElement("p");
     memberNote.className = "note";
-    memberNote.textContent = "The member price applies when you are logged in on your bookings.";
+    memberNote.textContent = t("booking.memberLoginNote");
     price.append(guestLine, memberLine, memberNote);
   }
   const minutes = view.health?.holdMinutes;
   document.querySelector("#sheet-hold-note").textContent = minutes
-    ? `We'll hold this time for ${minutes} minutes while you pay.`
-    : "We'll hold this time while you pay.";
+    ? t("booking.holdFor", { minutes: String(minutes) })
+    : t("booking.holdWhile");
   document.querySelector("#hold-button").disabled = false;
   sheetEl.showModal();
 }
@@ -568,7 +621,7 @@ async function hold(event) {
   const button = document.querySelector("#hold-button");
   if (!slot) return;
   button.disabled = true;
-  setStatus("Holding the slot…");
+  setStatus(t("booking.holding"));
   try {
     const data = await getJson("/api/holds", {
       method: "POST",
@@ -597,16 +650,16 @@ function showInvoice(hold) {
   document.querySelector("#invoice-qr").hidden = card;
   if (!card) {
     document.querySelector("#invoice-qr").src = `/api/holds/${hold.id}/qr.png`;
-    document.querySelector("#invoice-qr").alt = hold.payable ? "Lightning invoice QR" : "Mock invoice QR, not payable";
+    document.querySelector("#invoice-qr").alt = hold.payable ? t("booking.qrAltLightning") : t("booking.qrAltMock");
   }
   document.querySelector("#invoice-amount").textContent = formatPrice(hold.amountMinor, hold.currency, view.decimals);
   document.querySelector("#bolt11").textContent = card ? hold.checkoutUrl || "" : hold.bolt11;
-  document.querySelector("#invoice-title").textContent = card ? "Card checkout" : "Lightning invoice";
+  document.querySelector("#invoice-title").textContent = card ? t("booking.cardTitle") : t("booking.invoiceTitle");
   document.querySelector("#invoice-note").textContent = card
-    ? "Continue on the card provider's page. The booking confirms when their webhook arrives. Test mode does not charge a real card."
+    ? t("booking.cardNote")
     : hold.payable
-      ? "Pay this invoice from a Lightning wallet. The booking confirms when the payment settles."
-      : "Mock backend: this invoice cannot be paid. Confirm it from the admin page. A real BTCPay or LNbits backend replaces this.";
+      ? t("booking.payNote")
+      : t("booking.mockNote");
   invoiceEl.scrollIntoView({ block: "nearest" });
   poll(hold.id);
 }
@@ -618,18 +671,20 @@ async function poll(holdId) {
       const data = await getJson(`/api/holds/${holdId}`);
       const held = data.hold;
       if (held.status === "paid") {
-        document.querySelector("#invoice-status").textContent = "Booked. Payment settled.";
+        document.querySelector("#invoice-status").textContent = t("booking.paid");
         window.clearInterval(pollTimer);
         await Promise.all([loadDay(), refreshMonth()]);
         return;
       }
       if (held.status === "expired" || held.status === "released") {
-        document.querySelector("#invoice-status").textContent = "The hold expired and the slot was released.";
+        document.querySelector("#invoice-status").textContent = t("booking.expired");
         window.clearInterval(pollTimer);
         await Promise.all([loadDay(), refreshMonth()]);
         return;
       }
-      document.querySelector("#invoice-status").textContent = `Waiting for payment until ${formatClock(held.expiresAt, view.timeZone)}.`;
+      document.querySelector("#invoice-status").textContent = t("booking.waiting", {
+        time: formatClock(held.expiresAt, view.timeZone),
+      });
     } catch (error) {
       document.querySelector("#invoice-status").textContent = error.message;
     }
@@ -675,7 +730,9 @@ async function load() {
   view.todayYmd = civilDate(new Date(), view.timeZone);
   view.selectedYmd = view.todayYmd;
   view.visibleMonth = monthOf(view.todayYmd);
-  document.querySelector("#tz-note").textContent = `Times shown in club time (${view.timeZone.replaceAll("_", " ")}).`;
+  document.querySelector("#tz-note").textContent = t("booking.timesIn", {
+    zone: view.timeZone.replaceAll("_", " "),
+  });
   fillCourtFilter();
   fillSportFilter();
   renderChips();

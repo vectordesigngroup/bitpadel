@@ -9,24 +9,37 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="privacy.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/privacy" aria-current="page">Privacy</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/privacy" aria-current="page" data-i18n="nav.privacy">Privacy</a>
     </nav>
   </header>
   <main>
-    <h1>Privacy choices</h1>
-    <p class="note">This page is a template for the club's own notice. It is not legal advice. Ask a lawyer about US state privacy laws, CAN-SPAM, TCPA, and GDPR where they apply.</p>
-    <p>Operational visit records and marketing contacts are stored separately. Unsubscribing stops marketing. Deletion clears the contact stored with this privacy link.</p>
+    <h1 data-i18n="privacy.heading">Privacy choices</h1>
+    <p class="note" data-i18n="privacy.disclaimer">This page is a template for the club's own notice. It is not legal advice. Ask a lawyer about US state privacy laws, CAN-SPAM, TCPA, and GDPR where they apply.</p>
+    <p data-i18n="privacy.body">Operational visit records and marketing contacts are stored separately. Unsubscribing stops marketing. Deletion clears the contact stored with this privacy link.</p>
     <form id="privacy" class="card">
-      <label>Privacy token
+      <label><span data-i18n="privacy.token">Privacy token</span>
         <input name="token" required maxlength="80">
       </label>
-      <button type="submit" name="action" value="unsubscribe">Unsubscribe</button>
-      <button type="submit" class="secondary" name="action" value="delete">Delete this contact</button>
+      <button type="submit" name="action" value="unsubscribe" data-i18n="privacy.unsubscribe">Unsubscribe</button>
+      <button type="submit" class="secondary" name="action" value="delete" data-i18n="privacy.delete">Delete this contact</button>
     </form>
     <p id="status" class="status" role="status"></p>
   </main>
@@ -35,6 +48,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/privacy.js"></script>
 </body>

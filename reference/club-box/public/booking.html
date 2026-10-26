@@ -10,56 +10,69 @@
   <link rel="stylesheet" href="/brand.css">
   <link rel="stylesheet" href="/booking.css">
 </head>
-<body>
+<body data-i18n-title="booking.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/" aria-current="page">Booking</a>
-      <a href="/kiosk">Door kiosk</a>
-      <a href="/account">My bookings</a>
-      <a href="/admin">Admin</a>
+      <a href="/" aria-current="page" data-i18n="nav.booking">Booking</a>
+      <a href="/kiosk" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/account" data-i18n="nav.account">My bookings</a>
+      <a href="/admin" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main class="booking-schedule">
-    <h1>Book a court</h1>
-    <p class="note">Prices follow the club's rules. Log in on <a href="/account">your bookings</a> with the email on a membership to get the member price.</p>
+    <h1 data-i18n="booking.heading">Book a court</h1>
+    <p class="note"><span data-i18n="booking.note">Prices follow the club's rules. Log in with the email on a membership to get the member price.</span> <a href="/account" data-i18n="nav.account">My bookings</a></p>
 
     <section aria-labelledby="date-heading">
-      <h2 id="date-heading" class="visually-hidden">Choose a day</h2>
+      <h2 id="date-heading" class="visually-hidden" data-i18n="booking.chooseDay">Choose a day</h2>
       <div class="booking-cal-nav">
-        <button type="button" id="cal-prev">Previous</button>
+        <button type="button" id="cal-prev" data-i18n="booking.previous">Previous</button>
         <p id="cal-title" aria-live="polite"></p>
-        <button type="button" id="cal-next">Next</button>
+        <button type="button" id="cal-next" data-i18n="booking.next">Next</button>
       </div>
       <div id="calendar" role="grid" aria-labelledby="cal-title"></div>
-      <div id="day-chips" class="booking-chips" role="group" aria-label="Next 7 days"></div>
+      <div id="day-chips" class="booking-chips" role="group" aria-label="Next 7 days" data-i18n-aria="booking.nextDays"></div>
     </section>
 
     <section aria-labelledby="day-heading">
       <div class="booking-filters">
-        <label>Length
+        <label><span data-i18n="booking.length">Length</span>
           <select id="duration-filter">
-            <option value="">Any length</option>
+            <option value="" data-i18n="booking.anyLength">Any length</option>
           </select>
         </label>
-        <label id="court-filter-label">Court
+        <label id="court-filter-label"><span data-i18n="booking.court">Court</span>
           <select id="court-filter">
-            <option value="">All courts</option>
+            <option value="" data-i18n="booking.allCourts">All courts</option>
           </select>
         </label>
-        <label id="sport-filter-label" hidden>Sport
+        <label id="sport-filter-label" hidden><span data-i18n="booking.sport">Sport</span>
           <select id="sport-filter">
-            <option value="">All sports</option>
+            <option value="" data-i18n="booking.allSports">All sports</option>
           </select>
         </label>
       </div>
       <h2 id="day-heading" aria-live="polite"></h2>
       <p id="tz-note" class="note"></p>
-      <ul class="booking-legend" aria-label="Time slot states">
-        <li><span class="swatch swatch-open" aria-hidden="true"></span> Open</li>
-        <li><span class="swatch swatch-held" aria-hidden="true"></span> Held</li>
-        <li><span class="swatch swatch-booked" aria-hidden="true"></span> Booked</li>
-        <li><span class="swatch swatch-unavailable" aria-hidden="true"></span> Unavailable</li>
+      <ul class="booking-legend" aria-label="Time slot states" data-i18n-aria="booking.legend">
+        <li><span class="swatch swatch-open" aria-hidden="true"></span> <span data-i18n="booking.legendOpen">Open</span></li>
+        <li><span class="swatch swatch-held" aria-hidden="true"></span> <span data-i18n="booking.legendHeld">Held</span></li>
+        <li><span class="swatch swatch-booked" aria-hidden="true"></span> <span data-i18n="booking.legendBooked">Booked</span></li>
+        <li><span class="swatch swatch-unavailable" aria-hidden="true"></span> <span data-i18n="booking.legendUnavailable">Unavailable</span></li>
       </ul>
       <p id="schedule-note" class="note" hidden></p>
       <div id="schedule"></div>
@@ -67,34 +80,34 @@
 
     <dialog id="slot-sheet" aria-labelledby="sheet-title">
       <form id="slot-form">
-        <h2 id="sheet-title">Hold this time</h2>
+        <h2 id="sheet-title" data-i18n="booking.hold">Hold this time</h2>
         <p id="sheet-court"></p>
         <p id="sheet-when"></p>
         <div id="sheet-price"></div>
         <p id="sheet-hold-note" class="note"></p>
         <fieldset id="pay-with">
-          <legend>Pay with</legend>
-          <label><input type="radio" name="method" value="lightning" checked> Lightning</label>
+          <legend data-i18n="booking.payWith">Pay with</legend>
+          <label><input type="radio" name="method" value="lightning" checked> <span data-i18n="booking.lightning">Lightning</span></label>
         </fieldset>
-        <label>Receipt email, optional
+        <label><span data-i18n="booking.receiptEmail">Receipt email, optional</span>
           <input id="receipt-email" type="email" maxlength="200" autocomplete="email">
         </label>
-        <label><input id="reminder-email" type="checkbox"> Email me a reminder before this booking</label>
-        <label>Reminder phone, only if you want a text
+        <label><input id="reminder-email" type="checkbox"> <span data-i18n="booking.reminderEmail">Email me a reminder before this booking</span></label>
+        <label><span data-i18n="booking.reminderPhone">Reminder phone, only if you want a text</span>
           <input id="reminder-phone" type="tel" maxlength="32" autocomplete="tel">
         </label>
-        <label><input id="reminder-sms" type="checkbox"> Text me a reminder. This is not marketing.</label>
+        <label><input id="reminder-sms" type="checkbox"> <span data-i18n="booking.reminderSms">Text me a reminder. This is not marketing.</span></label>
         <div class="row">
-          <button type="submit" id="hold-button">Hold this time</button>
-          <button type="button" class="secondary" id="sheet-close">Close</button>
+          <button type="submit" id="hold-button" data-i18n="booking.hold">Hold this time</button>
+          <button type="button" class="secondary" id="sheet-close" data-i18n="booking.close">Close</button>
         </div>
       </form>
     </dialog>
 
     <section id="invoice" hidden>
-      <h2 id="invoice-title">Lightning invoice</h2>
+      <h2 id="invoice-title" data-i18n="booking.invoiceTitle">Lightning invoice</h2>
       <p id="invoice-note"></p>
-      <img id="invoice-qr" alt="Invoice QR" width="280" height="280">
+      <img id="invoice-qr" alt="Invoice QR" data-i18n-alt="booking.qrAlt" width="280" height="280">
       <p id="invoice-amount"></p>
       <p id="bolt11" class="mono"></p>
       <p id="invoice-status" role="status"></p>
@@ -106,6 +119,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script type="module" src="/booking.js"></script>
 </body>

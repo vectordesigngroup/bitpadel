@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
 import { AppError } from "../errors.js";
+import { canonicalizeLocale, type LocaleId } from "../i18n/locales.js";
 import { asObject } from "../validate.js";
 import { normalizeHex, parseFontKey } from "./color.js";
 import { type BrandFontKey, type BrandLink } from "./model.js";
@@ -17,6 +18,7 @@ export type BrandFields = {
   footerText: string;
   contactText: string;
   links: BrandLink[];
+  defaultLocale?: LocaleId;
 };
 
 const MAX_LINKS = 4;
@@ -39,7 +41,16 @@ export function validateBrandInput(value: unknown): BrandFields {
     footerText: plainText(body.footerText ?? "", "footerText", 0, 500),
     contactText: plainText(body.contactText ?? "", "contactText", 0, 400),
     links,
+    defaultLocale: readDefaultLocale(body.defaultLocale),
   };
+}
+
+function readDefaultLocale(value: unknown): LocaleId | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new AppError(400, "defaultLocale is not a supported language");
+  const locale = canonicalizeLocale(value);
+  if (!locale) throw new AppError(400, "defaultLocale is not a supported language");
+  return locale;
 }
 
 function colorField(value: unknown, key: string): string {

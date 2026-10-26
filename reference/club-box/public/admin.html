@@ -10,338 +10,362 @@
   <link rel="stylesheet" href="/brand.css">
   <link id="brand-preview-css" rel="stylesheet" href="/brand/preview.css">
 </head>
-<body>
+<body data-i18n-title="admin.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/kiosk">Door kiosk</a>
-      <a href="/desk">Front desk</a>
-      <a href="/admin" aria-current="page">Admin</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/kiosk" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/desk" data-i18n="nav.desk">Front desk</a>
+      <a href="/admin" aria-current="page" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main>
-    <h1>Courts, prices, and members</h1>
-    <p class="note">Prices are integers in your currency's minor units. Nothing on this page fills in a price for you.</p>
+    <h1 data-i18n="admin.heading">Courts, prices, and members</h1>
+    <p class="note" data-i18n="admin.priceNote">Prices are integers in your currency's minor units. Nothing on this page fills in a price for you.</p>
     <p id="status" class="status" role="status"></p>
     <form id="login" class="card">
-      <label>Username
+      <label><span data-i18n="admin.username">Username</span>
         <input id="username" autocomplete="username">
       </label>
-      <label>Password
+      <label><span data-i18n="admin.password">Password</span>
         <input id="password" type="password" autocomplete="current-password">
       </label>
-      <label>Or an admin or staff token
+      <label><span data-i18n="admin.token">Or an admin or staff token</span>
         <input id="token" type="password" autocomplete="current-password">
       </label>
-      <button type="submit">Load admin</button>
+      <button type="submit" data-i18n="admin.load">Load admin</button>
     </form>
     <div id="app" hidden>
       <section>
-        <h2>Server</h2>
+        <h2 data-i18n="admin.server">Server</h2>
         <p id="server" class="note"></p>
       </section>
       <form id="brand-form" class="card">
-        <h2>Branding</h2>
-        <p class="note">The name, logo, and colors members see on the booking page, the kiosk, receipts, and email.</p>
+        <h2 data-i18n="admin.branding">Branding</h2>
+        <p class="note" data-i18n="admin.brandNote">The name, logo, and colors members see on the booking page, the kiosk, receipts, and email.</p>
         <p id="brand-placeholder-note" class="note"></p>
-        <label>Club name
+        <label><span data-i18n="admin.clubName">Club name</span>
           <input name="clubName" required maxlength="80">
         </label>
-        <label>Short name
+        <label><span data-i18n="admin.shortName">Short name</span>
           <input name="shortName" required maxlength="40">
         </label>
-        <p class="note">Shown in the page header and at the start of email subjects.</p>
+        <p class="note" data-i18n="admin.shortNote">Shown in the page header and at the start of email subjects.</p>
+        <label><span data-i18n="admin.defaultLanguage">Default language</span>
+          <select name="defaultLocale">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="it">Italiano</option>
+            <option value="pt-BR">Português (Brasil)</option>
+          </select>
+        </label>
+        <p class="note" data-i18n="admin.defaultLanguageNote">Used when a member has not chosen a language and the browser does not ask for one this club supports. Members can still switch. Portuguese uses Brazilian Portuguese until a Portugal catalog is added.</p>
         <div class="color-row">
-          <label>Primary
+          <label><span data-i18n="admin.primary">Primary</span>
             <input id="primary-picker" type="color" value="#14b8a6">
           </label>
-          <label>Primary hex
+          <label><span data-i18n="admin.primaryHex">Primary hex</span>
             <input id="primary-hex" name="primaryColor" value="#14b8a6" maxlength="7" spellcheck="false">
           </label>
         </div>
         <div class="color-row">
-          <label>Accent
+          <label><span data-i18n="admin.accent">Accent</span>
             <input id="accent-picker" type="color" value="#d9f99d">
           </label>
-          <label>Accent hex
+          <label><span data-i18n="admin.accentHex">Accent hex</span>
             <input id="accent-hex" name="accentColor" value="#d9f99d" maxlength="7" spellcheck="false">
           </label>
         </div>
         <div class="color-row">
-          <label>Background
+          <label><span data-i18n="admin.background">Background</span>
             <input id="background-picker" type="color" value="#0f172a">
           </label>
-          <label>Background hex
+          <label><span data-i18n="admin.backgroundHex">Background hex</span>
             <input id="background-hex" name="backgroundColor" value="#0f172a" maxlength="7" spellcheck="false">
           </label>
         </div>
         <div class="color-row">
-          <label>Text
+          <label><span data-i18n="admin.colorText">Text</span>
             <input id="text-picker" type="color" value="#f8fafc">
           </label>
-          <label>Text hex
+          <label><span data-i18n="admin.colorTextHex">Text hex</span>
             <input id="text-hex" name="textColor" value="#f8fafc" maxlength="7" spellcheck="false">
           </label>
         </div>
-        <label>Font
+        <label><span data-i18n="admin.font">Font</span>
           <select name="fontKey">
-            <option value="system">System sans</option>
-            <option value="serif">Serif</option>
-            <option value="humanist">Humanist sans</option>
-            <option value="readable">Large screen sans</option>
+            <option value="system" data-i18n="admin.font.system">System sans</option>
+            <option value="serif" data-i18n="admin.font.serif">Serif</option>
+            <option value="humanist" data-i18n="admin.font.humanist">Humanist sans</option>
+            <option value="readable" data-i18n="admin.font.readable">Large screen sans</option>
           </select>
         </label>
-        <p class="note">Fonts already on the computer. This app does not load a font from another site.</p>
-        <label>Contact line
+        <p class="note" data-i18n="admin.fontNote">Fonts already on the computer. This app does not load a font from another site.</p>
+        <label><span data-i18n="admin.contact">Contact line</span>
           <textarea name="contactText" maxlength="400"></textarea>
         </label>
-        <label>Footer
+        <label><span data-i18n="admin.footer">Footer</span>
           <textarea name="footerText" maxlength="500"></textarea>
         </label>
         <fieldset>
-          <legend>Footer links</legend>
-          <p class="note">Optional. Use an http or https address for your club's own page.</p>
+          <legend data-i18n="admin.footerLinks">Footer links</legend>
+          <p class="note" data-i18n="admin.footerLinksNote">Optional. Use an http or https address for your club's own page.</p>
           <div class="row">
-            <label>Label <input name="linkLabel" maxlength="40"></label>
-            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+            <label><span data-i18n="admin.linkLabel">Label</span> <input name="linkLabel" maxlength="40"></label>
+            <label><span data-i18n="admin.linkUrl">URL</span> <input name="linkUrl" maxlength="200" placeholder="https://"></label>
           </div>
           <div class="row">
-            <label>Label <input name="linkLabel" maxlength="40"></label>
-            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+            <label><span data-i18n="admin.linkLabel">Label</span> <input name="linkLabel" maxlength="40"></label>
+            <label><span data-i18n="admin.linkUrl">URL</span> <input name="linkUrl" maxlength="200" placeholder="https://"></label>
           </div>
           <div class="row">
-            <label>Label <input name="linkLabel" maxlength="40"></label>
-            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+            <label><span data-i18n="admin.linkLabel">Label</span> <input name="linkLabel" maxlength="40"></label>
+            <label><span data-i18n="admin.linkUrl">URL</span> <input name="linkUrl" maxlength="200" placeholder="https://"></label>
           </div>
           <div class="row">
-            <label>Label <input name="linkLabel" maxlength="40"></label>
-            <label>URL <input name="linkUrl" maxlength="200" placeholder="https://"></label>
+            <label><span data-i18n="admin.linkLabel">Label</span> <input name="linkLabel" maxlength="40"></label>
+            <label><span data-i18n="admin.linkUrl">URL</span> <input name="linkUrl" maxlength="200" placeholder="https://"></label>
           </div>
         </fieldset>
         <div id="brand-preview" class="brand-preview">
           <p class="brand-preview-name"></p>
-          <p>Book a court</p>
-          <p><a href="#brand-preview">Sample link</a></p>
-          <p><span class="button">Sample button</span></p>
+          <p data-i18n="admin.previewBook">Book a court</p>
+          <p><a href="#brand-preview" data-i18n="admin.previewLink">Sample link</a></p>
+          <p><span class="button" data-i18n="admin.previewButton">Sample button</span></p>
           <p class="brand-preview-footer"></p>
         </div>
         <p id="brand-contrast" class="danger" role="status"></p>
-        <button type="submit">Save branding</button>
+        <button type="submit" data-i18n="admin.saveBranding">Save branding</button>
       </form>
       <form id="brand-logo-form" class="card">
-        <h2>Logo and favicon</h2>
-        <p class="note">PNG, JPG, or SVG, up to 512 KB. SVG files that contain a script are refused. Do not upload the BitPadel placeholder logo.</p>
+        <h2 data-i18n="admin.logoHeading">Logo and favicon</h2>
+        <p class="note" data-i18n="admin.logoNote">PNG, JPG, or SVG, up to 512 KB. SVG files that contain a script are refused. Do not upload the BitPadel placeholder logo.</p>
         <p><img id="brand-logo-current" alt="" hidden></p>
-        <label>Logo
+        <label><span data-i18n="admin.logo">Logo</span>
           <input id="brand-logo-file" type="file" accept="image/png,image/jpeg,image/svg+xml,.svg,.png,.jpg,.jpeg">
         </label>
-        <button type="submit">Upload logo</button>
-        <button type="button" id="brand-logo-clear" class="secondary">Remove logo</button>
+        <button type="submit" data-i18n="admin.uploadLogo">Upload logo</button>
+        <button type="button" id="brand-logo-clear" class="secondary" data-i18n="admin.removeLogo">Remove logo</button>
       </form>
       <form id="brand-favicon-form" class="card">
         <p><img id="brand-favicon-current" alt="" hidden width="32" height="32"></p>
-        <label>Favicon, PNG, JPG, SVG, or ICO
+        <label><span data-i18n="admin.favicon">Favicon, PNG, JPG, SVG, or ICO</span>
           <input id="brand-favicon-file" type="file" accept="image/png,image/jpeg,image/svg+xml,.svg,.ico,.png,.jpg,.jpeg">
         </label>
-        <button type="submit">Upload favicon</button>
-        <button type="button" id="brand-favicon-clear" class="secondary">Remove favicon</button>
+        <button type="submit" data-i18n="admin.uploadFavicon">Upload favicon</button>
+        <button type="button" id="brand-favicon-clear" class="secondary" data-i18n="admin.removeFavicon">Remove favicon</button>
       </form>
       <form id="court-form" class="card">
-        <h2>Add a court</h2>
-        <label>Court name
+        <h2 data-i18n="admin.addCourt">Add a court</h2>
+        <label><span data-i18n="admin.courtName">Court name</span>
           <input name="name" required maxlength="60">
         </label>
-        <button type="submit">Add court</button>
+        <button type="submit" data-i18n="admin.addCourtButton">Add court</button>
       </form>
       <form id="slot-form" class="card">
-        <h2>Add a slot</h2>
-        <label>Court
+        <h2 data-i18n="admin.addSlot">Add a slot</h2>
+        <label><span data-i18n="admin.court">Court</span>
           <select name="courtId" required></select>
         </label>
-        <label>Starts
+        <label><span data-i18n="admin.starts">Starts</span>
           <input name="startsAt" type="datetime-local" required>
         </label>
-        <label>Ends
+        <label><span data-i18n="admin.ends">Ends</span>
           <input name="endsAt" type="datetime-local" required>
         </label>
-        <label>Price, minor units
+        <label><span data-i18n="admin.priceMinor">Price, minor units</span>
           <input name="priceMinor" inputmode="numeric" required>
         </label>
-        <button type="submit">Add slot</button>
+        <button type="submit" data-i18n="admin.addSlotButton">Add slot</button>
       </form>
       <section>
-        <h2>Slots</h2>
+        <h2 data-i18n="admin.slots">Slots</h2>
         <div id="slots"></div>
       </section>
       <form id="member-form" class="card">
-        <h2>Members</h2>
-        <p class="note">Use a membership number or other label. Do not put a person's name here unless your privacy policy says so.</p>
-        <label>Label
+        <h2 data-i18n="admin.members">Members</h2>
+        <p class="note" data-i18n="admin.membersNote">Use a membership number or other label. Do not put a person's name here unless your privacy policy says so.</p>
+        <label><span data-i18n="admin.label">Label</span>
           <input name="label" required maxlength="80">
         </label>
-        <button type="submit">Add member</button>
+        <button type="submit" data-i18n="admin.addMember">Add member</button>
       </form>
       <div id="members"></div>
       <form id="allowance-form" class="card">
-        <h2>Plan allowance</h2>
-        <p class="note">The club sets this amount. It is a recurring credit for one membership type. Spending uses the allowance first, then the tab. Unused credit from an earlier period is not paid out. Before a club uses this, a CPA and a Florida attorney should review stored value, unused balances, sales tax on items, and sats accounting.</p>
-        <label>Membership type
+        <h2 data-i18n="admin.allowance">Plan allowance</h2>
+        <p class="note" data-i18n="admin.allowanceNote">The club sets this amount. It is a recurring credit for one membership type. Spending uses the allowance first, then the tab. Unused credit from an earlier period is not paid out. Before a club uses this, a CPA and a Florida attorney should review stored value, unused balances, sales tax on items, and sats accounting.</p>
+        <label><span data-i18n="admin.membershipType">Membership type</span>
           <select name="membershipType" id="allowance-type"></select>
         </label>
-        <label>Amount in minor units
+        <label><span data-i18n="admin.amountMinor">Amount in minor units</span>
           <input name="amountMinor" inputmode="numeric" required>
         </label>
-        <label>Period
+        <label><span data-i18n="admin.period">Period</span>
           <select name="period">
-            <option value="visit">visit</option>
-            <option value="day">day</option>
-            <option value="week">week</option>
-            <option value="month">month</option>
+            <option value="visit" data-i18n="account.period.visit">visit</option>
+            <option value="day" data-i18n="account.period.day">day</option>
+            <option value="week" data-i18n="account.period.week">week</option>
+            <option value="month" data-i18n="account.period.month">month</option>
           </select>
         </label>
-        <button type="submit">Save allowance</button>
+        <button type="submit" data-i18n="admin.saveAllowance">Save allowance</button>
         <div id="allowances"></div>
       </form>
       <section class="card">
-        <h2>Ledger</h2>
-        <p class="note">Each line is kept. Amounts are whole minor units. A credit reduces the tab. A charge can also record sats when the club set a sats-per-minor rate.</p>
-        <p><a href="/api/admin/ledger.csv" id="ledger-csv">Download ledger CSV</a></p>
+        <h2 data-i18n="admin.ledger">Ledger</h2>
+        <p class="note" data-i18n="admin.ledgerNote">Each line is kept. Amounts are whole minor units. A credit reduces the tab. A charge can also record sats when the club set a sats-per-minor rate.</p>
+        <p><a href="/api/admin/ledger.csv" id="ledger-csv" data-i18n="admin.ledgerCsv">Download ledger CSV</a></p>
         <div id="ledger"></div>
       </section>
       <form id="staff-form" class="card">
-        <h2>Staff accounts</h2>
-        <p class="note">Owners and managers can add accounts. A manager cannot create an owner. The admin token still works.</p>
-        <label>Username
+        <h2 data-i18n="admin.staff">Staff accounts</h2>
+        <p class="note" data-i18n="admin.staffNote">Owners and managers can add accounts. A manager cannot create an owner. The admin token still works.</p>
+        <label><span data-i18n="admin.username">Username</span>
           <input name="username" required maxlength="40">
         </label>
-        <label>Name
+        <label><span data-i18n="admin.name">Name</span>
           <input name="displayName" required maxlength="80">
         </label>
-        <label>Password
+        <label><span data-i18n="admin.password">Password</span>
           <input name="password" type="password" required minlength="12">
         </label>
-        <label>Role
+        <label><span data-i18n="admin.role">Role</span>
           <select name="role">
-            <option value="front-desk">front-desk</option>
-            <option value="coach">coach</option>
-            <option value="manager">manager</option>
-            <option value="owner">owner</option>
+            <option value="front-desk" data-i18n="admin.role.frontDesk">front desk</option>
+            <option value="coach" data-i18n="admin.role.coach">coach</option>
+            <option value="manager" data-i18n="admin.role.manager">manager</option>
+            <option value="owner" data-i18n="admin.role.owner">owner</option>
           </select>
         </label>
-        <button type="submit">Add staff account</button>
+        <button type="submit" data-i18n="admin.addStaff">Add staff account</button>
       </form>
       <form id="price-form" class="card">
-        <h2>Price rules</h2>
-        <p class="note">Weekdays are 0 Sunday through 6 Saturday, in the club timezone. A court-specific rule beats an all-courts rule. Leave court blank for every court.</p>
-        <label>Label
+        <h2 data-i18n="admin.priceRules">Price rules</h2>
+        <p class="note" data-i18n="admin.priceRulesNote">Weekdays are 0 Sunday through 6 Saturday, in the club timezone. A court-specific rule beats an all-courts rule. Leave court blank for every court.</p>
+        <label><span data-i18n="admin.label">Label</span>
           <input name="label" required maxlength="80">
         </label>
-        <label>Days, comma separated
+        <label><span data-i18n="admin.days">Days, comma separated</span>
           <input name="days" required placeholder="1,2,3,4,5">
         </label>
-        <label>Start
+        <label><span data-i18n="admin.start">Start</span>
           <input name="start" required placeholder="17:00">
         </label>
-        <label>End
+        <label><span data-i18n="admin.end">End</span>
           <input name="end" required placeholder="21:00">
         </label>
-        <label>Member price, minor units
+        <label><span data-i18n="admin.memberPrice">Member price, minor units</span>
           <input name="memberPriceMinor" inputmode="numeric" required>
         </label>
-        <label>Guest price, minor units
+        <label><span data-i18n="admin.guestPrice">Guest price, minor units</span>
           <input name="guestPriceMinor" inputmode="numeric" required>
         </label>
-        <label>Court id, optional
+        <label><span data-i18n="admin.courtId">Court id, optional</span>
           <input name="courtId">
         </label>
-        <button type="submit">Add price rule</button>
+        <button type="submit" data-i18n="admin.addRule">Add price rule</button>
         <div id="price-rules"></div>
       </form>
       <form id="sales-form" class="card">
-        <h2>Sales report</h2>
-        <p class="note">Lightning bookings and stored Playtomic payment rows in the date range. Playtomic amounts stay as imported text.</p>
-        <label>From
+        <h2 data-i18n="admin.sales">Sales report</h2>
+        <p class="note" data-i18n="admin.salesNote">Lightning bookings and stored Playtomic payment rows in the date range. Playtomic amounts stay as imported text.</p>
+        <label><span data-i18n="admin.from">From</span>
           <input name="from" type="date" required>
         </label>
-        <label>To
+        <label><span data-i18n="admin.to">To</span>
           <input name="to" type="date" required>
         </label>
-        <button type="submit">Download sales CSV</button>
-        <button type="button" id="payment-health" class="secondary">Check Lightning balance</button>
+        <button type="submit" data-i18n="admin.downloadSales">Download sales CSV</button>
+        <button type="button" id="payment-health" class="secondary" data-i18n="admin.checkBalance">Check Lightning balance</button>
       </form>
       <form id="daily-form" class="card">
-        <h2>End of day</h2>
-        <p class="note">Totals by Lightning, Stripe, Square, and refunds. Card totals appear after a webhook confirms the payment.</p>
-        <label>Date
+        <h2 data-i18n="admin.endOfDay">End of day</h2>
+        <p class="note" data-i18n="admin.endOfDayNote">Totals by Lightning, Stripe, Square, and refunds. Card totals appear after a webhook confirms the payment.</p>
+        <label><span data-i18n="admin.date">Date</span>
           <input name="date" type="date" required>
         </label>
-        <button type="submit">Show summary</button>
-        <button type="button" id="daily-email" class="secondary">Email summary</button>
+        <button type="submit" data-i18n="admin.showSummary">Show summary</button>
+        <button type="button" id="daily-email" class="secondary" data-i18n="admin.emailSummary">Email summary</button>
         <pre id="daily-summary"></pre>
       </form>
       <section class="card">
-        <h2>Staff audit</h2>
-        <p class="note">Who called an admin route, and when. Owners and managers can read this. The shared admin token is recorded as admin-token.</p>
-        <p><a href="/api/admin/staff-actions.csv" id="audit-csv">Download audit CSV</a></p>
+        <h2 data-i18n="admin.audit">Staff audit</h2>
+        <p class="note" data-i18n="admin.auditNote">Who called an admin route, and when. Owners and managers can read this. The shared admin token is recorded as admin-token.</p>
+        <p><a href="/api/admin/staff-actions.csv" id="audit-csv" data-i18n="admin.auditCsv">Download audit CSV</a></p>
         <div id="staff-actions"></div>
       </section>
       <form id="marketing-form" class="card">
-        <h2>Marketing message</h2>
-        <p class="note">This sends only if that contact opted in. Receipts, privacy links, and household notices are transactional and use the providers in the environment.</p>
-        <label>Channel
+        <h2 data-i18n="admin.marketing">Marketing message</h2>
+        <p class="note" data-i18n="admin.marketingNote">This sends only if that contact opted in. Receipts, privacy links, and household notices are transactional and use the providers in the environment.</p>
+        <label><span data-i18n="admin.channel">Channel</span>
           <select name="channel">
-            <option value="email">email</option>
-            <option value="sms">sms</option>
+            <option value="email" data-i18n="admin.channel.email">email</option>
+            <option value="sms" data-i18n="admin.channel.sms">sms</option>
           </select>
         </label>
-        <label>To
+        <label><span data-i18n="admin.toField">To</span>
           <input name="to" required maxlength="200">
         </label>
-        <label>Subject
+        <label><span data-i18n="admin.subject">Subject</span>
           <input name="subject" maxlength="120">
         </label>
-        <label>Text
+        <label><span data-i18n="admin.messageText">Text</span>
           <input name="text" required maxlength="2000">
         </label>
-        <button type="submit">Send to opted-in contact</button>
-        <a href="/api/admin/marketing.csv" id="marketing-csv">Download marketing CSV</a>
+        <button type="submit" data-i18n="admin.sendMarketing">Send to opted-in contact</button>
+        <a href="/api/admin/marketing.csv" id="marketing-csv" data-i18n="admin.marketingCsv">Download marketing CSV</a>
       </form>
       <section class="card">
-        <h2>Playtomic courts</h2>
-        <p class="note">Read-only import. This app never writes bookings back to Playtomic.</p>
+        <h2 data-i18n="admin.playtomic">Playtomic courts</h2>
+        <p class="note" data-i18n="admin.playtomicNote">Read-only import. This app never writes bookings back to Playtomic.</p>
         <form id="map-form">
-          <label>Local court
+          <label><span data-i18n="admin.localCourt">Local court</span>
             <select name="courtId" required></select>
           </label>
-          <label>Playtomic resource id
+          <label><span data-i18n="admin.resourceId">Playtomic resource id</span>
             <input name="resourceId" required maxlength="80">
           </label>
-          <button type="submit">Map court</button>
-          <button type="button" id="sync" class="secondary">Sync now</button>
+          <button type="submit" data-i18n="admin.mapCourt">Map court</button>
+          <button type="button" id="sync" class="secondary" data-i18n="admin.sync">Sync now</button>
         </form>
         <div id="maps"></div>
         <div id="conflicts"></div>
       </section>
       <section>
-        <h2>Bookings</h2>
-        <p><a href="/api/admin/bookings.csv" id="csv">Download CSV</a></p>
+        <h2 data-i18n="admin.bookings">Bookings</h2>
+        <p><a href="/api/admin/bookings.csv" id="csv" data-i18n="admin.csv">Download CSV</a></p>
         <div id="bookings"></div>
       </section>
       <section>
-        <h2>Access log</h2>
+        <h2 data-i18n="admin.accessLog">Access log</h2>
         <div id="audit"></div>
       </section>
     </div>
   </main>
   <footer>
-    <p><strong>Prototype — not yet tested with real money or real doors.</strong></p>
+    <p><strong data-i18n="admin.prototype">Prototype — not yet tested with real money or real doors.</strong></p>
     <div class="brand-footer">
       <p class="brand-footer-text">This look is a placeholder. Give your club its own name and logo. The BitPadel name and logo are not your club's brand.</p>
       <p class="brand-contact"></p>
       <p class="brand-links"></p>
     </div>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/admin.js"></script>
 </body>

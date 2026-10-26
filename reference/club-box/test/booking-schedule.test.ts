@@ -144,7 +144,8 @@ test("the booking page is served with the schedule assets and day windows stay b
     assert.match(html, /brand-name-text/);
     assert.match(html, /brand-footer-text/);
     assert.match(html, /type="module"/);
-    assert.equal(html.includes("minor units"), false);
+    const visible = html.replace(/<script id="i18n-boot" type="application\/json">[\s\S]*?<\/script>/, "");
+    assert.equal(visible.includes("minor units"), false);
 
     const script = await fetch(`${app.baseUrl}/booking.js`);
     const source = await script.text();

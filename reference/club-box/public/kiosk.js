@@ -6,8 +6,13 @@ const qrEl = document.querySelector("#qr");
 const areasEl = document.querySelector("#areas");
 const checkinEl = document.querySelector("#checkin");
 const uidWarning = document.querySelector("#uid-warning");
+const i18n = window.clubI18n;
 let area = new URLSearchParams(location.search).get("area") || "";
 let timer = 0;
+
+function t(key, vars) {
+  return i18n.t(key, vars);
+}
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -17,12 +22,12 @@ async function start() {
   let health;
   try {
     health = await fetch("/api/health").then((response) => {
-      if (!response.ok) throw new Error("Access server unreachable.");
+      if (!response.ok) throw new Error(t("kiosk.unreachable"));
       return response.json();
     });
   } catch {
     qrEl.hidden = true;
-    setStatus("Access server unreachable. Use a fob, a PIN, or staff. Exits stay available without this screen.");
+    setStatus(t("kiosk.unreachable"));
     return;
   }
   uidWarning.hidden = health.uidMode !== "insecure-dev";
@@ -42,7 +47,7 @@ async function start() {
       });
       areasEl.append(button);
     }
-    setStatus("Choose an area. The QR proves a wallet, then pulses entry only.");
+    setStatus(t("kiosk.chooseArea"));
     return;
   }
   await rotate();
@@ -57,15 +62,15 @@ async function rotate() {
       body: JSON.stringify({ area }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || "Could not start a code.");
+    if (!response.ok) throw new Error(body.error || t("kiosk.couldNotStart"));
     const challenge = body.challenge;
     qrEl.hidden = false;
     qrEl.src = `/api/access/challenges/${challenge.k1}/qr.png?ts=${Date.now()}`;
-    setStatus("Scan with an enrolled Lightning wallet.");
+    setStatus(t("kiosk.scan"));
     watch(challenge.k1, new Date(challenge.expiresAt).getTime());
   } catch (error) {
     qrEl.hidden = true;
-    setStatus(`${error.message} Use a fob, a PIN, or staff if you cannot get in.`);
+    setStatus(`${error.message} ${t("kiosk.fallbackSuffix")}`);
     timer = window.setTimeout(rotate, 5000);
   }
 }
@@ -78,12 +83,12 @@ function watch(k1, expiresAt) {
     }
     try {
       const response = await fetch(`/api/access/challenges/${k1}`);
-      if (!response.ok) throw new Error("Code check failed.");
+      if (!response.ok) throw new Error(t("kiosk.codeCheckFailed"));
       const body = await response.json();
       if (body.challenge.status === "unlocked") {
         qrEl.hidden = true;
         showCheckin(body.challenge.checkin);
-        setStatus("Entry pulsed. The strike releases on its own. You can always leave without this screen.");
+        setStatus(t("kiosk.entryPulsed"));
         return;
       }
       if (body.challenge.status === "denied") {
@@ -94,7 +99,7 @@ function watch(k1, expiresAt) {
       }
       timer = window.setTimeout(tick, 1000);
     } catch {
-      setStatus("Access server unreachable. Use a fob, a PIN, or staff. Exits stay available without this screen.");
+      setStatus(t("kiosk.unreachable"));
       timer = window.setTimeout(rotate, 5000);
     }
   };
@@ -108,7 +113,7 @@ function showCheckin(checkin) {
   const photo = document.querySelector("#checkin-photo");
   if (checkin.hasPhoto) {
     photo.hidden = false;
-    photo.alt = "Member photo";
+    photo.alt = t("kiosk.photoAlt");
     photo.src = `/api/checkins/${checkin.id}/photo?token=${encodeURIComponent(checkin.token)}`;
   }
   const count = document.querySelector("#guest-count");
@@ -121,7 +126,7 @@ function showCheckin(checkin) {
 async function changeGuests(checkin, delta, count) {
   const next = Math.max(0, Number(count.textContent) + delta);
   if (next > checkin.guestLimit) {
-    setStatus("That is over the guest limit.");
+    setStatus(t("kiosk.overLimit"));
     return;
   }
   const response = await fetch(`/api/checkins/${checkin.id}/guest-count`, {
@@ -131,7 +136,7 @@ async function changeGuests(checkin, delta, count) {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    setStatus(body.error || "Could not update guests.");
+    setStatus(body.error || t("kiosk.couldNotUpdate"));
     return;
   }
   count.textContent = String(body.checkin.guestCount);
@@ -140,25 +145,25 @@ async function changeGuests(checkin, delta, count) {
 function reasonText(reason) {
   switch (reason) {
     case "door-failed":
-      return "Entry controller did not respond. Use a fob, PIN, or staff.";
+      return t("kiosk.reason.door-failed");
     case "unknown-key":
-      return "This wallet is not enrolled.";
+      return t("kiosk.reason.unknown-key");
     case "member-inactive":
-      return "Membership is not active.";
+      return t("kiosk.reason.member-inactive");
     case "outside-hours":
-      return "That area is closed right now.";
+      return t("kiosk.reason.outside-hours");
     case "replay":
     case "counter-replay":
-      return "That code or card counter was already used.";
+      return t("kiosk.reason.replay");
     case "expired":
-      return "That code expired.";
+      return t("kiosk.reason.expired");
     case "revoked":
     case "lost":
-      return "That card is not active.";
+      return t("kiosk.reason.revoked");
     case "unknown-card":
-      return "This card is not enrolled.";
+      return t("kiosk.reason.unknown-card");
     default:
-      return "Entry was not granted. Use a fob, PIN, or staff if you need to get in.";
+      return t("kiosk.reason.default");
   }
 }
 

@@ -119,6 +119,10 @@ Owners and managers set the club name, short name, logo, favicon, colors, font, 
 
 Logo and favicon files are PNG, JPG, or SVG, at most 512 KB. A favicon may also be ICO. The server checks the file bytes. SVG is rewritten to a plain drawing; a file with a script is refused. Files use the same storage adapter as member photos.
 
+## Languages
+
+Pages, receipts, and outgoing email and texts can use English, Spanish, French, Italian, or Brazilian Portuguese. The club default is stored with the brand. A member's choice is stored on their profile. The browser `Accept-Language` header is the fallback. The **Language** menu is on the member pages, the desk, and Admin. Dates, times, numbers, and money use `Intl` in `CLUB_TIMEZONE`. The unit word stays `sats`. Catalogs live in `locales/` and are not loaded from another site. Spanish, French, Italian, and Brazilian Portuguese are machine drafts. Waiver, consent, and door-safety lines need a qualified reviewer in each country before use. How to add a language, including Portugal Portuguese later, is in [`docs/translations.md`](../../docs/translations.md).
+
 ## Tests
 
 ```bash
@@ -133,6 +137,7 @@ The suite covers:
 - Slot double-booking, including two concurrent claims, plus a price that changed under a player
 - The example HTTP relay: it pulses on `pulse-entry` and rejects lock, fire, and egress commands
 - Club branding: name and color validation, SVG rejection, page HTML, and receipt email
+- Message catalogs, date and money formatting, and which language a page or email uses
 
 Tests use an ephemeral SQLite file and a fixture price of one minor unit. That number is not a club price.
 

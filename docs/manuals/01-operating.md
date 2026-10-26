@@ -15,6 +15,8 @@ Know which payment mode the club is in. `GET /api/health` includes `paymentBacke
 
 Guest count stays at zero until a manager sets `GUEST_LIMIT` to a number above zero, or sets a cap on that member in Admin. The kiosk still shows **More**. Pressing it past the cap shows "That is over the guest limit."
 
+The **Language** menu is at the top of the booking page, My bookings, the kiosk, the guest form, and the desk. It changes the labels on this browser until the browser closes. After a member logs in on My bookings, that choice is saved for them, and their receipts, reminders, and login codes use it. A manager sets the club's usual language in Admin under Branding. Spanish, French, Italian, and Brazilian Portuguese in this kit are drafts. Waiver and door-safety lines still need a lawyer or other qualified reviewer in the club's country. See [translations](../translations.md).
+
 ## Opening checklist
 
 1. Open the kiosk page (`/kiosk`). You should see the club's short name at the top and the two safety lines: the service only pulses entry, and leaving does not use the screen. **Your club** means a manager has not saved a name in Admin **Branding** yet. If the page says the access server is unreachable, the app is down. Use the fob, PIN, or staff path, and tell a manager. Those fallbacks are physical. **Not yet implemented:** fob or PIN logic inside this app.
@@ -105,8 +107,8 @@ If the tab is frozen, or the sale would pass the member's tab limit, the charge 
 
 ## Court time paid with Lightning
 
-1. On `/`, pick the court if you use the court buttons.
-2. Press **Hold and get invoice** on an open slot that is not covered by an import.
+1. On `/`, pick a day on the calendar. Filter by length, court, or sport when those lists appear.
+2. Press an open time, then **Hold this time**. A time covered by an import is unavailable.
 3. The page shows the amount in the club currency and a Lightning invoice. The player scans it with a Lightning wallet.
 4. Wait until the page says "Booked. Payment settled." A screenshot of a wallet is not settlement.
 5. The slot then shows as booked. Another person cannot hold it.
@@ -115,7 +117,7 @@ Prices are whatever a manager typed for that slot, in minor units (the smallest 
 
 Holds expire after `HOLD_MINUTES` (default 15). The page then says the hold expired and the slot was released. A payment notice that arrives after that does not create the booking.
 
-If the slot says "Imported booking covers this time", do not try to sell that hour on Lightning. Playtomic already has it. The hold API returns "That time is already on the imported calendar."
+If the grid shows that time as unavailable because an import covers it, do not try to sell that hour on Lightning. Playtomic already has it. The hold API returns "That time is already on the imported calendar."
 
 An optional receipt email on the booking page is sent after settlement when email is not `console`. **Not yet implemented:** a Lightning address or LNURL-pay link, and a shop or lesson product on this page. Shop ideas stay in [Lightning integrations](../04-lightning-integrations.md).
 
@@ -123,7 +125,7 @@ An optional receipt email on the booking page is sent after settlement when emai
 
 Playtomic sync is optional and read-only. If `playtomicConfigured` is false on `/api/health`, skip this section.
 
-- Public booking page: a heading **Imported bookings**, court, time, and the label "Imported booking".
+- Public booking page: an imported time shows as unavailable on the day grid. Names and emails stay off that page.
 - Desk: today's imported players, for matching an arrival.
 - A wallet or card check-in can attach today's Playtomic booking when the member's Playtomic player id matches, or when the member email matches a player email.
 - A named guest email can match the same way.

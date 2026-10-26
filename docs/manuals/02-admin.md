@@ -27,13 +27,14 @@ What you can set:
 3. **Primary, accent, background, and text colors.** The preview updates as you change them. A contrast note appears when text, buttons, or links would be hard to read. You can still save. The pages keep working because the colors are published as the same CSS variables the stylesheet already uses (`--bg`, `--surface`, `--text`, `--muted`, `--primary`, `--accent`, `--danger`, `--line`, `--font`).
 4. **Font**, from the list on the form. The list is fonts already on the computer. The app does not load a font from another website.
 5. **Contact line**, **footer**, and up to four **http or https links**.
+6. **Default language.** Used when a member has not chosen one and the browser does not ask for a language this club supports. The choices are English, Spanish, French, Italian, and Brazilian Portuguese. Portugal Portuguese is not a separate choice yet. The wording shipped with the kit is a machine draft. Waiver, consent, and door-safety lines need a qualified reviewer in each country before the club relies on them. See [translations](../translations.md).
 
 Booking, the member's bookings page, the kiosk, enrollment, the desk, the guest form, the privacy page, and Admin itself show the saved name. Receipts and other email from the configured email provider use the same name, colors, and footer. Leave the email provider on `console` and nothing is delivered. See [integrations](10-integrations.md).
 
 ## Member profiles
 
 1. **Add a member.** The label is a membership number or similar handle. The new member is active.
-2. Fill **Display name**, **Email**, **Phone**, **Playtomic player id**, **Membership type**, and **Guest cap**. Press **Save profile**. Empty text clears that field. A blank guest cap clears the per-member override and the club `GUEST_LIMIT` applies. Allowed type ids are `MEMBERSHIP_TYPES` (default `standard,household`).
+2. Fill **Display name**, **Email**, **Phone**, **Preferred language**, **Playtomic player id**, **Membership type**, and **Guest cap**. Press **Save profile**. Empty text clears that field. **Club default** on the language list clears a saved language. A blank guest cap clears the per-member override and the club `GUEST_LIMIT` applies. Allowed type ids are `MEMBERSHIP_TYPES` (default `standard,household`). Email and texts to that member use the saved language.
 3. **Revoke member** blocks wallet and card entry. **Restore member** makes the membership active again. Restored members still need a key or card that was not revoked.
 4. **Enrollment QR** then **Open enrollment page** is the one-time wallet enroll. The linking key is a public key for this site. It is not a balance and not a payment key.
 

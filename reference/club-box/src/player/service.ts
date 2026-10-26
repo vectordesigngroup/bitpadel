@@ -7,6 +7,9 @@ import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
 import { one } from "../db.js";
 import { AppError } from "../errors.js";
+import { translate } from "../i18n/catalog.js";
+import { canonicalizeLocale, type LocaleId } from "../i18n/locales.js";
+import { localeForRecipient } from "../i18n/preference.js";
 import { newId } from "../ids.js";
 import type { Notifier } from "../notify/types.js";
 import { sendTransactional } from "../notify/service.js";
@@ -18,6 +21,7 @@ export type PlayerView = {
   email: string;
   phone: string | null;
   memberId: string | null;
+  preferredLocale: LocaleId | null;
 };
 
 export async function requestPlayerCode(
@@ -26,6 +30,7 @@ export async function requestPlayerCode(
   config: AppConfig,
   email: string,
   now: Date,
+  hintLocale?: string | null,
 ): Promise<void> {
   const code = mintCode();
   const expires = new Date(now.getTime() + 15 * 60_000).toISOString();
@@ -34,14 +39,15 @@ export async function requestPlayerCode(
      VALUES (?, ?, ?, ?, NULL, ?)`,
   ).run(newId("pcode"), email, hashCode(code), expires, now.toISOString());
   const link = `${config.publicBaseUrl}/account`;
+  const locale = localeForRecipient(db, { email, hint: hintLocale });
   await sendTransactional(
     notifier,
     {
       channel: "email",
       kind: "transactional",
       to: email,
-      subject: "Your court booking code",
-      text: `Your login code is ${code}. It expires in 15 minutes. Open ${link} and enter it. This is not a marketing message.`,
+      subject: translate(locale, "email.login.subject"),
+      text: translate(locale, "email.login.text", { code, link }),
     },
     { db, publicBaseUrl: config.publicBaseUrl },
   );
@@ -84,9 +90,15 @@ export function playerFromRequest(
 ): PlayerView | null {
   const token = readCookie(headers, "player_session");
   if (!token) return null;
-  const row = one<{ id: string; email: string; phone: string | null; member_id: string | null }>(
+  const row = one<{
+    id: string;
+    email: string;
+    phone: string | null;
+    member_id: string | null;
+    preferred_locale: string | null;
+  }>(
     db,
-    `SELECT p.id, p.email, p.phone, p.member_id
+    `SELECT p.id, p.email, p.phone, p.member_id, p.preferred_locale
      FROM player_sessions s
      JOIN players p ON p.id = s.player_id
      WHERE s.token_hash = ? AND s.expires_at > ?`,
@@ -94,7 +106,7 @@ export function playerFromRequest(
     now.toISOString(),
   );
   if (!row) return null;
-  return { id: row.id, email: row.email, phone: row.phone, memberId: row.member_id };
+  return playerView(row);
 }
 
 export function playerIsPayingMember(db: Database.Database, playerId: string): boolean {
@@ -160,21 +172,37 @@ export function playerCookie(token: string, maxAgeSeconds: number, secure: boole
 }
 
 function ensurePlayer(db: Database.Database, email: string, now: Date): PlayerView {
-  const existing = one<{ id: string; email: string; phone: string | null; member_id: string | null }>(
-    db,
-    "SELECT id, email, phone, member_id FROM players WHERE email = ?",
-    email,
-  );
-  if (existing) {
-    return { id: existing.id, email: existing.email, phone: existing.phone, memberId: existing.member_id };
-  }
+  const existing = one<{
+    id: string;
+    email: string;
+    phone: string | null;
+    member_id: string | null;
+    preferred_locale: string | null;
+  }>(db, "SELECT id, email, phone, member_id, preferred_locale FROM players WHERE email = ?", email);
+  if (existing) return playerView(existing);
   const id = newId("player");
   db.prepare("INSERT INTO players (id, email, phone, member_id, created_at) VALUES (?, ?, NULL, NULL, ?)").run(
     id,
     email,
     now.toISOString(),
   );
-  return { id, email, phone: null, memberId: null };
+  return { id, email, phone: null, memberId: null, preferredLocale: null };
+}
+
+function playerView(row: {
+  id: string;
+  email: string;
+  phone: string | null;
+  member_id: string | null;
+  preferred_locale: string | null;
+}): PlayerView {
+  return {
+    id: row.id,
+    email: row.email,
+    phone: row.phone,
+    memberId: row.member_id,
+    preferredLocale: canonicalizeLocale(row.preferred_locale),
+  };
 }
 
 function mintCode(): string {

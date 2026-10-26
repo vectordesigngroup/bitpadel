@@ -9,50 +9,64 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="account.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/account" aria-current="page">My bookings</a>
-      <a href="/kiosk">Door kiosk</a>
-      <a href="/admin">Admin</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/account" aria-current="page" data-i18n="nav.account">My bookings</a>
+      <a href="/kiosk" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/admin" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main>
-    <h1>My bookings</h1>
-    <p class="note">A login code arrives by email. It is not a marketing message. Cancel only inside the club's window.</p>
+    <h1 data-i18n="account.heading">My bookings</h1>
+    <p class="note" data-i18n="account.note">A login code arrives by email. It is not a marketing message. Cancel only inside the club's window.</p>
+    <p class="note" data-i18n="account.languageNote">The language menu on this page is kept in this browser until you close it. After you log in, that choice is also saved on your profile and used for email and texts.</p>
     <p id="status" class="status" role="status"></p>
     <form id="code-form" class="card">
-      <label>Email
+      <label><span data-i18n="account.email">Email</span>
         <input name="email" type="email" required maxlength="200" autocomplete="email">
       </label>
-      <button type="submit">Email me a code</button>
+      <button type="submit" data-i18n="account.sendCode">Email me a code</button>
     </form>
     <form id="session-form" class="card">
-      <label>Code
+      <label><span data-i18n="account.code">Code</span>
         <input name="code" required maxlength="12" inputmode="numeric" autocomplete="one-time-code">
       </label>
-      <button type="submit">Log in</button>
+      <button type="submit" data-i18n="account.login">Log in</button>
     </form>
     <section id="bookings" hidden>
-      <h2>Upcoming</h2>
+      <h2 data-i18n="account.upcoming">Upcoming</h2>
       <div id="upcoming"></div>
-      <h2>Past</h2>
+      <h2 data-i18n="account.past">Past</h2>
       <div id="past"></div>
     </section>
     <section id="tab" hidden>
-      <h2>Allowance and tab</h2>
-      <p class="note">Drinks and small items draw the membership allowance first. The rest stays on the tab until you settle it. A guest item is listed with the guest's name and is still your tab.</p>
+      <h2 data-i18n="account.tabHeading">Allowance and tab</h2>
+      <p class="note" data-i18n="account.tabNote">Drinks and small items draw the membership allowance first. The rest stays on the tab until you settle it. A guest item is listed with the guest's name and is still your tab.</p>
       <p id="tab-summary"></p>
       <div id="tab-lines"></div>
       <form id="settle-form">
-        <label>Pay with
+        <label><span data-i18n="account.payWith">Pay with</span>
           <select name="method" id="settle-method">
             <option value="lightning">Lightning</option>
           </select>
         </label>
-        <button type="submit">Settle tab</button>
+        <button type="submit" data-i18n="account.settle">Settle tab</button>
       </form>
       <p id="tab-pay" class="mono"></p>
     </section>
@@ -62,6 +76,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/account.js"></script>
 </body>

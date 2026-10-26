@@ -12,6 +12,7 @@ import { entryGrant } from "./booking-entry.js";
 import { notifyAdminAlert } from "../notify/service.js";
 import type { Notifier } from "../notify/types.js";
 import type { RateLimiter } from "../rate-limit.js";
+import { canonicalizeLocale, type LocaleId } from "../i18n/locales.js";
 import { minutesOfDay } from "../time.js";
 import { encodeLnurl } from "./lnurl.js";
 import { verifyLnurlAuthSignature } from "./verify.js";
@@ -75,6 +76,7 @@ export type MemberView = {
   guestLimit: number | null;
   hasPhoto: boolean;
   playtomicPlayerId: string | null;
+  preferredLocale: LocaleId | null;
   keys: MemberKeyView[];
   cards: CardSummary[];
 };
@@ -131,6 +133,7 @@ export function createMember(db: Database.Database, label: string, now: Date): M
     guestLimit: null,
     hasPhoto: false,
     playtomicPlayerId: null,
+    preferredLocale: null,
     keys: [],
     cards: [],
   };
@@ -141,7 +144,7 @@ export function listMembers(db: Database.Database): MemberView[] {
     .prepare(
       `SELECT m.id, m.label, m.status, m.created_at, m.display_name, m.phone, m.email,
               m.membership_type, m.household_id, m.household_role, m.guest_limit, m.photo_path,
-              p.player_id
+              m.preferred_locale, p.player_id
        FROM members m
        LEFT JOIN member_playtomic p ON p.member_id = m.id
        ORDER BY m.created_at ASC`,
@@ -159,6 +162,7 @@ export function listMembers(db: Database.Database): MemberView[] {
     household_role: string | null;
     guest_limit: number | null;
     photo_path: string | null;
+    preferred_locale: string | null;
     player_id: string | null;
   }>;
   const keys = db
@@ -197,6 +201,7 @@ export function listMembers(db: Database.Database): MemberView[] {
     guestLimit: member.guest_limit,
     hasPhoto: Boolean(member.photo_path),
     playtomicPlayerId: member.player_id,
+    preferredLocale: canonicalizeLocale(member.preferred_locale),
     keys: keys
       .filter((key) => key.member_id === member.id)
       .map((key) => ({

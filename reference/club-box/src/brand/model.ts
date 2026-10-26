@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
+import type { LocaleId } from "../i18n/locales.js";
+
 export const BRAND_FONT_KEYS = ["system", "serif", "humanist", "readable"] as const;
 export type BrandFontKey = (typeof BRAND_FONT_KEYS)[number];
 
@@ -28,6 +30,7 @@ export type ClubBrand = {
   links: BrandLink[];
   logo: BrandAsset | null;
   favicon: BrandAsset | null;
+  defaultLocale: LocaleId;
   updatedAt: string | null;
 };
 
@@ -45,6 +48,7 @@ export type PublicBrand = {
   links: BrandLink[];
   hasLogo: boolean;
   hasFavicon: boolean;
+  defaultLocale: LocaleId;
   updatedAt: string | null;
   usingPlaceholder: boolean;
   placeholderNote: string;
@@ -77,6 +81,7 @@ export function defaultClubBrand(): ClubBrand {
     links: [],
     logo: null,
     favicon: null,
+    defaultLocale: "en",
     updatedAt: null,
   };
 }

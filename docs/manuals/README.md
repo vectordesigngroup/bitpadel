@@ -6,7 +6,7 @@ They are not legal, tax, fire-code, or locksmith instructions. Read the [disclai
 
 Card processing, refunds, the customer data this app stores, and the wording of consent and waiver text need review by the club's own attorney and CPA before a club takes real payments. This repository is not that review.
 
-The app version in this tree is `0.1.0` (`reference/club-box/package.json`). The [roadmap](../ROADMAP.md) is the list of what is still ahead.
+The app version in this tree is `0.1.0` (`reference/club-box/package.json`). The [roadmap](../ROADMAP.md) is the list of what is still ahead. Pages can be shown in English, Spanish, French, Italian, or Brazilian Portuguese. How to add a language is in [translations](../translations.md).
 
 ## Manuals
 

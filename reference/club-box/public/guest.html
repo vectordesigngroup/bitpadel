@@ -9,34 +9,47 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="guest.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/privacy">Privacy</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/privacy" data-i18n="nav.privacy">Privacy</a>
     </nav>
   </header>
   <main>
-    <h1>Guest check-in</h1>
-    <p class="note">The club keeps the name and contact so staff know who is on site. Marketing is a separate choice.</p>
+    <h1 data-i18n="guest.heading">Guest check-in</h1>
+    <p class="note" data-i18n="guest.note">The club keeps the name and contact so staff know who is on site. Marketing is a separate choice.</p>
     <p id="status" class="status" role="status"></p>
     <form id="guest" class="card">
-      <label>Name
+      <label><span data-i18n="guest.name">Name</span>
         <input name="displayName" required maxlength="80">
       </label>
-      <label>Contact
+      <label><span data-i18n="guest.contact">Contact</span>
         <select name="contactKind">
-          <option value="email">Email</option>
-          <option value="phone">Phone</option>
+          <option value="email" data-i18n="guest.email">Email</option>
+          <option value="phone" data-i18n="guest.phone">Phone</option>
         </select>
       </label>
-      <label>Email or phone
+      <label><span data-i18n="guest.contactValue">Email or phone</span>
         <input name="contactValue" required maxlength="200">
       </label>
-      <label><input name="waiverAccepted" type="checkbox" required> I acknowledge the club waiver for this visit.</label>
-      <label><input name="marketingConsent" type="checkbox"> Send me club news. Leave this unchecked if you do not want that.</label>
-      <button type="submit">Add guest</button>
+      <label><input name="waiverAccepted" type="checkbox" required> <span data-i18n="guest.waiver">I acknowledge the club waiver for this visit.</span></label>
+      <label><input name="marketingConsent" type="checkbox"> <span data-i18n="guest.marketing">Send me club news. Leave this unchecked if you do not want that.</span></label>
+      <button type="submit" data-i18n="guest.submit">Add guest</button>
     </form>
   </main>
   <footer class="brand-footer">
@@ -44,6 +57,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/guest.js"></script>
 </body>

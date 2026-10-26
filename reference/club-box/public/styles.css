@@ -23,8 +23,12 @@ body {
 }
 a { color: var(--accent); }
 header, main, footer { width: min(960px, calc(100% - 32px)); margin: 0 auto; }
-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
-nav { display: flex; gap: 16px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px 0; }
+nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.locale-switch { display: flex; align-items: center; gap: 8px; margin: 0; }
+.locale-switch label { display: flex; align-items: center; gap: 6px; margin: 0; }
+.locale-switch select { width: auto; margin: 0; padding: 6px 8px; }
+.locale-switch button { padding: 6px 10px; }
 h1, h2 { line-height: 1.2; }
 h1 { margin-bottom: 8px; }
 .note, .safety, footer { color: var(--muted); }

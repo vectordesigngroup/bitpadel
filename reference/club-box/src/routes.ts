@@ -36,6 +36,8 @@ import type { AppDeps } from "./deps.js";
 import { AppError } from "./errors.js";
 import { readJson, requireAdmin, sendBytes, sendJson, sendText, type HttpReq, type Route } from "./http.js";
 import { log } from "./log.js";
+import { localeForRecipient } from "./i18n/preference.js";
+import { localeFromRequest } from "./i18n/request.js";
 import { sendReceipt } from "./notify/service.js";
 import { pngQr } from "./qr.js";
 import { accessRoutes } from "./routes-access.js";
@@ -43,6 +45,7 @@ import { ledgerRoutes } from "./routes-ledger.js";
 import { applyIncomingPayment } from "./ledger/settle.js";
 import { brandRoutes } from "./routes-brand.js";
 import { opsRoutes } from "./routes-ops.js";
+import { localeRoutes } from "./routes-locale.js";
 import { pilotRoutes } from "./routes-pilot.js";
 import { playerFromRequest } from "./player/service.js";
 import { playtomicRoutes } from "./routes-playtomic.js";
@@ -100,6 +103,7 @@ export function buildRoutes(ctx: AppDeps): Route[] {
     ...playtomicRoutes(ctx),
     ...opsRoutes(ctx),
     ...pilotRoutes(ctx),
+    ...localeRoutes(ctx),
   ];
 }
 
@@ -154,6 +158,7 @@ async function createHold(req: HttpReq, ctx: AppDeps): Promise<void> {
     reminderEmail: body.reminderEmail === true,
     reminderSms: body.reminderSms === true,
     reminderPhone: optionalPhone(body),
+    locale: localeFromRequest(ctx.db, req.headers, req.url, ctx.now()).locale,
     cards: ctx.cards,
   });
   sendJson(req.res, 201, { hold });
@@ -545,15 +550,26 @@ function optionalReceiptEmail(body: Record<string, unknown>): string | null {
 }
 
 async function deliverReceipt(ctx: AppDeps, bookingId: string): Promise<void> {
-  const row = one<{ receipt_email: string | null; amount_minor: number; currency: string }>(
+  const row = one<{
+    receipt_email: string | null;
+    amount_minor: number;
+    currency: string;
+    player_id: string | null;
+    locale: string | null;
+  }>(
     ctx.db,
-    `SELECT h.receipt_email, b.amount_minor, b.currency
+    `SELECT h.receipt_email, b.amount_minor, b.currency, h.player_id, h.locale
      FROM bookings b
      JOIN holds h ON h.id = b.hold_id
      WHERE b.id = ?`,
     bookingId,
   );
   if (!row?.receipt_email) return;
+  const locale = localeForRecipient(ctx.db, {
+    playerId: row.player_id,
+    email: row.receipt_email,
+    hint: row.locale,
+  });
   try {
     await sendReceipt(
       ctx.notifier,
@@ -562,6 +578,8 @@ async function deliverReceipt(ctx: AppDeps, bookingId: string): Promise<void> {
         bookingId,
         amountMinor: row.amount_minor,
         currency: row.currency,
+        currencyDecimals: ctx.config.currencyDecimals,
+        locale,
       },
       { db: ctx.db, publicBaseUrl: ctx.config.publicBaseUrl },
     );

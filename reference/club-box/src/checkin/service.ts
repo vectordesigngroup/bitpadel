@@ -5,6 +5,8 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
+import type { LocaleId } from "../i18n/locales.js";
+import { saveMemberLocale } from "../i18n/preference.js";
 import { isUniqueError, many, one } from "../db.js";
 import { AppError } from "../errors.js";
 import { newId } from "../ids.js";
@@ -332,6 +334,7 @@ export function updateMemberProfile(
     membershipType?: string;
     guestLimit?: number | null;
     playtomicPlayerId?: string | null;
+    preferredLocale?: LocaleId | null;
   },
 ): void {
   const existing = one<{ id: string }>(db, "SELECT id FROM members WHERE id = ?", memberId);
@@ -365,6 +368,7 @@ export function updateMemberProfile(
     values.push(memberId);
     db.prepare(`UPDATE members SET ${sets.join(", ")} WHERE id = ?`).run(...values);
   }
+  if (patch.preferredLocale !== undefined) saveMemberLocale(db, memberId, patch.preferredLocale);
   if (patch.playtomicPlayerId === null) {
     db.prepare("DELETE FROM member_playtomic WHERE member_id = ?").run(memberId);
   } else if (patch.playtomicPlayerId) {

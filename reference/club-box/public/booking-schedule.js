@@ -14,18 +14,65 @@ const SPORT_WORDS = [
   ["squash", "Squash"],
 ];
 
-const WEEKDAY_LABELS = [
-  ["Sun", "Sunday"],
-  ["Mon", "Monday"],
-  ["Tue", "Tuesday"],
-  ["Wed", "Wednesday"],
-  ["Thu", "Thursday"],
-  ["Fri", "Friday"],
-  ["Sat", "Saturday"],
-];
+const ENGLISH_COPY = {
+  locale: "",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  oneHour: "1 hour",
+  hours: (count) => `${count} hours`,
+  hourAndMin: (hours, minutes) => (hours === 1 ? `1 hour ${minutes} min` : `${hours} hours ${minutes} min`),
+  minutes: (count) => `${count} min`,
+  guest: "Guest",
+  member: "Member",
+  openTime: (count) => {
+    if (count === 1) return "1 open time";
+    if (count > 1) return `${count} open times`;
+    return "no open times";
+  },
+  until: (time) => `Until ${time}`,
+  state: {
+    open: "Open",
+    held: "Held",
+    booked: "Booked",
+    unavailable: "Unavailable",
+    past: "Ended",
+    empty: "Not offered",
+    continued: "Continues",
+  },
+};
+
+let scheduleCopy = ENGLISH_COPY;
+
+/** Page language for labels. Omitted or English keeps the original en-US clock and prices. */
+export function setScheduleCopy(next) {
+  if (!next) {
+    scheduleCopy = ENGLISH_COPY;
+    return;
+  }
+  scheduleCopy = {
+    ...ENGLISH_COPY,
+    ...next,
+    state: { ...ENGLISH_COPY.state, ...(next.state || {}) },
+  };
+}
+
+function uiLocale() {
+  if (!scheduleCopy.locale || scheduleCopy.locale === "en") return "en-US";
+  return scheduleCopy.locale;
+}
+
+function useHour12() {
+  return !scheduleCopy.locale || scheduleCopy.locale === "en";
+}
 
 export function weekdayHeaders() {
-  return WEEKDAY_LABELS.map(([shortLabel, longLabel]) => ({ shortLabel, longLabel }));
+  return [0, 1, 2, 3, 4, 5, 6].map((index) => {
+    const date = new Date(Date.UTC(2023, 0, 1 + index));
+    return {
+      shortLabel: new Intl.DateTimeFormat(uiLocale(), { timeZone: "UTC", weekday: "short" }).format(date),
+      longLabel: new Intl.DateTimeFormat(uiLocale(), { timeZone: "UTC", weekday: "long" }).format(date),
+    };
+  });
 }
 
 function pad(value) {
@@ -163,42 +210,41 @@ export function monthMatrix(year, month) {
 
 export function monthTitle(year, month) {
   const date = new Date(Date.UTC(year, month - 1, 1));
-  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "long", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat(uiLocale(), { timeZone: "UTC", month: "long", year: "numeric" }).format(date);
 }
 
 export function chipLabel(ymd, todayYmd) {
-  if (ymd === todayYmd) return "Today";
-  if (ymd === addCivilDays(todayYmd, 1)) return "Tomorrow";
+  if (ymd === todayYmd) return scheduleCopy.today;
+  if (ymd === addCivilDays(todayYmd, 1)) return scheduleCopy.tomorrow;
   const noon = new Date(`${ymd}T12:00:00.000Z`);
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(noon);
+  const weekday = new Intl.DateTimeFormat(uiLocale(), { timeZone: "UTC", weekday: "short" }).format(noon);
   return `${weekday} ${Number(ymd.slice(8, 10))}`;
 }
 
 export function dayAriaLabel(ymd, openCount) {
   const date = new Date(`${ymd}T12:00:00.000Z`);
-  const long = new Intl.DateTimeFormat("en-US", {
+  const long = new Intl.DateTimeFormat(uiLocale(), {
     timeZone: "UTC",
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
   }).format(date);
-  if (openCount === 1) return `${long}, 1 open time`;
-  if (openCount > 1) return `${long}, ${openCount} open times`;
-  return `${long}, no open times`;
+  return `${long}, ${scheduleCopy.openTime(openCount)}`;
 }
 
 export function formatClock(instant, timeZone) {
-  return new Intl.DateTimeFormat("en-US", {
+  const options = {
     timeZone,
     hour: "numeric",
     minute: "2-digit",
-    hour12: true,
-  }).format(new Date(instant));
+  };
+  if (useHour12()) options.hour12 = true;
+  return new Intl.DateTimeFormat(uiLocale(), options).format(new Date(instant));
 }
 
 export function formatDayHeading(instant, timeZone) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(uiLocale(), {
     timeZone,
     weekday: "long",
     month: "long",
@@ -233,15 +279,14 @@ export function formatDuration(minutes) {
   if (!Number.isFinite(minutes) || minutes <= 0) return "";
   if (minutes % 60 === 0) {
     const hours = minutes / 60;
-    return hours === 1 ? "1 hour" : `${hours} hours`;
+    return hours === 1 ? scheduleCopy.oneHour : scheduleCopy.hours(hours);
   }
   if (minutes > 60) {
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    const hourLabel = hours === 1 ? "1 hour" : `${hours} hours`;
-    return `${hourLabel} ${rest} min`;
+    return scheduleCopy.hourAndMin(hours, rest);
   }
-  return `${minutes} min`;
+  return scheduleCopy.minutes(minutes);
 }
 
 export function formatPrice(amountMinor, currency, decimals) {
@@ -249,26 +294,31 @@ export function formatPrice(amountMinor, currency, decimals) {
   const places = Number.isInteger(decimals) && decimals >= 0 ? decimals : 0;
   if (SAT_CODES.has(code)) {
     const sats = places === 0 ? amountMinor : amountMinor / 10 ** places;
-    const formatted = new Intl.NumberFormat("en-US", {
+    const formatted = new Intl.NumberFormat(uiLocale(), {
       maximumFractionDigits: places,
       minimumFractionDigits: 0,
+      useGrouping: "always",
     }).format(sats);
     return `${formatted} sats`;
   }
   const major = amountMinor / 10 ** places;
+  const number = new Intl.NumberFormat(uiLocale(), {
+    minimumFractionDigits: places,
+    maximumFractionDigits: places,
+    useGrouping: "always",
+  }).format(major);
   try {
-    return new Intl.NumberFormat("en-US", {
+    const formatted = new Intl.NumberFormat(uiLocale(), {
       style: "currency",
       currency: code,
       minimumFractionDigits: places,
       maximumFractionDigits: places,
+      useGrouping: "always",
     }).format(major);
+    if (formatted.includes("¤")) return `${number} ${code}`;
+    return formatted;
   } catch {
-    const formatted = new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: places,
-      maximumFractionDigits: places,
-    }).format(major);
-    return `${formatted} ${code}`;
+    return `${number} ${code}`;
   }
 }
 
@@ -277,7 +327,7 @@ export function priceLabel(slot, decimals) {
   const member = slot.memberPriceMinor ?? guest;
   const guestText = formatPrice(guest, slot.currency, decimals);
   if (guest === member) return guestText;
-  return `Guest ${guestText} · Member ${formatPrice(member, slot.currency, decimals)}`;
+  return `${scheduleCopy.guest} ${guestText} · ${scheduleCopy.member} ${formatPrice(member, slot.currency, decimals)}`;
 }
 
 export function sportOf(name) {
@@ -319,19 +369,13 @@ export function visualState(slot, nowMs) {
 export function stateLabel(state) {
   switch (state) {
     case "open":
-      return "Open";
     case "held":
-      return "Held";
     case "booked":
-      return "Booked";
     case "unavailable":
-      return "Unavailable";
     case "past":
-      return "Ended";
     case "empty":
-      return "Not offered";
     case "continued":
-      return "Continues";
+      return scheduleCopy.state[state];
     default: {
       const unknown = state;
       throw new Error(`Unknown schedule state: ${String(unknown)}`);

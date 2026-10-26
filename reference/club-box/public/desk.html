@@ -9,54 +9,67 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/brand.css">
 </head>
-<body>
+<body data-i18n-title="desk.title">
   <header>
     <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
+    <form class="locale-switch" method="get">
+      <label>
+        <span data-i18n="locale.switchLabel">Language</span>
+        <select name="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt-BR">Português (Brasil)</option>
+        </select>
+      </label>
+      <button type="submit" class="secondary" data-i18n="locale.apply">Apply</button>
+    </form>
     <nav>
-      <a href="/">Booking</a>
-      <a href="/kiosk">Door kiosk</a>
-      <a href="/desk" aria-current="page">Front desk</a>
-      <a href="/admin">Admin</a>
+      <a href="/" data-i18n="nav.booking">Booking</a>
+      <a href="/kiosk" data-i18n="nav.kiosk">Door kiosk</a>
+      <a href="/desk" aria-current="page" data-i18n="nav.desk">Front desk</a>
+      <a href="/admin" data-i18n="nav.admin">Admin</a>
     </nav>
   </header>
   <main>
-    <h1>On site now</h1>
-    <p class="safety">This screen shows who arrived. It does not lock an exit or touch fire systems.</p>
+    <h1 data-i18n="desk.heading">On site now</h1>
+    <p class="safety" data-i18n="desk.safety">This screen shows who arrived. It does not lock an exit or touch fire systems.</p>
     <p id="status" class="status" role="status"></p>
     <form id="login" class="card">
-      <label>Staff or admin token
+      <label><span data-i18n="desk.token">Staff or admin token</span>
         <input id="token" type="password" autocomplete="current-password" required>
       </label>
-      <button type="submit">Load desk</button>
+      <button type="submit" data-i18n="desk.load">Load desk</button>
     </form>
     <div id="app" hidden>
       <p id="headcount" class="note"></p>
       <form id="charge-form" class="card">
-        <h2>Charge a member</h2>
-        <p class="note">The allowance is used first. Anything left goes on the tab. A guest charge stays on the hosting member and records the guest. Amounts are whole minor units the club set. Use the same request id again only for the same charge.</p>
-        <label>Member id
+        <h2 data-i18n="desk.chargeHeading">Charge a member</h2>
+        <p class="note" data-i18n="desk.chargeNote">The allowance is used first. Anything left goes on the tab. A guest charge stays on the hosting member and records the guest. Amounts are whole minor units the club set. Use the same request id again only for the same charge.</p>
+        <label><span data-i18n="desk.memberId">Member id</span>
           <input name="memberId" required maxlength="80">
         </label>
-        <label>Guest id, if this item is for a guest
+        <label><span data-i18n="desk.guestId">Guest id, if this item is for a guest</span>
           <input name="guestId" maxlength="80">
         </label>
-        <label>What was sold
+        <label><span data-i18n="desk.sold">What was sold</span>
           <input name="description" required maxlength="80">
         </label>
-        <label>Amount in minor units
+        <label><span data-i18n="desk.amount">Amount in minor units</span>
           <input name="amountMinor" inputmode="numeric" required>
         </label>
-        <label>Request id, optional
+        <label><span data-i18n="desk.requestId">Request id, optional</span>
           <input name="requestId" maxlength="80">
         </label>
-        <button type="submit">Post charge</button>
-        <button type="button" id="lookup-tab" class="secondary">Look up balance</button>
+        <button type="submit" data-i18n="desk.post">Post charge</button>
+        <button type="button" id="lookup-tab" class="secondary" data-i18n="desk.lookup">Look up balance</button>
         <p id="charge-result" class="note"></p>
       </form>
       <div id="people"></div>
-      <h2>Today's imported bookings</h2>
+      <h2 data-i18n="desk.imported">Today's imported bookings</h2>
       <div id="bookings"></div>
-      <h2>Conflicts</h2>
+      <h2 data-i18n="desk.conflicts">Conflicts</h2>
       <div id="conflicts"></div>
     </div>
   </main>
@@ -65,6 +78,7 @@
     <p class="brand-contact"></p>
     <p class="brand-links"></p>
   </footer>
+  <script src="/i18n.js"></script>
   <script src="/brand.js"></script>
   <script src="/desk.js"></script>
 </body>
