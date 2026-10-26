@@ -61,6 +61,37 @@ document.querySelector("#csv").addEventListener("click", async (event) => {
   }
 });
 
+document.querySelector("#ledger-csv").addEventListener("click", async (event) => {
+  event.preventDefault();
+  try {
+    const csv = await api("/api/admin/ledger.csv");
+    downloadText(csv, "ledger.csv");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#allowance-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  try {
+    await api("/api/admin/allowances", {
+      method: "POST",
+      body: JSON.stringify({
+        membershipType: data.get("membershipType"),
+        amountMinor: Number(data.get("amountMinor")),
+        period: data.get("period"),
+      }),
+    });
+    form.elements.amountMinor.value = "";
+    await refresh();
+    setStatus("Allowance saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
 document.querySelector("#marketing-csv").addEventListener("click", async (event) => {
   event.preventDefault();
   try {
@@ -276,7 +307,55 @@ async function refresh() {
   await renderPlaytomic(courts.courts);
   await renderPriceRules();
   await renderStaffActions();
+  await renderAllowances();
+  await renderLedger();
   setStatus("");
+}
+
+async function renderAllowances() {
+  const select = document.querySelector("#allowance-type");
+  const current = select.value;
+  select.replaceChildren();
+  for (const type of config.membershipTypes || []) {
+    const option = document.createElement("option");
+    option.value = type;
+    option.textContent = type;
+    option.selected = type === current;
+    select.append(option);
+  }
+  const root = document.querySelector("#allowances");
+  const data = await api("/api/admin/allowances");
+  root.replaceChildren();
+  if (data.allowances.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No plan allowance is saved yet.";
+    root.append(empty);
+    return;
+  }
+  for (const plan of data.allowances) {
+    const line = document.createElement("p");
+    line.textContent = `${plan.membershipType}: ${plan.amountMinor} minor units (${plan.amountMajor} ${plan.currency}) each ${plan.period}`;
+    root.append(line);
+  }
+}
+
+async function renderLedger() {
+  const root = document.querySelector("#ledger");
+  const data = await api("/api/admin/ledger?limit=12");
+  root.replaceChildren();
+  if (data.entries.length === 0) {
+    root.textContent = "No ledger lines yet.";
+    return;
+  }
+  for (const entry of data.entries) {
+    const line = document.createElement("p");
+    line.className = "note";
+    const guest = entry.guestLabel ? ` · guest ${entry.guestLabel}` : "";
+    const sats = entry.amountSats == null ? "" : ` · ${entry.amountSats} sats`;
+    line.textContent = `${entry.at} ${entry.kind} ${entry.description} · allowance ${entry.allowanceMinor} · tab ${entry.tabMinor} ${entry.currency} minor${sats}${guest}`;
+    root.append(line);
+  }
 }
 
 async function renderPriceRules() {
@@ -551,7 +630,20 @@ function renderMembers(members) {
         setStatus(error.message);
       }
     });
-    block.append(name, email, phone, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue);
+    const tabPanel = document.createElement("div");
+    const showTab = document.createElement("button");
+    showTab.type = "button";
+    showTab.className = "secondary";
+    showTab.textContent = "Show tab";
+    showTab.addEventListener("click", async () => {
+      try {
+        const data = await api(`/api/admin/members/${member.id}/tab`);
+        renderMemberTab(tabPanel, member.id, data.balance);
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    block.append(name, email, phone, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue, showTab, tabPanel);
     for (const card of member.cards || []) {
       const line = document.createElement("p");
       line.className = "mono note";
@@ -563,6 +655,104 @@ function renderMembers(members) {
     }
     block.append(enroll, toggle);
     root.append(block);
+  }
+}
+
+function renderMemberTab(root, memberId, balance) {
+  root.replaceChildren();
+  const summary = document.createElement("p");
+  const allowance = balance.allowance
+    ? `Allowance left ${balance.allowance.remainingMinor} of ${balance.allowance.configuredMinor} minor units this ${balance.allowance.period} (${balance.allowance.periodKey || "no open visit"}).`
+    : "No allowance is set for this membership type.";
+  summary.textContent = `${allowance} Tab owed ${balance.tab.openMinor} minor units (${balance.tab.openMajor} ${balance.currency}). Limit ${balance.tab.limitMinor}. ${balance.tab.frozen ? "Frozen." : "Open."}`;
+  const limit = field("Tab limit in minor units", String(balance.tab.limitMinor));
+  const saveLimit = document.createElement("button");
+  saveLimit.type = "button";
+  saveLimit.className = "secondary";
+  saveLimit.textContent = "Save tab limit";
+  saveLimit.addEventListener("click", async () => {
+    try {
+      await api(`/api/admin/members/${memberId}/tab`, {
+        method: "POST",
+        body: JSON.stringify({ limitMinor: Number(limit.value) }),
+      });
+      const data = await api(`/api/admin/members/${memberId}/tab`);
+      renderMemberTab(root, memberId, data.balance);
+      setStatus("Tab limit saved.");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  const freeze = document.createElement("button");
+  freeze.type = "button";
+  freeze.className = "secondary";
+  freeze.textContent = balance.tab.frozen ? "Unfreeze tab" : "Freeze tab";
+  freeze.addEventListener("click", async () => {
+    const action = balance.tab.frozen ? "unfreeze" : "freeze";
+    try {
+      await api(`/api/admin/members/${memberId}/tab/${action}`, { method: "POST" });
+      const data = await api(`/api/admin/members/${memberId}/tab`);
+      renderMemberTab(root, memberId, data.balance);
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  const direction = document.createElement("select");
+  direction.setAttribute("aria-label", "Adjustment direction");
+  for (const value of ["credit", "debit"]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    direction.append(option);
+  }
+  const amount = field("Adjustment amount in minor units", "");
+  const reason = field("Reason for the adjustment", "");
+  const adjust = document.createElement("button");
+  adjust.type = "button";
+  adjust.className = "secondary";
+  adjust.textContent = "Post adjustment";
+  adjust.addEventListener("click", async () => {
+    try {
+      await api(`/api/admin/members/${memberId}/tab/adjust`, {
+        method: "POST",
+        body: JSON.stringify({
+          direction: direction.value,
+          amountMinor: Number(amount.value),
+          reason: reason.value,
+        }),
+      });
+      const data = await api(`/api/admin/members/${memberId}/tab`);
+      renderMemberTab(root, memberId, data.balance);
+      setStatus("Adjustment posted.");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  root.append(summary, limit, saveLimit, freeze, direction, amount, reason, adjust);
+  for (const entry of balance.recent) {
+    const line = document.createElement("p");
+    line.className = "note";
+    const guest = entry.guestLabel ? ` · guest ${entry.guestLabel}` : "";
+    line.textContent = `${entry.at} ${entry.kind} ${entry.description} · tab ${entry.tabMinor}${guest}`;
+    root.append(line);
+  }
+  if (config.paymentBackend === "mock") {
+    for (const pending of balance.pendingSettlements) {
+      const pay = document.createElement("button");
+      pay.type = "button";
+      pay.textContent = `Simulate tab payment ${pending.amountMinor} minor`;
+      pay.addEventListener("click", async () => {
+        try {
+          const result = await api(`/api/admin/tab-settlements/${pending.id}/simulate-payment`, { method: "POST" });
+          setStatus(`Payment result: ${result.outcome}`);
+          const data = await api(`/api/admin/members/${memberId}/tab`);
+          renderMemberTab(root, memberId, data.balance);
+        } catch (error) {
+          setStatus(error.message);
+        }
+      });
+      root.append(pay);
+    }
   }
 }
 

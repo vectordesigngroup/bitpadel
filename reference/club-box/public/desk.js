@@ -12,6 +12,7 @@ function setStatus(text) {
 async function api(pathname, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("authorization", `Bearer ${token}`);
+  if (options.body) headers.set("content-type", "application/json");
   const response = await fetch(pathname, { ...options, headers });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
@@ -63,7 +64,15 @@ async function refresh() {
       await api(`/api/staff/checkins/${member.checkinId}/checkout`, { method: "POST" });
       await refresh();
     });
-    block.append(button);
+    const charge = document.createElement("button");
+    charge.type = "button";
+    charge.className = "secondary";
+    charge.textContent = "Charge this member";
+    charge.addEventListener("click", () => {
+      document.querySelector("#charge-form").elements.memberId.value = member.memberId;
+      document.querySelector("#charge-form").elements.memberId.focus();
+    });
+    block.append(button, charge);
     people.append(block);
   }
   const list = document.querySelector("#bookings");
@@ -81,6 +90,53 @@ async function refresh() {
     line.textContent = conflict.detail;
     flags.append(line);
   }
+  setStatus("");
+}
+
+document.querySelector("#charge-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const body = {
+    memberId: String(data.get("memberId") || "").trim(),
+    description: String(data.get("description") || "").trim(),
+    amountMinor: Number(data.get("amountMinor")),
+  };
+  const guestId = String(data.get("guestId") || "").trim();
+  const requestId = String(data.get("requestId") || "").trim();
+  if (guestId) body.guestId = guestId;
+  if (requestId) body.requestId = requestId;
+  try {
+    const result = await api("/api/staff/tabs/charges", { method: "POST", body: JSON.stringify(body) });
+    writeCharge(result);
+    form.elements.description.value = "";
+    form.elements.amountMinor.value = "";
+    form.elements.requestId.value = "";
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#lookup-tab").addEventListener("click", async () => {
+  const memberId = document.querySelector("#charge-form").elements.memberId.value.trim();
+  try {
+    const result = await api(`/api/staff/members/${encodeURIComponent(memberId)}/tab`);
+    writeCharge({ balance: result.balance, entry: null, idempotentReplay: false });
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+function writeCharge(result) {
+  const balance = result.balance;
+  const allowance = balance.allowance
+    ? `Allowance left ${balance.allowance.remainingMinor} minor units.`
+    : "No allowance on this plan.";
+  const posted = result.entry
+    ? `${result.idempotentReplay ? "Already posted. " : "Posted. "}Allowance ${result.entry.allowanceMinor}, tab ${result.entry.tabMinor}. `
+    : "";
+  document.querySelector("#charge-result").textContent =
+    `${posted}${allowance} Owed ${balance.tab.openMinor} minor units (${balance.tab.openMajor} ${balance.currency}).${balance.tab.frozen ? " Tab is frozen." : ""}`;
   setStatus("");
 }
 

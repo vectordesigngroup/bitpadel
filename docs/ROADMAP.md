@@ -20,8 +20,8 @@
 
 ## Next: member perks on the same identity
 Design notes for everything in this section and the next: [`lnurl-club-ideas.md`](lnurl-club-ideas.md). They reuse LNURL-auth identity (no sats move), the NFC card fallback, door `area` pulses and the booking window, plus a new allowance and tab ledger.
-- [ ] **Allowance and tab ledger.** Per-member allowances (for example 2 waters per visit), a tab settled by Lightning or card, guest items charged to the host member, and an append-only audit. Needed by vending and several ideas below.
-- [ ] **Member vending.** Scan the QR or tap a card at a locked cooler or an MDB vending machine; the item counts against the allowance or goes on the tab.
+- [x] **Allowance and tab ledger.** Per-member allowances (for example 2 waters per visit — an example, not a price), a tab settled by Lightning or card, guest items charged to the host member, and an append-only audit. Implemented in [`reference/club-box`](../reference/club-box). Design and the CPA / Florida attorney note: [`allowance-and-tab.md`](allowance-and-tab.md).
+- [ ] **Member vending hardware.** The club-box device API can already charge a member by NFC card or LNURL at `/api/devices/vending/*`. Still open: a controller for a locked cooler or an MDB vending machine that calls that API.
 - [ ] **Lockers.** Scan or tap to claim a locker for the visit and open it again; staff release from the admin page.
 - [ ] **Booking-gated equipment.** Court lights, the ball machine and the gear rental cabinet work only during an active booking, with staff override.
 - [ ] **Member-vouched guest passes.** A member signs to issue a one-day guest QR, within the guest cap and waiver rules.

@@ -12,8 +12,8 @@ The app version in this tree is `0.1.0` (`reference/club-box/package.json`). The
 
 | Manual | Who it is for |
 |---|---|
-| [1. Operating](01-operating.md) | Front desk, daily open and close, check-in, bookings, lost cards |
-| [2. Admin and manager](02-admin.md) | Profiles, households, tokens, privacy, prices, Playtomic credentials |
+| [1. Operating](01-operating.md) | Front desk, daily open and close, check-in, counter charges, bookings, lost cards |
+| [2. Admin and manager](02-admin.md) | Profiles, households, allowance and tab, tokens, privacy, prices, Playtomic credentials |
 | [3. Installation and setup](03-installation.md) | Hardware categories, server, Docker, Caddy, environment, [setup checklist](setup-checklist.md), first run, go-live |
 | [4. Maintenance](04-maintenance.md) | Schedules, backups, keys, door inspection, [log template](maintenance-log.md) |
 | [5. Troubleshooting](05-troubleshooting.md) | Symptom, likely cause, and what to do |
@@ -21,7 +21,7 @@ The app version in this tree is `0.1.0` (`reference/club-box/package.json`). The
 | [7. Staff training](07-staff-training.md) | Onboarding, role cards, Lightning basics, quiz |
 | [8. Emergency and life safety](08-emergency.md) | Power, fire, medical, evacuation. Verify locally. |
 | [9. Developer and contributor](09-developer.md) | Layout, tests, new payment or card type, releases |
-| [10. Integrations](10-integrations.md) | Email, SMS, storage, backup, door, and payment providers each club plugs in |
+| [10. Integrations](10-integrations.md) | Email, SMS, storage, backup, door, payment, and vending-device providers each club plugs in |
 
 ## One-page cards
 

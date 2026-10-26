@@ -30,6 +30,28 @@
     </form>
     <div id="app" hidden>
       <p id="headcount" class="note"></p>
+      <form id="charge-form" class="card">
+        <h2>Charge a member</h2>
+        <p class="note">The allowance is used first. Anything left goes on the tab. A guest charge stays on the hosting member and records the guest. Amounts are whole minor units the club set. Use the same request id again only for the same charge.</p>
+        <label>Member id
+          <input name="memberId" required maxlength="80">
+        </label>
+        <label>Guest id, if this item is for a guest
+          <input name="guestId" maxlength="80">
+        </label>
+        <label>What was sold
+          <input name="description" required maxlength="80">
+        </label>
+        <label>Amount in minor units
+          <input name="amountMinor" inputmode="numeric" required>
+        </label>
+        <label>Request id, optional
+          <input name="requestId" maxlength="80">
+        </label>
+        <button type="submit">Post charge</button>
+        <button type="button" id="lookup-tab" class="secondary">Look up balance</button>
+        <p id="charge-result" class="note"></p>
+      </form>
       <div id="people"></div>
       <h2>Today's imported bookings</h2>
       <div id="bookings"></div>

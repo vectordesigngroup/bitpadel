@@ -39,6 +39,8 @@ import { log } from "./log.js";
 import { sendReceipt } from "./notify/service.js";
 import { pngQr } from "./qr.js";
 import { accessRoutes } from "./routes-access.js";
+import { ledgerRoutes } from "./routes-ledger.js";
+import { applyIncomingPayment } from "./ledger/settle.js";
 import { opsRoutes } from "./routes-ops.js";
 import { pilotRoutes } from "./routes-pilot.js";
 import { playerFromRequest } from "./player/service.js";
@@ -92,6 +94,7 @@ export function buildRoutes(ctx: AppDeps): Route[] {
     { method: "POST", pattern: "/api/admin/keys/:id/revoke", handler: (req) => adminRevokeKey(req, ctx) },
     { method: "GET", pattern: "/api/admin/audit", handler: (req) => adminAudit(req, ctx) },
     ...accessRoutes(ctx),
+    ...ledgerRoutes(ctx),
     ...playtomicRoutes(ctx),
     ...opsRoutes(ctx),
     ...pilotRoutes(ctx),
@@ -118,6 +121,7 @@ function health(req: HttpReq, ctx: AppDeps): Promise<void> {
     storageBackend: ctx.config.storageBackend,
     backupDestination: ctx.config.backupDestination,
     cardProviders: ctx.config.cardProviders,
+    vendingDevices: Boolean(ctx.config.vendingDeviceToken),
     bookingEntry: ctx.config.bookingEntry,
     ...SAFETY,
   });
@@ -210,7 +214,7 @@ async function settleWebhook(req: HttpReq, ctx: AppDeps): Promise<void> {
     nowIso: ctx.now().toISOString(),
     pathSecret: req.params.secret,
   });
-  const result = applyPaymentEvent(ctx.db, event, ctx.now());
+  const result = applyIncomingPayment(ctx.db, event, ctx.now());
   log("info", "payment notice", { backend: ctx.payments.name, outcome: result.outcome });
   if (result.outcome === "confirmed" && result.bookingId) await deliverReceipt(ctx, result.bookingId);
   sendJson(req.res, 200, result);
@@ -280,6 +284,7 @@ function adminConfig(req: HttpReq, ctx: AppDeps): Promise<void> {
     nfcConfigured: Boolean(ctx.config.nfc.keys.masterKey && ctx.config.nfc.keys.metaReadKey),
     uidMode: ctx.config.nfc.uidMode,
     playtomicConfigured: Boolean(ctx.config.playtomic),
+    vendingDevices: Boolean(ctx.config.vendingDeviceToken),
     emailProvider: ctx.config.emailProvider,
     smsProvider: ctx.config.smsProvider,
     storageBackend: ctx.config.storageBackend,

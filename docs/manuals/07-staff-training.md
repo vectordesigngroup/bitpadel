@@ -32,11 +32,13 @@ You can:
 - Load the desk, check people out, and read Playtomic names for today.
 - Run the kiosk and the guest form.
 - Hold a court slot and watch for settlement.
+- Charge a member for a drink or a small item. The allowance is used first. The rest goes on the tab. A guest's item is charged to the host and the guest's name stays on the line.
 - Hand someone the [door-fault card](quick-cards/door-fault.md) steps: fallback entry, never block the exit.
 
 You ask a manager when you need to:
 
 - Add a member, enroll a wallet, mark a card lost, or change a price.
+- Change an allowance, a tab limit, or a freeze, or post an adjustment. Those are admin actions and each adjustment needs a written reason.
 - Export CSV files.
 - Map a Playtomic court or press **Sync now**.
 - Rotate a token.

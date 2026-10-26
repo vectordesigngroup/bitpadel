@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 
 export type SqlValue = string | number | bigint | Buffer | null;
 
-const SCHEMA_VERSION = "4";
+const SCHEMA_VERSION = "5";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -345,6 +345,93 @@ CREATE TABLE IF NOT EXISTS cancelled_bookings (
   player_id TEXT,
   reason TEXT NOT NULL
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS plan_allowances (
+  membership_type TEXT PRIMARY KEY,
+  amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+  period TEXT NOT NULL CHECK (period IN ('visit', 'day', 'week', 'month')),
+  currency TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS member_tabs (
+  member_id TEXT PRIMARY KEY REFERENCES members(id),
+  limit_minor INTEGER NOT NULL CHECK (limit_minor >= 0),
+  frozen INTEGER NOT NULL CHECK (frozen IN (0, 1)),
+  currency TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS ledger_entries (
+  id TEXT PRIMARY KEY,
+  member_id TEXT NOT NULL REFERENCES members(id),
+  at TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('charge', 'settlement', 'adjustment')),
+  source TEXT NOT NULL CHECK (source IN ('staff', 'vending', 'member', 'admin')),
+  device_id TEXT,
+  request_id TEXT NOT NULL UNIQUE,
+  description TEXT NOT NULL,
+  currency TEXT NOT NULL,
+  unit TEXT NOT NULL CHECK (unit IN ('minor', 'sats')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+  amount_sats INTEGER CHECK (amount_sats IS NULL OR amount_sats >= 0),
+  allowance_minor INTEGER NOT NULL CHECK (allowance_minor >= 0),
+  tab_minor INTEGER NOT NULL,
+  period_key TEXT,
+  guest_id TEXT,
+  guest_label TEXT,
+  reason TEXT,
+  actor_label TEXT NOT NULL,
+  settlement_id TEXT,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS ledger_member_at ON ledger_entries (member_id, at);
+CREATE INDEX IF NOT EXISTS ledger_period ON ledger_entries (member_id, period_key);
+CREATE UNIQUE INDEX IF NOT EXISTS ledger_one_settlement ON ledger_entries (settlement_id) WHERE settlement_id IS NOT NULL;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entries_no_update
+BEFORE UPDATE ON ledger_entries
+BEGIN
+  SELECT RAISE(ABORT, 'ledger is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entries_no_delete
+BEFORE DELETE ON ledger_entries
+BEGIN
+  SELECT RAISE(ABORT, 'ledger is append-only');
+END;
+
+CREATE TABLE IF NOT EXISTS tab_settlements (
+  id TEXT PRIMARY KEY,
+  member_id TEXT NOT NULL REFERENCES members(id),
+  invoice_id TEXT NOT NULL UNIQUE,
+  payment_hash TEXT,
+  payment_method TEXT NOT NULL CHECK (payment_method IN ('lightning', 'stripe', 'square')),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'expired')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+  currency TEXT NOT NULL,
+  amount_sats INTEGER CHECK (amount_sats IS NULL OR amount_sats >= 0),
+  bolt11 TEXT NOT NULL,
+  checkout_url TEXT,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  paid_at TEXT
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS tab_settlements_member ON tab_settlements (member_id, status);
+
+CREATE TABLE IF NOT EXISTS vend_challenges (
+  k1 TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL,
+  member_id TEXT,
+  expires_at TEXT NOT NULL,
+  verified_at TEXT,
+  consumed_at TEXT,
+  created_at TEXT NOT NULL
+) STRICT;
 `;
 
 function migrate(db: Database.Database): void {
@@ -414,7 +501,7 @@ function migrate(db: Database.Database): void {
     db.prepare("INSERT INTO schema_meta (key, value) VALUES ('version', ?)").run(SCHEMA_VERSION);
     return;
   }
-  if (row.value === "1" || row.value === "2" || row.value === "3" || row.value === SCHEMA_VERSION) {
+  if (row.value === "1" || row.value === "2" || row.value === "3" || row.value === "4" || row.value === SCHEMA_VERSION) {
     db.prepare("UPDATE schema_meta SET value = ? WHERE key = 'version'").run(SCHEMA_VERSION);
     return;
   }
@@ -452,7 +539,11 @@ export function isUniqueError(error: unknown): boolean {
   );
 }
 
-/** Drop old access rows. Retention is an operator setting, counted in whole days. */
+/**
+ * Drop old access rows. Retention is an operator setting, counted in whole days.
+ * Ledger rows are not deleted here. Allowance and tab lines stay until a club,
+ * with its own CPA, decides a retention rule outside this process.
+ */
 export function purgeOldRows(
   db: Database.Database,
   retentionDays: number,

@@ -40,6 +40,21 @@
       <h2>Past</h2>
       <div id="past"></div>
     </section>
+    <section id="tab" hidden>
+      <h2>Allowance and tab</h2>
+      <p class="note">Drinks and small items draw the membership allowance first. The rest stays on the tab until you settle it. A guest item is listed with the guest's name and is still your tab.</p>
+      <p id="tab-summary"></p>
+      <div id="tab-lines"></div>
+      <form id="settle-form">
+        <label>Pay with
+          <select name="method" id="settle-method">
+            <option value="lightning">Lightning</option>
+          </select>
+        </label>
+        <button type="submit">Settle tab</button>
+      </form>
+      <p id="tab-pay" class="mono"></p>
+    </section>
   </main>
   <script src="/account.js"></script>
 </body>

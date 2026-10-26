@@ -127,6 +127,21 @@ GPIO and serial need a real machine to prove the hardware. The tests prove the s
 
 `STRIPE_SECRET_KEY` must start with `sk_test_` unless `STRIPE_ALLOW_LIVE=true`. `SQUARE_ENV` defaults to `sandbox` (`connect.squareupsandbox.com`). `production` also requires `SQUARE_ALLOW_LIVE=true`. Optional `STRIPE_API_BASE` and `SQUARE_API_BASE` must be `https` or `http://127.0.0.1`. Do not commit keys. Public `/api/health` lists the provider names and does not call them.
 
+The same Lightning backend and the same card providers settle a member tab. A tab invoice is a separate row from a court hold. A payment notice is applied to a court hold first. If that invoice is not a hold, it is tried as a tab payment. A second notice for the same invoice does not write a second ledger line. See [allowance and tab](../allowance-and-tab.md).
+
+## Vending machines
+
+Set `VENDING_DEVICE_TOKEN` (at least 16 characters) to open `/api/devices/vending/*`. Health reports `vendingDevices: true` when the token is set and does not reveal the token. The machine sends `Authorization: Bearer <VENDING_DEVICE_TOKEN>`.
+
+The machine does not pulse a door. It identifies the member, then posts one charge:
+
+1. NFC: send the same card proof the door uses (`nfc-sun`, `nfc-desfire`, or `nfc-uid` only when `NFC_UID_MODE=insecure-dev`).
+2. Lightning wallet: `POST /api/devices/vending/challenges` with a `deviceId`, show the returned LNURL, wait until the wallet calls the callback, then charge with `identity.kind` `lnurl` and that `k1`. The signature proves who the member is. It does not move sats.
+
+Each charge includes a `requestId`. Repeating that id with the same amount, description, device, and guest is a no-op. A different body with the same id is refused. Amounts are integer minor units, or integer sats when `SATS_PER_MINOR_UNIT` divides them exactly. The field list is in [allowance and tab](../allowance-and-tab.md).
+
+A locked cooler or an MDB controller is not in this app. The machine's own board calls this API.
+
 Stripe Checkout sessions last at least 30 minutes on Stripe's side. The club hold timer is still the one that releases the slot. A webhook that arrives after the hold expired does not book the court.
 
 Sales CSV and **End of day** include `lightning`, `stripe`, and `square`, including bookings a player later cancelled, plus refund rows.

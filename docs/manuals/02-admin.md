@@ -61,8 +61,21 @@ Each person unlocks only with their own enrolled wallet or card. The household d
 | Price rules | Admin **Price rules** | Admin. Weekdays 0–6 (Sunday first) in `CLUB_TIMEZONE`. A court id limits the rule. The court rule wins over an all-courts rule. |
 | Marketing opt-ins | Admin **Download marketing CSV** | Admin only. Columns are contact kind, contact, consent time, consent-text version, and source (`kiosk` or `playtomic`). People who did not opt in are absent. |
 | One marketing message | Admin **Send to opted-in contact** | Admin. Refuses with "That contact has not opted in to marketing" when there is no active consent. |
+| Plan allowance | Admin **Plan allowance** (`GET` and `POST /api/admin/allowances`) | Admin. Amount in minor units and a period: `visit`, `day`, `week`, or `month`. The club chooses the number. |
+| One member's tab | Member card **Show tab** | Admin. Limit, freeze, unfreeze, and an adjustment that requires a reason. |
+| Allowance and tab ledger | Admin **Ledger** and **Download ledger CSV** (`GET /api/admin/ledger` and `/api/admin/ledger.csv`) | Admin. Append-only. Integer minor units. Sats only when the row stored them. |
 
-**Not yet implemented:** tax reports and charts. The end-of-day total is not a tax filing. Card processing, refunds, and consent wording still need the club's attorney and CPA before live use.
+**Not yet implemented:** tax reports and charts. The end-of-day total is not a tax filing. Card processing, refunds, consent wording, stored-value rules for allowances, unused balances, sales tax on counter and vending items, and how to account for sats still need the club's attorney and a CPA before live use. A Florida attorney should review this before a Florida club turns it on. See [allowance and tab](../allowance-and-tab.md).
+
+## Allowance and tab
+
+1. Under **Plan allowance**, pick the membership type, type the amount in minor units, and pick the period. Save. An example of a period is "each visit." The amount is whatever the club decided. This page does not suggest one.
+2. On the member card, press **Show tab**. Set a tab limit in minor units. `0` means charges that do not fit in the allowance are refused.
+3. **Freeze tab** stops new tab charges. The allowance can still cover a sale that fits entirely in the remaining allowance. **Unfreeze tab** turns charges back on. Freezing does not delete lines.
+4. **Post adjustment** needs a direction (`credit` reduces what is owed, `debit` adds to the tab), an amount in minor units, and a reason. The reason is stored on the line with who posted it. A credit cannot be larger than the amount owed.
+5. **Download ledger CSV** for the accountant. Lines cannot be edited or deleted in the app.
+
+A member with an email on the profile can open `/account`, see the balance and recent lines, and press **Settle tab**. Lightning uses the same payment backend as court bookings. Card checkout appears only when that provider is in `CARD_PROVIDERS`. On the mock backend, **Simulate tab payment** on the member card marks the invoice paid. That button is not a real Lightning payment.
 
 The access log is deleted after `LOG_RETENTION_DAYS` (default 90). Check-ins, imported bookings, and resolved conflicts older than `VISIT_RETENTION_DAYS` (default 30) are deleted. The sweep runs at startup and about once an hour. Marketing rows are not part of that sweep.
 
