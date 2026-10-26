@@ -17,7 +17,7 @@ Guest count stays at zero until a manager sets `GUEST_LIMIT` to a number above z
 
 ## Opening checklist
 
-1. Open the kiosk page (`/kiosk`). You should see the two safety lines: the service only pulses entry, and leaving does not use the screen. If the page says the access server is unreachable, the app is down. Use the fob, PIN, or staff path, and tell a manager. Those fallbacks are physical. **Not yet implemented:** fob or PIN logic inside this app.
+1. Open the kiosk page (`/kiosk`). You should see the club's short name at the top and the two safety lines: the service only pulses entry, and leaving does not use the screen. **Your club** means a manager has not saved a name in Admin **Branding** yet. If the page says the access server is unreachable, the app is down. Use the fob, PIN, or staff path, and tell a manager. Those fallbacks are physical. **Not yet implemented:** fob or PIN logic inside this app.
 2. Choose the area the kiosk should open (the ids in `ACCESS_AREAS`, often `lounge` or `after-hours`). A QR appears with the line "Scan with an enrolled Lightning wallet." The QR changes by itself. Default lifetime is `K1_TTL_SECONDS` (90 seconds).
 3. Open the desk (`/desk`). Paste the staff or admin token and choose **Load desk**. The headcount line is who is still checked in. Visits older than `CHECKIN_STALE_MINUTES` (default 480, which is 8 hours) are checked out by the server about every 15 seconds. Glance at the list anyway. Someone who is still in the building should remain until they leave.
 4. Open booking (`/`). Courts and open slots for the day should be listed. A slot covered by Playtomic says "Imported booking covers this time" and has no hold button.
@@ -88,6 +88,20 @@ A household is a label plus a primary member and optional dependents. It does no
 - Conflicts: short text such as an unmapped court or an overlap.
 
 **Check out** when the member leaves. Do not use checkout to lock the door. Checkout only ends the visit row.
+
+## Counter charges
+
+On `/desk`, **Charge a member** posts a drink or a small item.
+
+1. Paste the member id, or press **Charge this member** on someone who is on site.
+2. If the item is for a guest, paste that guest id from the check-in. The charge stays on the hosting member and the ledger keeps the guest's name.
+3. Type what was sold and the amount in minor units. The club sets that amount. This manual does not.
+4. Press **Post charge**. The screen shows how much came from the allowance and how much went on the tab.
+5. **Look up balance** before you sell if you want to see what is left.
+
+Use a request id when the same tap might be sent twice. Sending that id again with the same charge does not add a second line. A different amount with the same id is refused.
+
+If the tab is frozen, or the sale would pass the member's tab limit, the charge is refused. Ask a manager. You cannot change the limit, freeze the tab, or edit a posted line from the desk.
 
 ## Court time paid with Lightning
 

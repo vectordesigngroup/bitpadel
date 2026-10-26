@@ -7,10 +7,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My bookings</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/brand.css">
 </head>
 <body>
   <header>
-    <p>Club box</p>
+    <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
     <nav>
       <a href="/">Booking</a>
       <a href="/account" aria-current="page">My bookings</a>
@@ -40,7 +41,28 @@
       <h2>Past</h2>
       <div id="past"></div>
     </section>
+    <section id="tab" hidden>
+      <h2>Allowance and tab</h2>
+      <p class="note">Drinks and small items draw the membership allowance first. The rest stays on the tab until you settle it. A guest item is listed with the guest's name and is still your tab.</p>
+      <p id="tab-summary"></p>
+      <div id="tab-lines"></div>
+      <form id="settle-form">
+        <label>Pay with
+          <select name="method" id="settle-method">
+            <option value="lightning">Lightning</option>
+          </select>
+        </label>
+        <button type="submit">Settle tab</button>
+      </form>
+      <p id="tab-pay" class="mono"></p>
+    </section>
   </main>
+  <footer class="brand-footer">
+    <p class="brand-footer-text">This look is a placeholder. Give your club its own name and logo. The BitPadel name and logo are not your club's brand.</p>
+    <p class="brand-contact"></p>
+    <p class="brand-links"></p>
+  </footer>
+  <script src="/brand.js"></script>
   <script src="/account.js"></script>
 </body>
 </html>

@@ -7,11 +7,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Court booking</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/brand.css">
   <link rel="stylesheet" href="/booking.css">
 </head>
 <body>
   <header>
-    <p>Club box</p>
+    <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
     <nav>
       <a href="/" aria-current="page">Booking</a>
       <a href="/kiosk">Door kiosk</a>
@@ -100,9 +101,12 @@
     </section>
     <p id="status" class="status" role="status"></p>
   </main>
-  <footer>
-    <p>Reference app. Replace the placeholder colors with your club's brand.</p>
+  <footer class="brand-footer">
+    <p class="brand-footer-text">This look is a placeholder. Give your club its own name and logo. The BitPadel name and logo are not your club's brand.</p>
+    <p class="brand-contact"></p>
+    <p class="brand-links"></p>
   </footer>
+  <script src="/brand.js"></script>
   <script type="module" src="/booking.js"></script>
 </body>
 </html>

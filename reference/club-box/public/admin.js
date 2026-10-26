@@ -61,6 +61,37 @@ document.querySelector("#csv").addEventListener("click", async (event) => {
   }
 });
 
+document.querySelector("#ledger-csv").addEventListener("click", async (event) => {
+  event.preventDefault();
+  try {
+    const csv = await api("/api/admin/ledger.csv");
+    downloadText(csv, "ledger.csv");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#allowance-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  try {
+    await api("/api/admin/allowances", {
+      method: "POST",
+      body: JSON.stringify({
+        membershipType: data.get("membershipType"),
+        amountMinor: Number(data.get("amountMinor")),
+        period: data.get("period"),
+      }),
+    });
+    form.elements.amountMinor.value = "";
+    await refresh();
+    setStatus("Allowance saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
 document.querySelector("#marketing-csv").addEventListener("click", async (event) => {
   event.preventDefault();
   try {
@@ -276,7 +307,56 @@ async function refresh() {
   await renderPlaytomic(courts.courts);
   await renderPriceRules();
   await renderStaffActions();
+  await renderAllowances();
+  await renderLedger();
+  await renderBrand();
   setStatus("");
+}
+
+async function renderAllowances() {
+  const select = document.querySelector("#allowance-type");
+  const current = select.value;
+  select.replaceChildren();
+  for (const type of config.membershipTypes || []) {
+    const option = document.createElement("option");
+    option.value = type;
+    option.textContent = type;
+    option.selected = type === current;
+    select.append(option);
+  }
+  const root = document.querySelector("#allowances");
+  const data = await api("/api/admin/allowances");
+  root.replaceChildren();
+  if (data.allowances.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "note";
+    empty.textContent = "No plan allowance is saved yet.";
+    root.append(empty);
+    return;
+  }
+  for (const plan of data.allowances) {
+    const line = document.createElement("p");
+    line.textContent = `${plan.membershipType}: ${plan.amountMinor} minor units (${plan.amountMajor} ${plan.currency}) each ${plan.period}`;
+    root.append(line);
+  }
+}
+
+async function renderLedger() {
+  const root = document.querySelector("#ledger");
+  const data = await api("/api/admin/ledger?limit=12");
+  root.replaceChildren();
+  if (data.entries.length === 0) {
+    root.textContent = "No ledger lines yet.";
+    return;
+  }
+  for (const entry of data.entries) {
+    const line = document.createElement("p");
+    line.className = "note";
+    const guest = entry.guestLabel ? ` · guest ${entry.guestLabel}` : "";
+    const sats = entry.amountSats == null ? "" : ` · ${entry.amountSats} sats`;
+    line.textContent = `${entry.at} ${entry.kind} ${entry.description} · allowance ${entry.allowanceMinor} · tab ${entry.tabMinor} ${entry.currency} minor${sats}${guest}`;
+    root.append(line);
+  }
 }
 
 async function renderPriceRules() {
@@ -551,7 +631,20 @@ function renderMembers(members) {
         setStatus(error.message);
       }
     });
-    block.append(name, email, phone, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue);
+    const tabPanel = document.createElement("div");
+    const showTab = document.createElement("button");
+    showTab.type = "button";
+    showTab.className = "secondary";
+    showTab.textContent = "Show tab";
+    showTab.addEventListener("click", async () => {
+      try {
+        const data = await api(`/api/admin/members/${member.id}/tab`);
+        renderMemberTab(tabPanel, member.id, data.balance);
+      } catch (error) {
+        setStatus(error.message);
+      }
+    });
+    block.append(name, email, phone, player, membership, guests, profile, photo, upload, household, dependent, addDependent, uid, issue, showTab, tabPanel);
     for (const card of member.cards || []) {
       const line = document.createElement("p");
       line.className = "mono note";
@@ -563,6 +656,104 @@ function renderMembers(members) {
     }
     block.append(enroll, toggle);
     root.append(block);
+  }
+}
+
+function renderMemberTab(root, memberId, balance) {
+  root.replaceChildren();
+  const summary = document.createElement("p");
+  const allowance = balance.allowance
+    ? `Allowance left ${balance.allowance.remainingMinor} of ${balance.allowance.configuredMinor} minor units this ${balance.allowance.period} (${balance.allowance.periodKey || "no open visit"}).`
+    : "No allowance is set for this membership type.";
+  summary.textContent = `${allowance} Tab owed ${balance.tab.openMinor} minor units (${balance.tab.openMajor} ${balance.currency}). Limit ${balance.tab.limitMinor}. ${balance.tab.frozen ? "Frozen." : "Open."}`;
+  const limit = field("Tab limit in minor units", String(balance.tab.limitMinor));
+  const saveLimit = document.createElement("button");
+  saveLimit.type = "button";
+  saveLimit.className = "secondary";
+  saveLimit.textContent = "Save tab limit";
+  saveLimit.addEventListener("click", async () => {
+    try {
+      await api(`/api/admin/members/${memberId}/tab`, {
+        method: "POST",
+        body: JSON.stringify({ limitMinor: Number(limit.value) }),
+      });
+      const data = await api(`/api/admin/members/${memberId}/tab`);
+      renderMemberTab(root, memberId, data.balance);
+      setStatus("Tab limit saved.");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  const freeze = document.createElement("button");
+  freeze.type = "button";
+  freeze.className = "secondary";
+  freeze.textContent = balance.tab.frozen ? "Unfreeze tab" : "Freeze tab";
+  freeze.addEventListener("click", async () => {
+    const action = balance.tab.frozen ? "unfreeze" : "freeze";
+    try {
+      await api(`/api/admin/members/${memberId}/tab/${action}`, { method: "POST" });
+      const data = await api(`/api/admin/members/${memberId}/tab`);
+      renderMemberTab(root, memberId, data.balance);
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  const direction = document.createElement("select");
+  direction.setAttribute("aria-label", "Adjustment direction");
+  for (const value of ["credit", "debit"]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    direction.append(option);
+  }
+  const amount = field("Adjustment amount in minor units", "");
+  const reason = field("Reason for the adjustment", "");
+  const adjust = document.createElement("button");
+  adjust.type = "button";
+  adjust.className = "secondary";
+  adjust.textContent = "Post adjustment";
+  adjust.addEventListener("click", async () => {
+    try {
+      await api(`/api/admin/members/${memberId}/tab/adjust`, {
+        method: "POST",
+        body: JSON.stringify({
+          direction: direction.value,
+          amountMinor: Number(amount.value),
+          reason: reason.value,
+        }),
+      });
+      const data = await api(`/api/admin/members/${memberId}/tab`);
+      renderMemberTab(root, memberId, data.balance);
+      setStatus("Adjustment posted.");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  });
+  root.append(summary, limit, saveLimit, freeze, direction, amount, reason, adjust);
+  for (const entry of balance.recent) {
+    const line = document.createElement("p");
+    line.className = "note";
+    const guest = entry.guestLabel ? ` · guest ${entry.guestLabel}` : "";
+    line.textContent = `${entry.at} ${entry.kind} ${entry.description} · tab ${entry.tabMinor}${guest}`;
+    root.append(line);
+  }
+  if (config.paymentBackend === "mock") {
+    for (const pending of balance.pendingSettlements) {
+      const pay = document.createElement("button");
+      pay.type = "button";
+      pay.textContent = `Simulate tab payment ${pending.amountMinor} minor`;
+      pay.addEventListener("click", async () => {
+        try {
+          const result = await api(`/api/admin/tab-settlements/${pending.id}/simulate-payment`, { method: "POST" });
+          setStatus(`Payment result: ${result.outcome}`);
+          const data = await api(`/api/admin/members/${memberId}/tab`);
+          renderMemberTab(root, memberId, data.balance);
+        } catch (error) {
+          setStatus(error.message);
+        }
+      });
+      root.append(pay);
+    }
   }
 }
 
@@ -695,6 +886,255 @@ document.querySelector("#sync").addEventListener("click", async () => {
     const result = await api("/api/admin/playtomic/sync", { method: "POST" });
     setStatus(`Synced ${result.report.bookings} bookings.`);
     await refresh();
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+const BRAND_COLORS = ["primary", "accent", "background", "text"];
+
+function normalizeHex(value) {
+  const trimmed = String(value || "").trim().toLowerCase();
+  const withHash = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  return /^#[0-9a-f]{6}$/.test(withHash) ? withHash : null;
+}
+
+function channelLuminance(value) {
+  const scaled = value / 255;
+  return scaled <= 0.04045 ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(hex) {
+  const body = hex.slice(1);
+  const red = Number.parseInt(body.slice(0, 2), 16);
+  const green = Number.parseInt(body.slice(2, 4), 16);
+  const blue = Number.parseInt(body.slice(4, 6), 16);
+  return 0.2126 * channelLuminance(red) + 0.7152 * channelLuminance(green) + 0.0722 * channelLuminance(blue);
+}
+
+function contrastRatio(left, right) {
+  const lighter = Math.max(relativeLuminance(left), relativeLuminance(right));
+  const darker = Math.min(relativeLuminance(left), relativeLuminance(right));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function contrastMessages(draft) {
+  const warnings = [];
+  const text = contrastRatio(draft.textColor, draft.backgroundColor);
+  if (text < 4.5) warnings.push(`Text on the background is ${text.toFixed(2)}:1. Aim for 4.5:1 or higher.`);
+  const button = contrastRatio(draft.backgroundColor, draft.primaryColor);
+  if (button < 4.5) warnings.push(`Button text on the primary color is ${button.toFixed(2)}:1. Aim for 4.5:1 or higher.`);
+  const links = contrastRatio(draft.accentColor, draft.backgroundColor);
+  if (links < 4.5) warnings.push(`Links on the background are ${links.toFixed(2)}:1. Aim for 4.5:1 or higher.`);
+  return warnings;
+}
+
+function readBrandDraft() {
+  const form = document.querySelector("#brand-form");
+  return {
+    clubName: form.clubName.value.trim(),
+    shortName: form.shortName.value.trim(),
+    primaryColor: normalizeHex(form.primaryColor.value),
+    accentColor: normalizeHex(form.accentColor.value),
+    backgroundColor: normalizeHex(form.backgroundColor.value),
+    textColor: normalizeHex(form.textColor.value),
+    fontKey: form.fontKey.value,
+    footerText: form.footerText.value.trim(),
+    contactText: form.contactText.value.trim(),
+  };
+}
+
+function brandLinks(form) {
+  const labels = [...form.querySelectorAll("[name=linkLabel]")];
+  const urls = [...form.querySelectorAll("[name=linkUrl]")];
+  const links = [];
+  for (let index = 0; index < labels.length; index += 1) {
+    const label = labels[index].value.trim();
+    const url = urls[index].value.trim();
+    if (!label && !url) continue;
+    links.push({ label, url });
+  }
+  return links;
+}
+
+let brandPreviewTimer = 0;
+
+function scheduleBrandPreview() {
+  window.clearTimeout(brandPreviewTimer);
+  brandPreviewTimer = window.setTimeout(updateBrandPreview, 80);
+}
+
+function updateBrandPreview() {
+  const draft = readBrandDraft();
+  const preview = document.querySelector("#brand-preview");
+  preview.querySelector(".brand-preview-name").textContent = draft.clubName || draft.shortName || "Your club";
+  preview.querySelector(".brand-preview-footer").textContent = draft.footerText;
+  const warnings = document.querySelector("#brand-contrast");
+  if (!draft.primaryColor || !draft.accentColor || !draft.backgroundColor || !draft.textColor) {
+    warnings.textContent = "Enter 6-digit hex colors, such as #14b8a6.";
+    return;
+  }
+  const params = new URLSearchParams({
+    background: draft.backgroundColor,
+    text: draft.textColor,
+    primary: draft.primaryColor,
+    accent: draft.accentColor,
+    font: draft.fontKey,
+  });
+  document.querySelector("#brand-preview-css").href = `/brand/preview.css?${params}`;
+  warnings.textContent = contrastMessages(draft).join(" ");
+}
+
+function setBrandColor(name, value) {
+  const hex = normalizeHex(value) || value;
+  document.querySelector(`#${name}-hex`).value = hex;
+  const normalized = normalizeHex(value);
+  if (normalized) document.querySelector(`#${name}-picker`).value = normalized;
+}
+
+async function renderBrand() {
+  const brand = await api("/api/admin/brand");
+  const form = document.querySelector("#brand-form");
+  form.clubName.value = brand.clubName;
+  form.shortName.value = brand.shortName;
+  setBrandColor("primary", brand.primaryColor);
+  setBrandColor("accent", brand.accentColor);
+  setBrandColor("background", brand.backgroundColor);
+  setBrandColor("text", brand.textColor);
+  form.fontKey.value = brand.fontKey;
+  form.footerText.value = brand.footerText;
+  form.contactText.value = brand.contactText;
+  const labels = [...form.querySelectorAll("[name=linkLabel]")];
+  const urls = [...form.querySelectorAll("[name=linkUrl]")];
+  labels.forEach((input, index) => {
+    input.value = brand.links[index] ? brand.links[index].label : "";
+    urls[index].value = brand.links[index] ? brand.links[index].url : "";
+  });
+  document.querySelector("#brand-placeholder-note").textContent = brand.usingPlaceholder ? brand.placeholderNote : "";
+  const logo = document.querySelector("#brand-logo-current");
+  if (brand.hasLogo) {
+    logo.hidden = false;
+    logo.src = `/brand/logo?v=${encodeURIComponent(brand.updatedAt || "")}`;
+  } else {
+    logo.hidden = true;
+    logo.removeAttribute("src");
+  }
+  const favicon = document.querySelector("#brand-favicon-current");
+  if (brand.hasFavicon) {
+    favicon.hidden = false;
+    favicon.src = `/brand/favicon?v=${encodeURIComponent(brand.updatedAt || "")}`;
+  } else {
+    favicon.hidden = true;
+    favicon.removeAttribute("src");
+  }
+  updateBrandPreview();
+}
+
+async function postBrandFile(pathname, file) {
+  const response = await fetch(pathname, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: file,
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  return body;
+}
+
+for (const name of BRAND_COLORS) {
+  const picker = document.querySelector(`#${name}-picker`);
+  const hex = document.querySelector(`#${name}-hex`);
+  picker.addEventListener("input", () => {
+    hex.value = picker.value;
+    scheduleBrandPreview();
+  });
+  hex.addEventListener("input", () => {
+    const normalized = normalizeHex(hex.value);
+    if (normalized) picker.value = normalized;
+    scheduleBrandPreview();
+  });
+}
+
+document.querySelector("#brand-form").addEventListener("input", scheduleBrandPreview);
+document.querySelector("#brand-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const draft = readBrandDraft();
+  if (!draft.primaryColor || !draft.accentColor || !draft.backgroundColor || !draft.textColor) {
+    setStatus("Enter 6-digit hex colors, such as #14b8a6.");
+    return;
+  }
+  try {
+    const saved = await api("/api/admin/brand", {
+      method: "POST",
+      body: JSON.stringify({
+        clubName: draft.clubName,
+        shortName: draft.shortName,
+        primaryColor: draft.primaryColor,
+        accentColor: draft.accentColor,
+        backgroundColor: draft.backgroundColor,
+        textColor: draft.textColor,
+        fontKey: draft.fontKey,
+        footerText: draft.footerText,
+        contactText: draft.contactText,
+        links: brandLinks(form),
+      }),
+    });
+    await refresh();
+    const warning = saved.contrastWarnings && saved.contrastWarnings.length ? ` ${saved.contrastWarnings.join(" ")}` : "";
+    setStatus(`Branding saved.${warning}`);
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-logo-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = document.querySelector("#brand-logo-file").files[0];
+  if (!file) {
+    setStatus("Choose a logo file.");
+    return;
+  }
+  try {
+    await postBrandFile("/api/admin/brand/logo", file);
+    await refresh();
+    setStatus("Logo saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-logo-clear").addEventListener("click", async () => {
+  try {
+    await api("/api/admin/brand/logo/clear", { method: "POST" });
+    await refresh();
+    setStatus("Logo removed.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-favicon-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = document.querySelector("#brand-favicon-file").files[0];
+  if (!file) {
+    setStatus("Choose a favicon file.");
+    return;
+  }
+  try {
+    await postBrandFile("/api/admin/brand/favicon", file);
+    await refresh();
+    setStatus("Favicon saved.");
+  } catch (error) {
+    setStatus(error.message);
+  }
+});
+
+document.querySelector("#brand-favicon-clear").addEventListener("click", async () => {
+  try {
+    await api("/api/admin/brand/favicon/clear", { method: "POST" });
+    await refresh();
+    setStatus("Favicon removed.");
   } catch (error) {
     setStatus(error.message);
   }

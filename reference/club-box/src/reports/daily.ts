@@ -74,13 +74,17 @@ export async function maybeSendDailySummary(
   if (existing) return false;
   const summary = dailySummary(db, config, date);
   try {
-    await sendTransactional(notifier, {
-      channel: "email",
-      kind: "transactional",
-      to: config.dailySummaryEmail,
-      subject: `Daily sales ${date}`,
-      text: summaryText(summary),
-    });
+    await sendTransactional(
+      notifier,
+      {
+        channel: "email",
+        kind: "transactional",
+        to: config.dailySummaryEmail,
+        subject: `Daily sales ${date}`,
+        text: summaryText(summary),
+      },
+      { db, publicBaseUrl: config.publicBaseUrl },
+    );
   } catch (error) {
     log("error", "daily summary failed", { error: error instanceof Error ? error.message : "error" });
     return false;

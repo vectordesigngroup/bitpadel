@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
 import { releaseExpired } from "./booking/service.js";
+import { expireDueTabSettlements } from "./ledger/service.js";
 import { expireStaleCheckins } from "./checkin/service.js";
 import { loadConfig } from "./config.js";
 import { openDatabase, purgeOldRows } from "./db.js";
@@ -34,6 +35,7 @@ try {
   const storage = createStorage(config);
   const now = (): Date => new Date();
   releaseExpired(db, now());
+  expireDueTabSettlements(db, now());
   expireStaleCheckins(db, config, now());
   purgeOldRows(db, config.logRetentionDays, now(), config.visitRetentionDays);
   const playtomic = config.playtomic ? new PlaytomicClient(config.playtomic, now) : null;
@@ -56,6 +58,7 @@ try {
   const holdSweep = setInterval(() => {
     try {
       releaseExpired(db, now());
+      expireDueTabSettlements(db, now());
       expireStaleCheckins(db, config, now());
     } catch (error) {
       log("error", "hold sweep failed", { error: error instanceof Error ? error.message : "error" });
@@ -83,7 +86,7 @@ try {
       syncPlaytomic(db, config, playtomic, now()).catch((error: unknown) => {
         const message = error instanceof Error ? error.message : "error";
         log("error", "playtomic sync failed", { error: message });
-        notifyAdminAlert(notifier, config, `Playtomic sync failed: ${message}`).catch((alertError: unknown) => {
+        notifyAdminAlert(notifier, config, `Playtomic sync failed: ${message}`, db).catch((alertError: unknown) => {
           log("error", "admin alert failed", {
             error: alertError instanceof Error ? alertError.message : "error",
           });

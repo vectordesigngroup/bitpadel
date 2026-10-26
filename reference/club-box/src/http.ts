@@ -35,6 +35,7 @@ const STATIC_FILES: Record<string, string> = {
   "/privacy.js": "privacy.js",
   "/account": "account.html",
   "/account.js": "account.js",
+  "/brand.js": "brand.js",
 };
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -160,11 +161,20 @@ export function createAppServer(options: {
   trustProxy: boolean;
   routes: Route[];
   publicDir: string;
+  transformHtml?: (pathname: string, html: string) => string;
   onComplete?: (info: { method: string; path: string; status: number; headers: IncomingHttpHeaders }) => void;
 }): Server {
   const publicRoot = path.resolve(options.publicDir);
   return createServer((incoming, res) => {
-    void handleRequest(incoming, res, options.routes, options.trustProxy, publicRoot, options.onComplete);
+    void handleRequest(
+      incoming,
+      res,
+      options.routes,
+      options.trustProxy,
+      publicRoot,
+      options.onComplete,
+      options.transformHtml,
+    );
   });
 }
 
@@ -175,6 +185,7 @@ async function handleRequest(
   trustProxy: boolean,
   publicRoot: string,
   onComplete?: (info: { method: string; path: string; status: number; headers: IncomingHttpHeaders }) => void,
+  transformHtml?: (pathname: string, html: string) => string,
 ): Promise<void> {
   try {
     const method = incoming.method ?? "GET";
@@ -202,6 +213,10 @@ async function handleRequest(
       const body = await readFile(file.path);
       if (method === "HEAD") {
         sendBytes(res, 200, Buffer.alloc(0), file.contentType);
+        return;
+      }
+      if (transformHtml && file.contentType.startsWith("text/html")) {
+        sendText(res, 200, transformHtml(url.pathname, body.toString("utf8")), file.contentType);
         return;
       }
       sendBytes(res, 200, body, file.contentType);

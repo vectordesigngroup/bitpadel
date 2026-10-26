@@ -45,12 +45,17 @@ export async function runDueReminders(
     const text = `Reminder: ${row.court_name} starts at ${when}. This is a booking reminder, not marketing.`;
     if (row.reminder_email === 1) {
       const to = row.player_email || row.receipt_email;
-      if (to && (await sendOnce(db, notifier, row.id, "email", to, `Reminder for ${row.court_name}`, text, now))) {
+      if (
+        to &&
+        (await sendOnce(db, notifier, row.id, "email", to, `Reminder for ${row.court_name}`, text, now, config.publicBaseUrl))
+      ) {
         sent += 1;
       }
     }
     if (row.reminder_sms === 1 && row.reminder_phone) {
-      if (await sendOnce(db, notifier, row.id, "sms", row.reminder_phone, null, text, now)) sent += 1;
+      if (await sendOnce(db, notifier, row.id, "sms", row.reminder_phone, null, text, now, config.publicBaseUrl)) {
+        sent += 1;
+      }
     }
   }
   return sent;
@@ -65,13 +70,14 @@ async function sendOnce(
   subject: string | null,
   text: string,
   now: Date,
+  publicBaseUrl: string,
 ): Promise<boolean> {
   const inserted = db
     .prepare("INSERT OR IGNORE INTO reminder_log (booking_id, channel, sent_at) VALUES (?, ?, ?)")
     .run(bookingId, channel, now.toISOString());
   if (inserted.changes !== 1) return false;
   try {
-    await sendTransactional(notifier, { channel, kind: "transactional", to, subject, text });
+    await sendTransactional(notifier, { channel, kind: "transactional", to, subject, text }, { db, publicBaseUrl });
     return true;
   } catch (error) {
     db.prepare("DELETE FROM reminder_log WHERE booking_id = ? AND channel = ?").run(bookingId, channel);
