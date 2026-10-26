@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BitPadel access and the member experience</title>
+<meta name="description" content="Door entry with a Lightning wallet or NFC card, guest check-in, the kiosk, phone pages, and the language menu in BitPadel. Entry only. Exits stay outside the software.">
+<meta name="theme-color" content="#0B1220">
+<link rel="canonical" href="https://vectordesigngroup.github.io/bitpadel/sell-sheets/access.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sheets.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top no-print">
+  <div class="wrap top-row">
+    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30"><span><b>Bit</b><i>Padel</i></span></a>
+    <nav aria-label="Sell sheets">
+      <a href="../index.html">Home</a>
+      <a href="./">All sheets</a>
+      <a href="club-overview.html">Overview</a>
+      <a href="payments.html">Payments</a>
+      <a href="access.html" aria-current="page">Access</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+  <article class="sheet wrap">
+    <header class="sheet-intro">
+      <p class="eyebrow">Sell sheet · 3 of 3 · Access</p>
+      <h1>Doors, check-in, and pages members actually use</h1>
+      <p class="lede">Members come in with a Lightning wallet or an NFC card. Guests check in at the desk or kiosk. Pages open in a phone browser. The language menu is on those pages.</p>
+      <p class="badge">Prototype: not yet tested with real money or real doors</p>
+    </header>
+
+    <div class="features">
+      <section class="card caution span-2">
+        <h2>What the door software does</h2>
+        <ul>
+          <li>It can send one short entry pulse to a lock you connect.</li>
+          <li>It does not lock a door shut. It does not control exits, fire egress, or other life-safety systems. People leave without this software.</li>
+          <li>If the screen cannot reach the server, use a fob, a PIN, or staff. Those paths are physical. They are not built into this app.</li>
+          <li>A licensed installer and your fire marshal design the door. Notes for that conversation are in the kit. They are not a certification.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Wallet unlock</h2>
+        <ul>
+          <li>A member enrolls a Lightning wallet once.</li>
+          <li>The kiosk shows a QR code that rotates. The wallet signs it. No sats move.</li>
+          <li>An active member gets an entry pulse. The attempt is written to a log. Expired, repeated, or revoked tries are refused.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>NFC cards</h2>
+        <ul>
+          <li>NTAG 424 DNA cards can be enrolled, revoked, or marked lost. A programming command is in the kit.</li>
+          <li>A DESFire card can be checked when a reader finishes the card session. Programming a DESFire card is not included.</li>
+          <li>One member can hold more than one card and more than one wallet.</li>
+          <li>Copied UID-only cards stay off unless you turn on a development switch.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Kiosk and check-in</h2>
+        <ul>
+          <li>The kiosk is a browser page on the club network. You pick the area. The safety lines stay on the screen.</li>
+          <li>A successful unlock records a check-in. If you saved a photo, the kiosk can show the name and photo.</li>
+          <li>The front desk lists who is still on site.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Guests</h2>
+        <ul>
+          <li>After a member is in, staff can add guests up to the cap you set. The cap starts at zero, so guests stay off until you raise it.</li>
+          <li>A named guest fills in a short form and acknowledges a waiver. The form stores the waiver version and the time.</li>
+          <li>Members are not asked to sign. An online signature for everyone is planned, not available.</li>
+          <li>The marketing box starts unchecked. That consent is stored apart from the visit.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>On a phone</h2>
+        <ul>
+          <li>Booking, account, guest, kiosk, and desk pages open in a phone browser.</li>
+          <li>The court grid scrolls sideways when a day has many courts.</li>
+          <li>An installable page that puts booking, the door, and the tab in one home-screen app is planned. It is not available.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Language menu</h2>
+        <ul>
+          <li>English, Spanish, French, Italian, or Brazilian Portuguese. The choice applies in this browser.</li>
+          <li>After a member signs in, the same choice can be saved on their profile. Receipts use that language when email is set up.</li>
+          <li>Translations other than English are machine drafts pending native review. Waiver, consent, and door-safety lines need a local review before you rely on them.</li>
+        </ul>
+      </section>
+      <section class="card span-2">
+        <h2>Hours</h2>
+        <p>You can limit an area to set hours. You can also allow entry only around a member’s booked court time. That booking rule is off until you turn it on. A closed area is not unlocked.</p>
+      </section>
+      <section class="card planned span-2">
+        <h2>Planned, not available yet</h2>
+        <p>Lockers. A one-day guest pass a member can sign. Court lights, a ball machine, and a gear cabinet that work only during a booking. The installable phone page described above. Online waiver signatures for members and players.</p>
+      </section>
+    </div>
+
+    <p class="actions no-print">
+      <a class="btn primary" href="access.pdf">Download PDF</a>
+      <a class="btn secondary" href="club-overview.html">Overview sheet</a>
+    </p>
+    <p class="more">Also in this set: <a href="club-overview.html">Club owners overview</a> · <a href="payments.html">Payments</a></p>
+    <p class="colophon">BitPadel · free open-source club software · AGPL-3.0 · github.com/vectordesigngroup/bitpadel</p>
+  </article>
+</main>
+</body>
+</html>

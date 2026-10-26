@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BitPadel payments: Lightning and cards</title>
+<meta name="description" content="How BitPadel takes Lightning and optional Stripe or Square card payments, refunds, allowances, tabs, and counter charges. Payments start in test mode.">
+<meta name="theme-color" content="#0B1220">
+<link rel="canonical" href="https://vectordesigngroup.github.io/bitpadel/sell-sheets/payments.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sheets.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top no-print">
+  <div class="wrap top-row">
+    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30"><span><b>Bit</b><i>Padel</i></span></a>
+    <nav aria-label="Sell sheets">
+      <a href="../index.html">Home</a>
+      <a href="./">All sheets</a>
+      <a href="club-overview.html">Overview</a>
+      <a href="payments.html" aria-current="page">Payments</a>
+      <a href="access.html">Access</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+  <article class="sheet wrap">
+    <header class="sheet-intro">
+      <p class="eyebrow">Sell sheet · 2 of 3 · Payments</p>
+      <h1>Players pay in sats or by card</h1>
+      <p class="lede">Court time can be paid with Lightning, or with Stripe or Square when you turn those on. You set every amount. BitPadel does not include prices.</p>
+      <p class="badge">Prototype: not yet tested with real money or real doors</p>
+    </header>
+
+    <div class="features">
+      <section class="card">
+        <h2>Lightning</h2>
+        <ul>
+          <li>Invoices go through BTCPay Server or LNbits.</li>
+          <li>The booking confirms when the invoice is paid. An unpaid hold expires and the court time opens again.</li>
+          <li>You choose how many sats to charge. The software does not look up a rate for you.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Cards, if you want them</h2>
+        <ul>
+          <li>Stripe and Square are optional. Turn on one, both, or neither.</li>
+          <li>The player picks Lightning or a card. Card checkout is the provider’s own page.</li>
+          <li>With neither card provider on, the booking page offers Lightning only.</li>
+        </ul>
+      </section>
+      <section class="card caution span-2">
+        <h2>Payments start in test mode</h2>
+        <ul>
+          <li>Lightning starts on a practice backend. Those invoices cannot be paid.</li>
+          <li>Stripe starts with a test key. Square starts in sandbox.</li>
+          <li>Live keys are a separate switch you choose later.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Refunds</h2>
+        <ul>
+          <li>Staff can refund a paid booking.</li>
+          <li>A player can cancel inside a window you set. You choose whether that cancel refunds.</li>
+          <li>On LNbits, the player provides a Lightning invoice for the refund. BTCPay, Stripe, and Square send the refund through that provider.</li>
+          <li>On the practice backend, a refund is recorded and no sats move.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Prices you type</h2>
+        <ul>
+          <li>Each court time has an amount you enter, in your currency.</li>
+          <li>You can also set a member price and a guest price for chosen weekdays and hours.</li>
+          <li>A signed-in member pays the member amount. Everyone else pays the guest amount. With no rule, the court-time amount is used.</li>
+          <li>There are no sample prices in the kit.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Allowance and tab</h2>
+        <ul>
+          <li>A membership can include an allowance. You set the amount and when it starts again: each visit, day, week, or month.</li>
+          <li>The allowance is used first. The rest goes on the member’s tab. The member pays the tab later with Lightning or a card you enabled.</li>
+          <li>A guest’s item can be charged to the host member.</li>
+          <li>Lines in the ledger cannot be edited or deleted. Unused allowance does not roll forward and is not paid out.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Counter sales and vending</h2>
+        <ul>
+          <li>The desk can charge a drink or a small item to the allowance and the tab.</li>
+          <li>A device can do the same after an NFC card tap or a Lightning wallet sign-in. That sign-in does not move sats.</li>
+          <li>A cooler or vending-machine controller is planned. It is not included. The machine’s own board would call this software.</li>
+        </ul>
+      </section>
+      <section class="card span-2">
+        <h2>End of day</h2>
+        <p>Totals group Lightning, Stripe, Square, and refunds for the date you pick. Card totals show up after the provider confirms the payment. This is a payment total, not a tax filing. You can also download a sales file.</p>
+      </section>
+      <section class="card planned span-2">
+        <h2>Planned, not available yet</h2>
+        <p>Equipment rentals, lesson payments, and a controller for a locked cooler or vending machine. Ask your own tax advisor before you turn allowances on. Stored value and sales tax are local questions.</p>
+      </section>
+    </div>
+
+    <p class="actions no-print">
+      <a class="btn primary" href="payments.pdf">Download PDF</a>
+      <a class="btn secondary" href="access.html">Access sheet</a>
+    </p>
+    <p class="more">Also in this set: <a href="club-overview.html">Club owners overview</a> · <a href="access.html">Access and the member experience</a></p>
+    <p class="colophon">BitPadel · free open-source club software · AGPL-3.0 · github.com/vectordesigngroup/bitpadel</p>
+  </article>
+</main>
+</body>
+</html>
