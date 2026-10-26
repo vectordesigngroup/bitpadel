@@ -133,6 +133,7 @@ export function createMember(db: Database.Database, label: string, now: Date): M
     guestLimit: null,
     hasPhoto: false,
     playtomicPlayerId: null,
+    preferredLocale: null,
     keys: [],
     cards: [],
   };

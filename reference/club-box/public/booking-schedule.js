@@ -302,21 +302,23 @@ export function formatPrice(amountMinor, currency, decimals) {
     return `${formatted} sats`;
   }
   const major = amountMinor / 10 ** places;
+  const number = new Intl.NumberFormat(uiLocale(), {
+    minimumFractionDigits: places,
+    maximumFractionDigits: places,
+    useGrouping: "always",
+  }).format(major);
   try {
-    return new Intl.NumberFormat(uiLocale(), {
+    const formatted = new Intl.NumberFormat(uiLocale(), {
       style: "currency",
       currency: code,
       minimumFractionDigits: places,
       maximumFractionDigits: places,
       useGrouping: "always",
     }).format(major);
+    if (formatted.includes("¤")) return `${number} ${code}`;
+    return formatted;
   } catch {
-    const formatted = new Intl.NumberFormat(uiLocale(), {
-      minimumFractionDigits: places,
-      maximumFractionDigits: places,
-      useGrouping: "always",
-    }).format(major);
-    return `${formatted} ${code}`;
+    return `${number} ${code}`;
   }
 }
 

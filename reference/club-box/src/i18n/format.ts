@@ -17,8 +17,12 @@ export function formatTime(date: Date, locale: LocaleId, timeZone: string): stri
   return new Intl.DateTimeFormat(locale, { timeZone, timeStyle: "short" }).format(date);
 }
 
+function groupedFormat(locale: LocaleId, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  return new Intl.NumberFormat(locale, { ...options, useGrouping: "always" as unknown as boolean });
+}
+
 export function formatNumber(value: number, locale: LocaleId): string {
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0, useGrouping: "always" }).format(value);
+  return groupedFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
 /**
@@ -27,20 +31,20 @@ export function formatNumber(value: number, locale: LocaleId): string {
  */
 export function formatMoney(amountMinor: number, currency: string, decimals: number, locale: LocaleId): string {
   const major = amountMinor / 10 ** decimals;
+  const number = groupedFormat(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(major);
   try {
-    return new Intl.NumberFormat(locale, {
+    const formatted = groupedFormat(locale, {
       style: "currency",
       currency,
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
-      useGrouping: "always",
     }).format(major);
+    if (formatted.includes("¤")) return `${number} ${currency}`;
+    return formatted;
   } catch {
-    const number = new Intl.NumberFormat(locale, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-      useGrouping: "always",
-    }).format(major);
     return `${number} ${currency}`;
   }
 }

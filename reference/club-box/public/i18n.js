@@ -88,20 +88,22 @@
   function formatMoney(amountMinor, currency, decimals) {
     const scale = decimals === undefined || decimals === null ? boot.currencyDecimals : decimals;
     const major = amountMinor / 10 ** scale;
+    const number = new Intl.NumberFormat(boot.locale, {
+      minimumFractionDigits: scale,
+      maximumFractionDigits: scale,
+      useGrouping: "always",
+    }).format(major);
     try {
-      return new Intl.NumberFormat(boot.locale, {
+      const formatted = new Intl.NumberFormat(boot.locale, {
         style: "currency",
         currency: currency,
         minimumFractionDigits: scale,
         maximumFractionDigits: scale,
         useGrouping: "always",
       }).format(major);
+      if (formatted.indexOf("¤") >= 0) return `${number} ${currency}`;
+      return formatted;
     } catch {
-      const number = new Intl.NumberFormat(boot.locale, {
-        minimumFractionDigits: scale,
-        maximumFractionDigits: scale,
-        useGrouping: "always",
-      }).format(major);
       return `${number} ${currency}`;
     }
   }
