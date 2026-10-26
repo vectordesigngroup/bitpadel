@@ -144,6 +144,7 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 | `BTCPAY_URL`, `BTCPAY_STORE_ID`, `BTCPAY_API_KEY`, `BTCPAY_WEBHOOK_SECRET` | Greenfield. Required when the backend is `btcpay`. |
 | `BTCPAY_PAYMENT_METHOD` | Default `BTC-LN`. Some servers use `BTC-LightningNetwork`. |
 | `LNBITS_URL`, `LNBITS_INVOICE_KEY`, `LNBITS_WEBHOOK_SECRET` | Required when the backend is `lnbits`. The secret is 16–128 characters from `[A-Za-z0-9_-]` because it sits in the webhook path. |
+| `LNBITS_ADMIN_KEY` | Optional. The wallet admin key, used only to pay refund invoices. Without it, Lightning refunds are refused. |
 | `DOOR_BACKEND` | `mock`, `http`, `gpio`, or `serial`. Only `pulse-entry`. Fire release stays on hardware. |
 | `DOOR_HTTP_URL`, `DOOR_HTTP_TOKEN`, `DOOR_HTTP_TIMEOUT_MS` | Required for `http`. Token at least 16 characters. |
 | `DOOR_GPIO_PIN`, `DOOR_GPIO_ACTIVE_HIGH` | Required pin for `gpio`. Needs optional `onoff` on that host. |
@@ -178,7 +179,12 @@ The mock **Simulate payment** button is absent when this backend is selected.
 
 1. Set `PAYMENT_BACKEND=lnbits`, the wallet invoice key, and `SATS_PER_MINOR_UNIT` (how many sats equal one minor unit of `CURRENCY` at the rate you choose to charge).
 2. Set `LNBITS_WEBHOOK_SECRET`. The app registers `PUBLIC_BASE_URL/api/webhooks/lnbits/<secret>` as the invoice webhook.
-3. A payment body with `pending: true` does not confirm a booking. A paid notice whose secret matches confirms it.
+3. The webhook body is only a hint. With a matching secret, the app asks LNbits (`GET /api/v1/payments/<hash>`) whether the invoice is paid and confirms only when LNbits says `paid: true`. LNbits 1.x sends the payment as a JSON-encoded string; both shapes are accepted.
+4. If a webhook is lost, the hold page also checks LNbits while the hold is pending (rate-limited), so a paid booking still confirms.
+5. Invoices are created with an expiry equal to `HOLD_MINUTES`, so a player cannot pay after the hold has been released.
+6. Refunds need the player's own BOLT11 invoice and `LNBITS_ADMIN_KEY`. The app decodes the invoice and refuses one that asks for more sats than were paid. A player self-cancel with `CANCEL_REFUND=full` must include `{"bolt11": "..."}`; without it the cancel is refused and the booking is kept. Keep a small float in the LNbits wallet: LNbits holds back a routing-fee reserve, and the node needs outbound liquidity to pay refunds.
+
+`scripts/regtest/` has a rerunnable end-to-end check against real Lightning nodes on regtest (free test coins). See its README.
 
 You choose the sats rate. The app does not look up an exchange rate.
 

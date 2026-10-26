@@ -17,6 +17,8 @@ export async function cancelPlayerBooking(
   playerId: string,
   bookingId: string,
   now: Date,
+  /** Lightning invoice from the player's wallet for the refund. Needed by LNbits. */
+  refundBolt11: string | null = null,
 ): Promise<{ cancelled: true; refundStatus: string | null }> {
   if (config.cancelWindowHours <= 0) throw new AppError(403, "Self-cancel is turned off");
   const row = one<{
@@ -50,7 +52,7 @@ export async function cancelPlayerBooking(
   if (now.getTime() > deadline) throw new AppError(409, "The cancellation window has closed.");
   let refundStatus: string | null = null;
   if (config.cancelRefund === "full") {
-    const refunded = await refundCharge(payments, cards, row, "Player cancelled inside the window");
+    const refunded = await refundCharge(payments, cards, { ...row, bolt11: refundBolt11 }, "Player cancelled inside the window");
     if (!refunded.supported) throw new AppError(409, refunded.reason);
     db.prepare(
       `INSERT INTO refunds (
@@ -104,7 +106,9 @@ export async function refundCharge(
     amount_minor: number;
     currency: string;
     payment_hash: string | null;
+    /** Customer invoice to pay the refund to. Never the club's own (already paid) invoice. */
     bolt11: string | null;
+    amount_sats?: number | null;
   },
   reason: string,
 ): Promise<{ supported: true; refundId: string; status: "recorded" | "submitted" } | { supported: false; reason: string }> {
@@ -117,6 +121,7 @@ export async function refundCharge(
         currency: row.currency,
         reason,
         bolt11: row.bolt11,
+        paidSats: row.amount_sats ?? null,
       });
     case "stripe":
     case "square": {

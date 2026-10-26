@@ -311,9 +311,18 @@ export function challengeStatus(deps: AccessDeps, k1: string): ChallengeStatus |
 export function challengeQrText(deps: AccessDeps, k1: string): string | null {
   const status = challengeStatus(deps, k1);
   if (!status || status.status === "expired") return null;
-  return status.purpose === "enroll"
-    ? encodeLnurl(`${deps.config.publicBaseUrl}/api/access/enroll/lnurl?k1=${k1}`)
-    : encodeLnurl(`${deps.config.publicBaseUrl}/api/access/lnurl?k1=${k1}`);
+  return encodeLnurl(loginUrl(deps.config.publicBaseUrl, status.purpose, k1.toLowerCase()));
+}
+
+/**
+ * LUD-04 login URL. Wallets look for tag=login and k1 in the decoded LNURL, sign k1,
+ * and call this same URL with &sig=...&key=... appended, so it points at the callback.
+ * The older /api/access/lnurl JSON routes stay for wallets that fetch the URL first.
+ */
+export function loginUrl(baseUrl: string, purpose: "unlock" | "enroll", k1: string): string {
+  const callback = purpose === "enroll" ? "/api/access/enroll/callback" : "/api/access/callback";
+  const action = purpose === "enroll" ? "register" : "login";
+  return `${baseUrl}${callback}?tag=login&k1=${k1}&action=${action}`;
 }
 
 export async function handleUnlock(
@@ -652,8 +661,7 @@ function insertChallenge(
        VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)`,
     )
     .run(k1, input.purpose, input.memberId, input.area, expiresAt, now.toISOString());
-  const path = input.purpose === "enroll" ? "/api/access/enroll/lnurl" : "/api/access/lnurl";
-  const httpsUrl = `${deps.config.publicBaseUrl}${path}?k1=${k1}`;
+  const httpsUrl = loginUrl(deps.config.publicBaseUrl, input.purpose, k1);
   return {
     k1,
     purpose: input.purpose,

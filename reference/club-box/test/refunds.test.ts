@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import test from "node:test";
 import { LnbitsPaymentBackend } from "../src/payments/lnbits.js";
 import { adminHeaders, api, createCourtAndSlot, FIXTURE_PRICE_MINOR, startTestApp } from "./helpers.js";
@@ -67,4 +69,48 @@ test("LNbits refund is not supported without a customer invoice", async () => {
   });
   assert.equal(result.supported, false);
   if (!result.supported) assert.match(result.reason, /Not supported by this backend/);
+});
+
+test("LNbits refunds need the admin key and never pay more than was paid", async () => {
+  const sent: Array<{ key: string | undefined; bolt11: string }> = [];
+  const server = createServer((req, res) => {
+    let raw = "";
+    req.on("data", (chunk) => (raw += String(chunk)));
+    req.on("end", () => {
+      res.setHeader("content-type", "application/json");
+      if (req.url === "/api/v1/payments/decode") {
+        const { data } = JSON.parse(raw) as { data: string };
+        res.end(JSON.stringify({ amount_msat: data === "lnbcrt-small" ? 2000 : 9_000_000, payment_hash: "ab".repeat(32) }));
+        return;
+      }
+      if (req.url === "/api/v1/payments" && req.method === "POST") {
+        const body = JSON.parse(raw) as { bolt11: string };
+        sent.push({ key: req.headers["x-api-key"] as string | undefined, bolt11: body.bolt11 });
+        res.end(JSON.stringify({ payment_hash: "cd".repeat(32), status: "success" }));
+        return;
+      }
+      res.statusCode = 404;
+      res.end("{}");
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const base = { invoiceId: "ef".repeat(32), amountMinor: 1, currency: "XXX", reason: "test", paidSats: 2 };
+    const noAdmin = new LnbitsPaymentBackend({ url, invoiceKey: "invoice-key", webhookSecret: "webhook-secret-ok" }, 2);
+    const refused = await noAdmin.refund({ ...base, bolt11: "lnbcrt-small" });
+    assert.equal(refused.supported, false);
+    if (!refused.supported) assert.match(refused.reason, /LNBITS_ADMIN_KEY/);
+
+    const backend = new LnbitsPaymentBackend(
+      { url, invoiceKey: "invoice-key", webhookSecret: "webhook-secret-ok", adminKey: "admin-key" },
+      2,
+    );
+    await assert.rejects(backend.refund({ ...base, bolt11: "lnbcrt-big" }), /more than the 2 sats/);
+    const ok = await backend.refund({ ...base, bolt11: "lnbcrt-small" });
+    assert.equal(ok.supported, true);
+    assert.deepEqual(sent, [{ key: "admin-key", bolt11: "lnbcrt-small" }]);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });

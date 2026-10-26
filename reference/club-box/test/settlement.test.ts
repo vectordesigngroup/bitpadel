@@ -174,14 +174,20 @@ test("BTCPay webhook signature gates settlement and expiry releases the hold", a
 });
 
 test("LNbits webhook settles only with the path secret and a paid invoice", async () => {
-  const payments = new Map<string, { amount: number }>();
+  const payments = new Map<string, { amount: number; paid: boolean }>();
   const fake = await fakeJsonServer((req, raw) => {
     if (req.method === "POST" && req.url === "/api/v1/payments") {
-      const body = JSON.parse(raw) as { amount: number; webhook: string };
+      const body = JSON.parse(raw) as { amount: number; webhook: string; expiry: number };
       const paymentHash = randomBytes(32).toString("hex");
-      payments.set(paymentHash, { amount: body.amount });
+      payments.set(paymentHash, { amount: body.amount, paid: false });
       assert.match(body.webhook, /\/api\/webhooks\/lnbits\//);
+      assert.equal(body.expiry, 15 * 60, "invoice expiry must match HOLD_MINUTES");
       return { status: 200, body: { payment_hash: paymentHash, payment_request: "lnbc1lnbitstestonly" } };
+    }
+    const lookup = req.method === "GET" ? /^\/api\/v1\/payments\/([0-9a-f]{64})$/.exec(req.url ?? "") : null;
+    if (lookup) {
+      const payment = payments.get(lookup[1] ?? "");
+      return payment ? { status: 200, body: { paid: payment.paid } } : { status: 404, body: {} };
     }
     return { status: 404, body: {} };
   });
@@ -219,10 +225,20 @@ test("LNbits webhook settles only with the path secret and a paid invoice", asyn
     });
     assert.equal(wrong.status, 401);
 
+    // A body that claims "paid" is not enough: LNbits itself still says unpaid.
+    const forged = await api(app.baseUrl, `/api/webhooks/lnbits/${secret}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ payment_hash: invoiceId, pending: false, status: "success" }),
+    });
+    assert.equal(forged.body.outcome, "ignored");
+
+    payments.set(invoiceId, { amount: 2, paid: true });
+    // LNbits 1.x double-encodes: the JSON body is a string holding the payment object.
     const paid = await api(app.baseUrl, `/api/webhooks/lnbits/${secret}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ payment_hash: invoiceId, pending: false }),
+      body: JSON.stringify(JSON.stringify({ payment_hash: invoiceId, status: "success" })),
     });
     assert.equal(paid.body.outcome, "confirmed");
     const bookings = await api(app.baseUrl, "/api/admin/bookings", { headers: adminHeaders() });
@@ -276,3 +292,45 @@ function fakeJsonServer(
     });
   });
 }
+
+test("a pending LNbits hold confirms by lookup when the webhook never arrives", async () => {
+  const payments = new Map<string, boolean>();
+  const fake = await fakeJsonServer((req) => {
+    if (req.method === "POST" && req.url === "/api/v1/payments") {
+      const paymentHash = randomBytes(32).toString("hex");
+      payments.set(paymentHash, false);
+      return { status: 200, body: { payment_hash: paymentHash, payment_request: "lnbc1lnbitstestonly" } };
+    }
+    const lookup = req.method === "GET" ? /^\/api\/v1\/payments\/([0-9a-f]{64})$/.exec(req.url ?? "") : null;
+    if (lookup) return { status: 200, body: { paid: payments.get(lookup[1] ?? "") === true } };
+    return { status: 404, body: {} };
+  });
+  const app = await startTestApp({
+    PAYMENT_BACKEND: "lnbits",
+    LNBITS_URL: fake.url,
+    LNBITS_INVOICE_KEY: "invoice-key-test-not-real",
+    LNBITS_WEBHOOK_SECRET: "lnbits-webhook-secret",
+    SATS_PER_MINOR_UNIT: "2",
+  });
+  try {
+    const { slotId } = await createCourtAndSlot(app, FIXTURE_PRICE_MINOR);
+    const hold = await api(app.baseUrl, "/api/holds", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slotId }),
+    });
+    const holdId = (hold.body.hold as { id: string }).id;
+    const before = await api(app.baseUrl, `/api/holds/${holdId}`);
+    assert.equal((before.body.hold as { status: string }).status, "pending");
+    const hash = [...payments.keys()].at(-1);
+    if (!hash) throw new Error("missing payment hash");
+    payments.set(hash, true);
+    const after = await api(app.baseUrl, `/api/holds/${holdId}`);
+    assert.equal((after.body.hold as { status: string }).status, "paid");
+    const bookings = await api(app.baseUrl, "/api/admin/bookings", { headers: adminHeaders() });
+    assert.equal((bookings.body.bookings as unknown[]).length, 1);
+  } finally {
+    await app.close();
+    await fake.close();
+  }
+});

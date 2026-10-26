@@ -45,6 +45,8 @@ export type RefundRequest = {
   bolt11: string | null;
   /** Stripe payment intent or Square payment id, when the webhook has stored one. */
   providerPaymentId?: string | null;
+  /** Sats the customer paid, when known. Backends that pay a customer invoice must not send more. */
+  paidSats?: number | null;
 };
 
 export type RefundResult =
@@ -63,4 +65,9 @@ export interface PaymentBackend {
   interpretWebhook(input: WebhookInput): Promise<WebhookInterpretation>;
   refund(input: RefundRequest): Promise<RefundResult>;
   health(): Promise<BackendHealth>;
+  /**
+   * Optional: ask the backend whether an invoice settled. Used as a fallback when a
+   * webhook never arrived (for example the club box was offline or behind NAT).
+   */
+  lookupInvoice?(invoiceId: string, nowIso: string): Promise<WebhookInterpretation>;
 }

@@ -36,12 +36,15 @@ export class LnbitsPaymentBackend implements PaymentBackend {
         out: false,
         amount,
         memo: input.memo,
+        // Match the hold. Without this LNbits uses its own default (often an hour), and a
+        // player could pay after the hold expired: the sats arrive but no booking is made.
+        expiry: input.expirySeconds,
         webhook: input.webhookUrl,
       },
     });
     if (!isRecord(created)) throw new AppError(502, "LNbits invoice response was not an object");
     const paymentHash = stringField(created, "payment_hash");
-    const bolt11 = stringField(created, "payment_request");
+    const bolt11 = stringField(created, "payment_request") || stringField(created, "bolt11");
     if (!paymentHash || !bolt11) {
       throw new AppError(502, "LNbits did not return a payment hash and invoice");
     }
@@ -61,34 +64,69 @@ export class LnbitsPaymentBackend implements PaymentBackend {
     let parsed: unknown;
     try {
       parsed = JSON.parse(input.rawBody.toString("utf8")) as unknown;
+      // LNbits 1.x posts payment.json() through httpx's json=, so the body is a JSON
+      // string that itself holds the payment object. Unwrap one level.
+      if (typeof parsed === "string") parsed = JSON.parse(parsed) as unknown;
     } catch {
       throw new AppError(400, "Invalid JSON");
     }
     if (!isRecord(parsed)) return { kind: "ignore" };
     const paymentHash = stringField(parsed, "payment_hash");
-    if (!paymentHash) return { kind: "ignore" };
+    if (!paymentHash || !/^[0-9a-f]{64}$/i.test(paymentHash)) return { kind: "ignore" };
     if (!lnbitsSettled(parsed)) return { kind: "ignore" };
-    return {
-      kind: "settled",
-      invoiceId: paymentHash,
-      paymentHash,
-      settledAt: input.nowIso,
-    };
+    // The webhook body is only a hint. Ask LNbits before confirming anything, so a
+    // leaked path secret alone cannot mark an unpaid invoice as paid.
+    return this.lookupInvoice(paymentHash, input.nowIso);
+  }
+
+  async lookupInvoice(invoiceId: string, nowIso: string): Promise<WebhookInterpretation> {
+    if (!/^[0-9a-f]{64}$/i.test(invoiceId)) return { kind: "ignore" };
+    const body = await requestJson(`${this.config.url}/api/v1/payments/${invoiceId.toLowerCase()}`, {
+      method: "GET",
+      headers: { "x-api-key": this.config.invoiceKey },
+    });
+    if (!isRecord(body) || body.paid !== true) return { kind: "ignore" };
+    return { kind: "settled", invoiceId, paymentHash: invoiceId, settledAt: nowIso };
   }
 
   async refund(input: RefundRequest): Promise<RefundResult> {
     if (!input.bolt11) {
       return {
         supported: false,
-        reason: "Not supported by this backend without a customer BOLT11. LNbits cannot reverse an invoice in place.",
+        reason:
+          "Not supported by this backend without a customer BOLT11. LNbits cannot reverse an invoice in place. Ask the player for a Lightning invoice for the refund amount.",
       };
+    }
+    if (!this.config.adminKey) {
+      return {
+        supported: false,
+        reason: "Not supported by this backend until LNBITS_ADMIN_KEY is set. LNbits needs the admin key to send a refund.",
+      };
+    }
+    const decoded = await requestJson(`${this.config.url}/api/v1/payments/decode`, {
+      method: "POST",
+      body: { data: input.bolt11 },
+    });
+    const msat = isRecord(decoded) && typeof decoded.amount_msat === "number" ? decoded.amount_msat : null;
+    if (msat == null || msat <= 0) {
+      throw new AppError(400, "The refund invoice must include an amount");
+    }
+    if (isRecord(decoded) && typeof decoded.payment_hash === "string" && decoded.payment_hash === input.invoiceId) {
+      throw new AppError(400, "That is the club's own invoice. Send a new invoice from the player's wallet.");
+    }
+    const limitSats =
+      input.paidSats ?? (input.amountMinor == null ? null : minorToSats(input.amountMinor, this.satsPerMinorUnit));
+    if (limitSats == null || msat > limitSats * 1000) {
+      throw new AppError(400, `The refund invoice asks for more than the ${limitSats ?? "?"} sats that were paid`);
     }
     const created = await requestJson(`${this.config.url}/api/v1/payments`, {
       method: "POST",
-      headers: { "x-api-key": this.config.invoiceKey },
+      headers: { "x-api-key": this.config.adminKey },
       body: { out: true, bolt11: input.bolt11 },
     });
     const paymentHash = isRecord(created) ? stringField(created, "payment_hash") : "";
+    const status = isRecord(created) ? stringField(created, "status").toLowerCase() : "";
+    if (status === "failed") throw new AppError(502, "LNbits could not pay the refund invoice");
     return {
       supported: true,
       refundId: paymentHash || `lnbits_${input.invoiceId}`,
