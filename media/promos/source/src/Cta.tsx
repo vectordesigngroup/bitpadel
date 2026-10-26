@@ -43,7 +43,7 @@ export const Cta: React.FC = () => {
           <div style={{display: 'flex', flexDirection: v ? 'column' : 'row', gap: v ? 20 : 50, alignItems: 'center'}}>
             {lines.map((l, i) => <In key={l} d={10 + i * 14} y={50}><H size={v ? 120 : 120} style={{color: i === 2 ? T.lime : T.text}}>{l}</H></In>)}
           </div>
-          <In d={60}><P size={v ? 42 : 46}>Code MIT · Docs CC BY-SA 4.0</P></In>
+          <In d={60}><P size={v ? 42 : 46}>Code AGPL-3.0 · Docs CC BY-SA 4.0</P></In>
         </div>
       </Scene>
       <Scene from={600} dur={120}>
