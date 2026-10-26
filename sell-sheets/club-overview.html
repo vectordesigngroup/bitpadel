@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BitPadel for club owners</title>
+<meta name="description" content="One-page overview of BitPadel for padel and pickleball club owners: booking, members, the front desk, branding, languages, reports, and Playtomic. Self-hosted and open source.">
+<meta name="theme-color" content="#0B1220">
+<link rel="canonical" href="https://vectordesigngroup.github.io/bitpadel/sell-sheets/club-overview.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sheets.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top no-print">
+  <div class="wrap top-row">
+    <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="30" height="30"><span><b>Bit</b><i>Padel</i></span></a>
+    <nav aria-label="Sell sheets">
+      <a href="../index.html">Home</a>
+      <a href="./">All sheets</a>
+      <a href="club-overview.html" aria-current="page">Overview</a>
+      <a href="payments.html">Payments</a>
+      <a href="access.html">Access</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+  <article class="sheet wrap">
+    <header class="sheet-intro">
+      <p class="eyebrow">Sell sheet · 1 of 3 · For club owners</p>
+      <h1>BitPadel for club owners</h1>
+      <p class="lede">Club software for padel and pickleball. You run it on your own computer. It is free and open source. This project does not charge a license fee and does not list a price.</p>
+      <p class="badge">Prototype: not yet tested with real money or real doors</p>
+    </header>
+
+    <div class="features">
+      <section class="card">
+        <h2>Court booking</h2>
+        <ul>
+          <li>Players pick a day on a calendar, then a time on a court grid.</li>
+          <li>They hold the time and pay. The booking confirms when payment settles. Unpaid holds expire.</li>
+          <li>The same time cannot be booked twice.</li>
+          <li>Players can filter by court, length, or sport. The sport list appears when court names include a sport, such as padel or pickleball.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Members and guests</h2>
+        <ul>
+          <li>Add a member, a membership type, and optional name, phone, email, and photo.</li>
+          <li>A household links a primary member and dependents. Each person still needs their own card or wallet. A household does not send a bill.</li>
+          <li>Guests stay off until you set a cap.</li>
+          <li>A named guest acknowledges a waiver. The form stores the version and the time. Marketing contact is opt-in and kept apart from the visit.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Front desk and admin</h2>
+        <ul>
+          <li>The desk shows who is on site. Checking someone out ends the visit. It does not lock a door.</li>
+          <li>Staff roles are owner, manager, front desk, and coach.</li>
+          <li>Admin is where you add courts, times, members, prices, and refunds.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Your club’s look and language</h2>
+        <ul>
+          <li>Set the club name, logo, colors, font, and footer. Until you do, pages say “Your club.”</li>
+          <li>BitPadel is the name of this software. Give your club its own name.</li>
+          <li>Pages can use English, Spanish, French, Italian, or Brazilian Portuguese. You set the club default. A language menu is on the member pages.</li>
+          <li>Spanish, French, Italian, and Brazilian Portuguese are machine drafts. A native speaker still needs to review them.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Reports and Playtomic</h2>
+        <ul>
+          <li>Download a sales file for a date range. End-of-day totals cover Lightning, Stripe, Square, and refunds.</li>
+          <li>That total is for your books. It is not a tax filing.</li>
+          <li>Playtomic sync is optional and read-only. It can import bookings and payment records. An imported time blocks a new hold on that court.</li>
+          <li>BitPadel does not write bookings back to Playtomic. Sync runs on a timer, or when you press Sync now.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>You host it</h2>
+        <ul>
+          <li>Your data stays on your machine. The code is free under AGPL-3.0.</li>
+          <li>If you change the software and run it for members, you share those changes with them.</li>
+          <li>The kit includes staff manuals, a pilot checklist, install notes, a Docker setup, and a blank financial model. You fill in your own numbers.</li>
+          <li>You can back up the database. Encryption is optional.</li>
+        </ul>
+      </section>
+
+      <section class="card planned span-2">
+        <h2>Planned, not available yet</h2>
+        <p>These items are on the roadmap and are not in the software today: tournaments and socials; open play and leagues; coach lessons; paddle, ball, and ball-machine rentals; a player CRM with leads and tags; online waiver signatures; an installable phone page; lockers; a vending-machine controller; lights and gear that follow a booking; a guest pass a member can sign. A workshop slide deck, a spreadsheet model with charts, and case studies are also still ahead.</p>
+      </section>
+      <section class="card caution span-2">
+        <h2>Before you rely on it</h2>
+        <ul>
+          <li>Card and Lightning payments start in test mode. The payments sheet says how.</li>
+          <li>Translations other than English are machine drafts pending native review.</li>
+          <li>Waiver and privacy wording needs a local legal review.</li>
+          <li>The door software does not control exits, fire egress, or other life-safety systems.</li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="actions no-print">
+      <a class="btn primary" href="club-overview.pdf">Download PDF</a>
+      <a class="btn secondary" href="payments.html">Payments sheet</a>
+    </p>
+    <p class="more">Also in this set: <a href="payments.html">Payments</a> · <a href="access.html">Access and the member experience</a></p>
+    <p class="colophon">BitPadel · free open-source club software · AGPL-3.0 · github.com/vectordesigngroup/bitpadel</p>
+  </article>
+</main>
+</body>
+</html>
