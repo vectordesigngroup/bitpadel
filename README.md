@@ -58,7 +58,7 @@ Club founders, coaches, Bitcoin educators and Lightning developers are welcome. 
 
 ## License
 
-- Code: [AGPL-3.0-only](LICENSE)
+- Code: [AGPL-3.0-only](LICENSE). Copyright and licensing notice: [NOTICE](NOTICE)
 - Docs, playbooks, templates and brand placeholders: [CC BY-SA 4.0](LICENSE-docs)
 - Names and logos: not licensed, see [TRADEMARKS.md](TRADEMARKS.md)
 
