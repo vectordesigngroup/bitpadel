@@ -6,7 +6,7 @@ import { AppError } from "./errors.js";
 import { many, one } from "./db.js";
 import { newId } from "./ids.js";
 import { readJson, requireAdmin, sendJson, sendText, type HttpReq, type Route } from "./http.js";
-import { applyPaymentEvent } from "./booking/service.js";
+import { applyIncomingPayment } from "./ledger/settle.js";
 import { cancelPlayerBooking } from "./player/cancel.js";
 import { optionalBolt11 } from "./routes-ops.js";
 import {
@@ -262,7 +262,7 @@ async function stripeWebhook(req: HttpReq, ctx: AppDeps): Promise<void> {
   const stripe = ctx.cards.get("stripe");
   if (!stripe) throw new AppError(404, "Stripe webhooks are not enabled");
   const event = await stripe.interpretWebhook({ headers: req.headers, rawBody: req.rawBody, nowIso: ctx.now().toISOString() });
-  const result = applyPaymentEvent(ctx.db, event, ctx.now());
+  const result = applyIncomingPayment(ctx.db, event, ctx.now());
   sendJson(req.res, 200, { outcome: result.outcome });
 }
 
@@ -270,7 +270,7 @@ async function squareWebhook(req: HttpReq, ctx: AppDeps): Promise<void> {
   const square = ctx.cards.get("square");
   if (!square) throw new AppError(404, "Square webhooks are not enabled");
   const event = await square.interpretWebhook({ headers: req.headers, rawBody: req.rawBody, nowIso: ctx.now().toISOString() });
-  const result = applyPaymentEvent(ctx.db, event, ctx.now());
+  const result = applyIncomingPayment(ctx.db, event, ctx.now());
   sendJson(req.res, 200, { outcome: result.outcome });
 }
 

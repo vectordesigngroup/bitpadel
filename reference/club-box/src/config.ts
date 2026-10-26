@@ -157,6 +157,8 @@ export type AppConfig = {
   logRetentionDays: number;
   trustProxy: boolean;
   staffToken: string | null;
+  /** Bearer token for vending and counter devices. Null refuses those routes. */
+  vendingDeviceToken: string | null;
   guestLimit: number;
   checkinStaleMinutes: number;
   visitRetentionDays: number;
@@ -263,6 +265,7 @@ export function loadConfig(env: Env): AppConfig {
     logRetentionDays: intEnv(env, "LOG_RETENTION_DAYS", 90, 1, 3650),
     trustProxy: boolEnv(env, "TRUST_PROXY", false),
     staffToken: optionalSecret(env.STAFF_TOKEN, "STAFF_TOKEN"),
+    vendingDeviceToken: optionalSecret(env.VENDING_DEVICE_TOKEN, "VENDING_DEVICE_TOKEN"),
     guestLimit: intEnv(env, "GUEST_LIMIT", 0, 0, 50),
     checkinStaleMinutes: intEnv(env, "CHECKIN_STALE_MINUTES", 480, 15, 10_080),
     visitRetentionDays: intEnv(env, "VISIT_RETENTION_DAYS", 30, 1, 3650),

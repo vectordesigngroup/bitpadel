@@ -183,6 +183,32 @@
         <button type="submit">Add member</button>
       </form>
       <div id="members"></div>
+      <form id="allowance-form" class="card">
+        <h2>Plan allowance</h2>
+        <p class="note">The club sets this amount. It is a recurring credit for one membership type. Spending uses the allowance first, then the tab. Unused credit from an earlier period is not paid out. Before a club uses this, a CPA and a Florida attorney should review stored value, unused balances, sales tax on items, and sats accounting.</p>
+        <label>Membership type
+          <select name="membershipType" id="allowance-type"></select>
+        </label>
+        <label>Amount in minor units
+          <input name="amountMinor" inputmode="numeric" required>
+        </label>
+        <label>Period
+          <select name="period">
+            <option value="visit">visit</option>
+            <option value="day">day</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+          </select>
+        </label>
+        <button type="submit">Save allowance</button>
+        <div id="allowances"></div>
+      </form>
+      <section class="card">
+        <h2>Ledger</h2>
+        <p class="note">Each line is kept. Amounts are whole minor units. A credit reduces the tab. A charge can also record sats when the club set a sats-per-minor rate.</p>
+        <p><a href="/api/admin/ledger.csv" id="ledger-csv">Download ledger CSV</a></p>
+        <div id="ledger"></div>
+      </section>
       <form id="staff-form" class="card">
         <h2>Staff accounts</h2>
         <p class="note">Owners and managers can add accounts. A manager cannot create an owner. The admin token still works.</p>

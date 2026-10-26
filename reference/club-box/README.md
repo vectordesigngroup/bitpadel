@@ -147,7 +147,7 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 | `PUBLIC_BASE_URL` | Origin wallets and webhooks call. Must match the URL the phone can reach. |
 | `CURRENCY`, `CURRENCY_DECIMALS` | Required. Slot currency and the scale of minor units. |
 | `DEFAULT_SLOT_PRICE_MINOR` | Optional helper. Empty means every admin request must include `priceMinor`. |
-| `SATS_PER_MINOR_UNIT` | Required for LNbits. BTCPay invoices in `CURRENCY` and converts itself. |
+| `SATS_PER_MINOR_UNIT` | Required for LNbits. BTCPay invoices in `CURRENCY` and converts itself. Also required when a counter or vending machine posts a charge in sats. That sats amount must divide into a whole number of minor units. |
 | `HOLD_MINUTES` | Unpaid hold lifetime. |
 | `PAYMENT_BACKEND` | `mock`, `btcpay`, or `lnbits`. This is the Lightning backend only. |
 | `BTCPAY_URL`, `BTCPAY_STORE_ID`, `BTCPAY_API_KEY`, `BTCPAY_WEBHOOK_SECRET` | Greenfield. Required when the backend is `btcpay`. |
@@ -164,6 +164,7 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 | `CHALLENGE_RATE_LIMIT_MAX` | How often the kiosk may mint a new QR. |
 | `ADMIN_TOKEN` | Required. Bearer token for `/api/admin/*`. At least 16 characters. Named staff logins are optional beside it. |
 | `STAFF_TOKEN` | Optional shared desk token. At least 16 characters. |
+| `VENDING_DEVICE_TOKEN` | Optional bearer token for `/api/devices/vending/*`. At least 16 characters. Empty leaves those routes closed. |
 | `ACCESS_AREAS` | Comma-separated ids such as `lounge,after-hours`. |
 | `ACCESS_AREA_HOURS` | Optional `area=HH:MM-HH:MM` pairs. Empty means the area is allowed whenever the server is up. A window that wraps past midnight is written with the start later than the end. |
 | `CLUB_TIMEZONE` | IANA name. Default `UTC`. Used for hours and generated slots. |
@@ -323,6 +324,14 @@ An unlock by wallet or card records a check-in. The kiosk shows the name and pho
 `GUEST_LIMIT` defaults to 0, so guests stay off until you set a cap. A member row can override it. Named guests need a waiver acknowledgement. The marketing checkbox is off unless the guest turns it on. That consent is stored apart from the visit, with the time and the consent-text version. Export `GET /api/admin/marketing.csv` for opted-in contacts only. Unsubscribe and deletion use the privacy token from the guest form.
 
 Collect as little as you need. Staff routes accept the admin token or `STAFF_TOKEN`. This repository's notice template is [templates/privacy-notice.md](../../templates/privacy-notice.md). It is not legal advice. US state privacy laws, CAN-SPAM, TCPA for texts, and GDPR where it applies are local questions for a lawyer. The app does not send email or SMS.
+
+## Allowance and tab
+
+A membership plan can include a recurring credit (an allowance) and a member can carry a tab. The club sets both amounts. Nothing in this app picks a price. Spending uses the allowance for the current period first. The rest is added to the tab. A guest charge is stored on the hosting member and keeps the guest's name.
+
+Admin sets the plan allowance, the member's tab limit, a freeze, and an adjustment with a reason. The desk posts a charge. A vending machine with `VENDING_DEVICE_TOKEN` posts a charge after an NFC tap or an LNURL-auth signature. The member sees the balance on `/account` and can settle the tab with Lightning or with an enabled card provider. The ledger is append-only. Rows are integer minor units, and sats only when `SATS_PER_MINOR_UNIT` makes the conversion exact.
+
+The design, routes, and the note to check stored value, unused balances, sales tax, and sats accounting with a CPA and a Florida attorney are in [docs/allowance-and-tab.md](../../docs/allowance-and-tab.md).
 
 ## Read-only Playtomic sync
 

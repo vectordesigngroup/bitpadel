@@ -10,6 +10,17 @@ import { aesCmac, equalBytes, truncateMac } from "./aes.js";
 import { fromHex } from "./bytes.js";
 import { diversifyDesfireKey, diversifyNtagKey } from "./diversify.js";
 import type { CardPresentation } from "./reader.js";
+
+export type CardProof =
+  | { kind: "sun"; piccDataHex: string; cmacHex: string }
+  | { kind: "desfire"; uidHex: string; counter: number; cmacHex: string }
+  | { kind: "uid-insecure"; uidHex: string };
+
+export type AuthenticatedCard = {
+  memberId: string;
+  uid: string;
+  credentialType: "ntag424-sun" | "desfire" | "uid-insecure";
+};
 import { counterToLe, decryptSunPicc, verifySunMessage } from "./sun.js";
 
 type CardRow = {
@@ -19,12 +30,6 @@ type CardRow = {
   status: string;
   counter: number;
   member_status: string;
-};
-
-type ResolvedCard = {
-  memberId: string;
-  uid: string;
-  credentialType: "ntag424-sun" | "desfire" | "uid-insecure";
 };
 
 /**
@@ -39,7 +44,7 @@ export async function presentCard(
 ): Promise<{ checkinId: string; token: string; displayName: string }> {
   if (!deps.callbacks.allow(`ip:${ip}`)) throw new AppError(429, "Too many attempts. Wait and try again.");
   if (!deps.config.bookingEntry) assertAreaAvailable(deps, presentation.area);
-  const card = resolveCard(deps, presentation);
+  const card = authenticateCard(deps, proofOf(presentation));
   if (!deps.callbacks.allow(`card:${card.uid}`)) throw new AppError(429, "Too many attempts. Wait and try again.");
   const view = await finishEntry(deps, {
     memberId: card.memberId,
@@ -52,14 +57,38 @@ export async function presentCard(
   return { checkinId: view.id, token: view.token, displayName: view.displayName };
 }
 
-function resolveCard(deps: AccessDeps, presentation: CardPresentation): ResolvedCard {
+/**
+ * Check a card and advance its counter. Does not pulse a door and does not open a visit.
+ * A refused charge can still leave the counter advanced: the tap itself is one-time.
+ */
+export function authenticateCard(deps: AccessDeps, proof: CardProof): AuthenticatedCard {
+  switch (proof.kind) {
+    case "sun":
+      return resolveSun(deps, proof);
+    case "desfire":
+      return resolveDesfire(deps, proof);
+    case "uid-insecure":
+      return resolveUid(deps, proof);
+    default: {
+      const unknown: never = proof;
+      throw new AppError(400, `Unknown card presentation ${String(unknown)}`);
+    }
+  }
+}
+
+function proofOf(presentation: CardPresentation): CardProof {
   switch (presentation.kind) {
     case "sun":
-      return resolveSun(deps, presentation);
+      return { kind: "sun", piccDataHex: presentation.piccDataHex, cmacHex: presentation.cmacHex };
     case "desfire":
-      return resolveDesfire(deps, presentation);
+      return {
+        kind: "desfire",
+        uidHex: presentation.uidHex,
+        counter: presentation.counter,
+        cmacHex: presentation.cmacHex,
+      };
     case "uid-insecure":
-      return resolveUid(deps, presentation);
+      return { kind: "uid-insecure", uidHex: presentation.uidHex };
     default: {
       const unknown: never = presentation;
       throw new AppError(400, `Unknown card presentation ${String(unknown)}`);
@@ -67,7 +96,7 @@ function resolveCard(deps: AccessDeps, presentation: CardPresentation): Resolved
   }
 }
 
-function resolveSun(deps: AccessDeps, presentation: Extract<CardPresentation, { kind: "sun" }>): ResolvedCard {
+function resolveSun(deps: AccessDeps, presentation: Extract<CardProof, { kind: "sun" }>): AuthenticatedCard {
   const keys = deps.config.nfc.keys;
   if (!keys.masterKey || !keys.metaReadKey) throw new AppError(503, "Card verification is not configured");
   const opened = decryptSunPicc(keys.metaReadKey, presentation.piccDataHex);
@@ -87,8 +116,8 @@ function resolveSun(deps: AccessDeps, presentation: Extract<CardPresentation, { 
 
 function resolveDesfire(
   deps: AccessDeps,
-  presentation: Extract<CardPresentation, { kind: "desfire" }>,
-): ResolvedCard {
+  presentation: Extract<CardProof, { kind: "desfire" }>,
+): AuthenticatedCard {
   const master = deps.config.nfc.keys.masterKey;
   if (!master) throw new AppError(503, "Card verification is not configured");
   let uid: Buffer;
@@ -108,7 +137,7 @@ function resolveDesfire(
   return { memberId: card.member_id, uid: uid.toString("hex"), credentialType: "desfire" };
 }
 
-function resolveUid(deps: AccessDeps, presentation: Extract<CardPresentation, { kind: "uid-insecure" }>): ResolvedCard {
+function resolveUid(deps: AccessDeps, presentation: Extract<CardProof, { kind: "uid-insecure" }>): AuthenticatedCard {
   if (deps.config.nfc.uidMode !== "insecure-dev") throw new AppError(403, "UID-only cards are disabled");
   let uid: Buffer;
   try {

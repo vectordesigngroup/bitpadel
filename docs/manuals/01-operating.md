@@ -89,6 +89,20 @@ A household is a label plus a primary member and optional dependents. It does no
 
 **Check out** when the member leaves. Do not use checkout to lock the door. Checkout only ends the visit row.
 
+## Counter charges
+
+On `/desk`, **Charge a member** posts a drink or a small item.
+
+1. Paste the member id, or press **Charge this member** on someone who is on site.
+2. If the item is for a guest, paste that guest id from the check-in. The charge stays on the hosting member and the ledger keeps the guest's name.
+3. Type what was sold and the amount in minor units. The club sets that amount. This manual does not.
+4. Press **Post charge**. The screen shows how much came from the allowance and how much went on the tab.
+5. **Look up balance** before you sell if you want to see what is left.
+
+Use a request id when the same tap might be sent twice. Sending that id again with the same charge does not add a second line. A different amount with the same id is refused.
+
+If the tab is frozen, or the sale would pass the member's tab limit, the charge is refused. Ask a manager. You cannot change the limit, freeze the tab, or edit a posted line from the desk.
+
 ## Court time paid with Lightning
 
 1. On `/`, pick the court if you use the court buttons.

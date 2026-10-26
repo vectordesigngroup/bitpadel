@@ -6,7 +6,7 @@ import type Database from "better-sqlite3";
 import type { AppConfig } from "../config.js";
 import { many } from "../db.js";
 import { newId } from "../ids.js";
-import { resolveActor } from "./gate.js";
+import { resolveActor, type Actor } from "./gate.js";
 
 export type StaffActionView = {
   id: string;
@@ -18,6 +18,39 @@ export type StaffActionView = {
   status: number;
 };
 
+/** Plain label stored on a ledger line. It is not a secret. */
+export function describeActor(actor: Actor | null): string {
+  if (!actor) return "unknown";
+  switch (actor.kind) {
+    case "legacy-admin":
+      return "admin-token";
+    case "legacy-staff":
+      return "staff-token";
+    case "account":
+      return `${actor.displayName} (${actor.username})`;
+    default: {
+      const unknown: never = actor;
+      return String(unknown);
+    }
+  }
+}
+
+function actorKindOf(actor: Actor | null): string {
+  if (!actor) return "unknown";
+  switch (actor.kind) {
+    case "legacy-admin":
+      return "legacy-admin";
+    case "legacy-staff":
+      return "legacy-staff";
+    case "account":
+      return actor.role;
+    default: {
+      const unknown: never = actor;
+      return String(unknown);
+    }
+  }
+}
+
 export function recordStaffAction(
   db: Database.Database,
   config: AppConfig,
@@ -26,29 +59,8 @@ export function recordStaffAction(
   if (input.method === "GET" || input.method === "HEAD") return;
   if (!input.path.startsWith("/api/admin")) return;
   const actor = resolveActor({ headers: input.headers }, config, db, input.now);
-  let actorKind = "unknown";
-  let actorLabel = "unknown";
-  if (actor) {
-    switch (actor.kind) {
-      case "legacy-admin":
-        actorKind = "legacy-admin";
-        actorLabel = "admin-token";
-        break;
-      case "legacy-staff":
-        actorKind = "legacy-staff";
-        actorLabel = "staff-token";
-        break;
-      case "account":
-        actorKind = actor.role;
-        actorLabel = `${actor.displayName} (${actor.username})`;
-        break;
-      default: {
-        const unknown: never = actor;
-        actorKind = "unknown";
-        actorLabel = String(unknown);
-      }
-    }
-  }
+  const actorKind = actorKindOf(actor);
+  const actorLabel = describeActor(actor);
   db.prepare(
     `INSERT INTO staff_actions (id, at, actor_kind, actor_label, method, path, status)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
