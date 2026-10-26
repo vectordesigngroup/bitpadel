@@ -37,6 +37,7 @@
     </a>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
     <nav class="nav" id="nav" aria-label="Main">
+      <a href="#videos">Videos</a>
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
       <a href="#roadmap">Roadmap</a>
@@ -78,6 +79,55 @@
       <li>Stripe · Square</li>
       <li>LNURL-auth · NFC</li>
     </ul>
+  </div>
+</section>
+
+<section class="block alt" id="videos" aria-labelledby="videos-h">
+  <div class="wrap">
+    <p class="eyebrow">Videos</p>
+    <h2 id="videos-h">BitPadel in 30 seconds</h2>
+    <p class="intro">Three short promos for the open kit. On a phone in portrait the vertical (9:16) cut plays; both sizes can be downloaded below each video. Music and sound effects only, no voiceover; all words are on screen. Source and posters are in <a href="https://github.com/vectordesigngroup/bitpadel/tree/main/media/promos">media/promos</a>.</p>
+    <div class="videos">
+      <figure class="video-card">
+        <video controls playsinline preload="metadata" poster="assets/promo-01-mission.jpg" width="1920" height="1080"
+          data-v-src="assets/video/bitpadel-01-mission-9x16.mp4" data-v-poster="assets/promo-01-mission-9x16.jpg"
+          aria-label="Mission promo video, about 30 seconds">
+          <source src="assets/video/bitpadel-01-mission-16x9.mp4" type="video/mp4">
+          Your browser can't play this video. <a href="assets/video/bitpadel-01-mission-16x9.mp4">Download the MP4</a>.
+        </video>
+        <figcaption>
+          <h3>Mission</h3>
+          <p>Padel meets Bitcoin adoption. The “mine” line is labeled on screen as a metaphor.</p>
+          <p class="dl">0:30 · <a href="assets/video/bitpadel-01-mission-16x9.mp4">16:9 MP4</a> · <a href="assets/video/bitpadel-01-mission-9x16.mp4">9:16 vertical MP4</a></p>
+        </figcaption>
+      </figure>
+      <figure class="video-card">
+        <video controls playsinline preload="metadata" poster="assets/promo-02-kit.jpg" width="1920" height="1080"
+          data-v-src="assets/video/bitpadel-02-kit-9x16.mp4" data-v-poster="assets/promo-02-kit-9x16.jpg"
+          aria-label="What’s in the kit promo video, about 30 seconds">
+          <source src="assets/video/bitpadel-02-kit-16x9.mp4" type="video/mp4">
+          Your browser can't play this video. <a href="assets/video/bitpadel-02-kit-16x9.mp4">Download the MP4</a>.
+        </video>
+        <figcaption>
+          <h3>What’s in the kit</h3>
+          <p>Playbooks, templates, Lightning court booking, and wallet or NFC door entry.</p>
+          <p class="dl">0:30 · <a href="assets/video/bitpadel-02-kit-16x9.mp4">16:9 MP4</a> · <a href="assets/video/bitpadel-02-kit-9x16.mp4">9:16 vertical MP4</a></p>
+        </figcaption>
+      </figure>
+      <figure class="video-card">
+        <video controls playsinline preload="metadata" poster="assets/promo-03-cta.jpg" width="1920" height="1080"
+          data-v-src="assets/video/bitpadel-03-cta-9x16.mp4" data-v-poster="assets/promo-03-cta-9x16.jpg"
+          aria-label="Join in promo video, about 30 seconds">
+          <source src="assets/video/bitpadel-03-cta-16x9.mp4" type="video/mp4">
+          Your browser can't play this video. <a href="assets/video/bitpadel-03-cta-16x9.mp4">Download the MP4</a>.
+        </video>
+        <figcaption>
+          <h3>Join in</h3>
+          <p>Who the project is looking for: club founders, coaches, Bitcoin educators and Lightning devs.</p>
+          <p class="dl">0:30 · <a href="assets/video/bitpadel-03-cta-16x9.mp4">16:9 MP4</a> · <a href="assets/video/bitpadel-03-cta-9x16.mp4">9:16 vertical MP4</a></p>
+        </figcaption>
+      </figure>
+    </div>
   </div>
 </section>
 
@@ -289,12 +339,6 @@ npm run typecheck</code></pre></div>
       </div>
     </div>
 
-    <h3 style="margin-top:28px">Watch the promos</h3>
-    <div class="promos">
-      <a href="https://github.com/vectordesigngroup/bitpadel/blob/main/media/promos/bitpadel-01-mission-16x9.mp4"><img src="assets/promo-01-mission.jpg" alt="Poster for the Mission promo: A different way to mine Bitcoin, labeled as a metaphor" width="960" height="540" loading="lazy"><span>Mission</span></a>
-      <a href="https://github.com/vectordesigngroup/bitpadel/blob/main/media/promos/bitpadel-02-kit-16x9.mp4"><img src="assets/promo-02-kit.jpg" alt="Poster for the What's in the kit promo: playbooks list" width="960" height="540" loading="lazy"><span>What's in the kit</span></a>
-      <a href="https://github.com/vectordesigngroup/bitpadel/blob/main/media/promos/bitpadel-03-cta-16x9.mp4"><img src="assets/promo-03-cta.jpg" alt="Poster for the call-to-action promo" width="960" height="540" loading="lazy"><span>Join in</span></a>
-    </div>
   </div>
 </section>
 
@@ -381,6 +425,19 @@ npm run typecheck</code></pre></div>
           b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500);
         });
       });
+    });
+    // Videos: play the vertical cut on narrow portrait screens, and only one video at a time.
+    var vids = document.querySelectorAll('.video-card video');
+    if (window.matchMedia && window.matchMedia('(max-width: 640px) and (orientation: portrait)').matches) {
+      vids.forEach(function (v) {
+        var s = v.querySelector('source');
+        s.src = v.dataset.vSrc; v.poster = v.dataset.vPoster;
+        v.setAttribute('width', '1080'); v.setAttribute('height', '1920');
+        v.classList.add('vertical'); v.load();
+      });
+    }
+    vids.forEach(function (v) {
+      v.addEventListener('play', function () { vids.forEach(function (o) { if (o !== v) o.pause(); }); });
     });
   })();
 </script>
