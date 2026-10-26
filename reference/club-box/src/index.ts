@@ -83,7 +83,7 @@ try {
       syncPlaytomic(db, config, playtomic, now()).catch((error: unknown) => {
         const message = error instanceof Error ? error.message : "error";
         log("error", "playtomic sync failed", { error: message });
-        notifyAdminAlert(notifier, config, `Playtomic sync failed: ${message}`).catch((alertError: unknown) => {
+        notifyAdminAlert(notifier, config, `Playtomic sync failed: ${message}`, db).catch((alertError: unknown) => {
           log("error", "admin alert failed", {
             error: alertError instanceof Error ? alertError.message : "error",
           });

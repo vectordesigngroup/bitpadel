@@ -39,6 +39,7 @@ import { log } from "./log.js";
 import { sendReceipt } from "./notify/service.js";
 import { pngQr } from "./qr.js";
 import { accessRoutes } from "./routes-access.js";
+import { brandRoutes } from "./routes-brand.js";
 import { opsRoutes } from "./routes-ops.js";
 import { pilotRoutes } from "./routes-pilot.js";
 import { playerFromRequest } from "./player/service.js";
@@ -91,6 +92,7 @@ export function buildRoutes(ctx: AppDeps): Route[] {
     { method: "POST", pattern: "/api/admin/members/:id/enroll", handler: (req) => adminEnroll(req, ctx) },
     { method: "POST", pattern: "/api/admin/keys/:id/revoke", handler: (req) => adminRevokeKey(req, ctx) },
     { method: "GET", pattern: "/api/admin/audit", handler: (req) => adminAudit(req, ctx) },
+    ...brandRoutes(ctx),
     ...accessRoutes(ctx),
     ...playtomicRoutes(ctx),
     ...opsRoutes(ctx),
@@ -548,12 +550,16 @@ async function deliverReceipt(ctx: AppDeps, bookingId: string): Promise<void> {
   );
   if (!row?.receipt_email) return;
   try {
-    await sendReceipt(ctx.notifier, {
-      to: row.receipt_email,
-      bookingId,
-      amountMinor: row.amount_minor,
-      currency: row.currency,
-    });
+    await sendReceipt(
+      ctx.notifier,
+      {
+        to: row.receipt_email,
+        bookingId,
+        amountMinor: row.amount_minor,
+        currency: row.currency,
+      },
+      { db: ctx.db, publicBaseUrl: ctx.config.publicBaseUrl },
+    );
   } catch (error) {
     log("error", "receipt failed", { error: error instanceof Error ? error.message : "error" });
   }

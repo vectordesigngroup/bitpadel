@@ -2,15 +2,27 @@
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
 import type Database from "better-sqlite3";
+import { applyEmailBrand } from "../brand/email.js";
+import { defaultClubBrand } from "../brand/model.js";
+import { loadClubBrand } from "../brand/store.js";
 import type { AppConfig } from "../config.js";
 import { one } from "../db.js";
 import { AppError } from "../errors.js";
 import { log } from "../log.js";
 import type { Channel, MessageKind, Notifier, OutboundMessage } from "./types.js";
 
-export async function sendTransactional(notifier: Notifier, message: OutboundMessage): Promise<{ id: string }> {
+export type EmailBrandSource = {
+  db: Database.Database;
+  publicBaseUrl?: string;
+};
+
+export async function sendTransactional(
+  notifier: Notifier,
+  message: OutboundMessage,
+  source?: EmailBrandSource,
+): Promise<{ id: string }> {
   if (message.kind !== "transactional") throw new AppError(500, "Expected a transactional message");
-  return providerFor(notifier, message.channel).send(message);
+  return providerFor(notifier, message.channel).send(withBrand(message, source));
 }
 
 /** Marketing never sends unless a consent row is still active. */
@@ -18,12 +30,13 @@ export async function sendMarketing(
   db: Database.Database,
   notifier: Notifier,
   message: OutboundMessage,
+  publicBaseUrl?: string,
 ): Promise<{ id: string }> {
   if (message.kind !== "marketing") throw new AppError(500, "Expected a marketing message");
   if (!isOptedIn(db, message.channel, message.to)) {
     throw new AppError(409, "That contact has not opted in to marketing");
   }
-  return providerFor(notifier, message.channel).send(message);
+  return providerFor(notifier, message.channel).send(withBrand(message, { db, publicBaseUrl }));
 }
 
 export function isOptedIn(db: Database.Database, channel: Channel, to: string): boolean {
@@ -40,17 +53,27 @@ export function isOptedIn(db: Database.Database, channel: Channel, to: string): 
   return Boolean(row);
 }
 
-export async function notifyAdminAlert(notifier: Notifier, config: AppConfig, text: string): Promise<void> {
+export async function notifyAdminAlert(
+  notifier: Notifier,
+  config: AppConfig,
+  text: string,
+  db?: Database.Database,
+): Promise<void> {
+  const source = db ? { db, publicBaseUrl: config.publicBaseUrl } : undefined;
   const jobs: Array<Promise<unknown>> = [];
   if (config.notifyAdminEmail) {
     jobs.push(
-      sendTransactional(notifier, {
-        channel: "email",
-        kind: "transactional",
-        to: config.notifyAdminEmail,
-        subject: "Club alert",
-        text,
-      }),
+      sendTransactional(
+        notifier,
+        {
+          channel: "email",
+          kind: "transactional",
+          to: config.notifyAdminEmail,
+          subject: "Club alert",
+          text,
+        },
+        source,
+      ),
     );
   }
   if (config.notifyAdminSms) {
@@ -76,30 +99,40 @@ export async function notifyAdminAlert(notifier: Notifier, config: AppConfig, te
 export async function sendReceipt(
   notifier: Notifier,
   input: { to: string; bookingId: string; amountMinor: number; currency: string },
+  source?: EmailBrandSource,
 ): Promise<void> {
-  await sendTransactional(notifier, {
-    channel: "email",
-    kind: "transactional",
-    to: input.to,
-    subject: "Court booking receipt",
-    text: `Booking ${input.bookingId} is paid. Amount ${input.amountMinor} ${input.currency} minor units. This receipt is transactional.`,
-  });
+  await sendTransactional(
+    notifier,
+    {
+      channel: "email",
+      kind: "transactional",
+      to: input.to,
+      subject: "Court booking receipt",
+      text: `Booking ${input.bookingId} is paid. Amount ${input.amountMinor} ${input.currency} minor units. This receipt is transactional.`,
+    },
+    source,
+  );
 }
 
 export async function sendPrivacyLink(
   notifier: Notifier,
   config: AppConfig,
   input: { contactKind: "email" | "phone"; to: string; privacyToken: string },
+  db?: Database.Database,
 ): Promise<void> {
   const url = `${config.publicBaseUrl}/privacy?token=${encodeURIComponent(input.privacyToken)}`;
   const channel: Channel = input.contactKind === "email" ? "email" : "sms";
-  await sendTransactional(notifier, {
-    channel,
-    kind: "transactional",
-    to: input.to,
-    subject: channel === "email" ? "Your privacy choices" : null,
-    text: `Privacy choices for this visit: ${url}`,
-  });
+  await sendTransactional(
+    notifier,
+    {
+      channel,
+      kind: "transactional",
+      to: input.to,
+      subject: channel === "email" ? "Your privacy choices" : null,
+      text: `Privacy choices for this visit: ${url}`,
+    },
+    db ? { db, publicBaseUrl: config.publicBaseUrl } : undefined,
+  );
 }
 
 export async function sendHouseholdNotice(
@@ -107,17 +140,28 @@ export async function sendHouseholdNotice(
   notifier: Notifier,
   primaryMemberId: string,
   text: string,
+  publicBaseUrl?: string,
 ): Promise<void> {
   const row = one<{ email: string | null }>(db, "SELECT email FROM members WHERE id = ?", primaryMemberId);
   const email = row?.email?.trim() ?? "";
   if (!email) return;
-  await sendTransactional(notifier, {
-    channel: "email",
-    kind: "transactional",
-    to: email,
-    subject: "Household update",
-    text,
-  });
+  await sendTransactional(
+    notifier,
+    {
+      channel: "email",
+      kind: "transactional",
+      to: email,
+      subject: "Household update",
+      text,
+    },
+    { db, publicBaseUrl },
+  );
+}
+
+function withBrand(message: OutboundMessage, source?: EmailBrandSource): OutboundMessage {
+  if (message.channel !== "email") return message;
+  const brand = source ? loadClubBrand(source.db) : defaultClubBrand();
+  return applyEmailBrand(brand, message, source?.publicBaseUrl);
 }
 
 function providerFor(notifier: Notifier, channel: Channel) {

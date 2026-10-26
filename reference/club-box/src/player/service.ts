@@ -34,13 +34,17 @@ export async function requestPlayerCode(
      VALUES (?, ?, ?, ?, NULL, ?)`,
   ).run(newId("pcode"), email, hashCode(code), expires, now.toISOString());
   const link = `${config.publicBaseUrl}/account`;
-  await sendTransactional(notifier, {
-    channel: "email",
-    kind: "transactional",
-    to: email,
-    subject: "Your court booking code",
-    text: `Your login code is ${code}. It expires in 15 minutes. Open ${link} and enter it. This is not a marketing message.`,
-  });
+  await sendTransactional(
+    notifier,
+    {
+      channel: "email",
+      kind: "transactional",
+      to: email,
+      subject: "Your court booking code",
+      text: `Your login code is ${code}. It expires in 15 minutes. Open ${link} and enter it. This is not a marketing message.`,
+    },
+    { db, publicBaseUrl: config.publicBaseUrl },
+  );
 }
 
 export function openPlayerSession(

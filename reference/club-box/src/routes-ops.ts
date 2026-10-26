@@ -168,13 +168,18 @@ async function marketingSend(req: HttpReq, ctx: AppDeps): Promise<void> {
   const body = asObject(readJson(req));
   const channel = requiredString(body, "channel", 8);
   if (!isChannel(channel)) throw new AppError(400, "channel must be email or sms");
-  const sent = await sendMarketing(ctx.db, ctx.notifier, {
-    channel,
-    kind: "marketing",
-    to: requiredString(body, "to", 200),
-    subject: channel === "email" ? requiredString(body, "subject", 120) : null,
-    text: requiredString(body, "text", 2000),
-  });
+  const sent = await sendMarketing(
+    ctx.db,
+    ctx.notifier,
+    {
+      channel,
+      kind: "marketing",
+      to: requiredString(body, "to", 200),
+      subject: channel === "email" ? requiredString(body, "subject", 120) : null,
+      text: requiredString(body, "text", 2000),
+    },
+    ctx.config.publicBaseUrl,
+  );
   sendJson(req.res, 200, sent);
 }
 

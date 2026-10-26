@@ -405,6 +405,7 @@ export async function finishEntry(
         deps.notifier,
         deps.config,
         `Entry pulse failed for area ${input.area} (${pulse.reason}). People can still leave. This software does not release doors for fire.`,
+        deps.db,
       );
     }
     throw new AppError(502, "Entry controller did not respond. Use a fob, PIN, or staff.");

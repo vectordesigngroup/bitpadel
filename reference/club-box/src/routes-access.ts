@@ -145,11 +145,16 @@ async function namedGuest(req: HttpReq, ctx: AppDeps): Promise<void> {
     now: ctx.now(),
   });
   try {
-    await sendPrivacyLink(ctx.notifier, ctx.config, {
-      contactKind: kind,
-      to: contactValue,
-      privacyToken: created.privacyToken,
-    });
+    await sendPrivacyLink(
+      ctx.notifier,
+      ctx.config,
+      {
+        contactKind: kind,
+        to: contactValue,
+        privacyToken: created.privacyToken,
+      },
+      ctx.db,
+    );
   } catch (error) {
     log("error", "privacy link failed", { error: error instanceof Error ? error.message : "error" });
   }
@@ -243,6 +248,7 @@ async function household(req: HttpReq, ctx: AppDeps): Promise<void> {
       ctx.notifier,
       primaryMemberId,
       "A household was created and this membership is the primary contact. This notice is transactional.",
+      ctx.config.publicBaseUrl,
     );
   } catch (error) {
     log("error", "household notice failed", { error: error instanceof Error ? error.message : "error" });
@@ -269,6 +275,7 @@ async function householdMember(req: HttpReq, ctx: AppDeps): Promise<void> {
         ctx.notifier,
         primary.primary_member_id,
         "A household membership was updated. This notice is transactional.",
+        ctx.config.publicBaseUrl,
       );
     } catch (error) {
       log("error", "household notice failed", { error: error instanceof Error ? error.message : "error" });

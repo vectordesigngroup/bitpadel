@@ -32,6 +32,7 @@ export class PostmarkEmailProvider implements MessageProvider {
           To: message.to,
           Subject: message.subject ?? "Club message",
           TextBody: message.text,
+          ...(message.html ? { HtmlBody: message.html } : {}),
           MessageStream: "outbound",
         }),
         redirect: "error",

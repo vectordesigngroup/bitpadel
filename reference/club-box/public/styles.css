@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 /* Copyright (c) 2026 Daniel Solano and BitPadel contributors */
 
-/* Placeholder palette from the kit brand. Replace it with your club's own. */
+/* Placeholder palette. /brand.css overrides these after an admin saves branding. */
 :root {
   --bg: #0f172a;
   --surface: #1e293b;
@@ -36,8 +36,8 @@ section, .card, form.card {
   margin: 16px 0;
 }
 label { display: block; margin: 12px 0; }
-input, select, button { font: inherit; }
-input, select {
+input, select, textarea, button { font: inherit; }
+input, select, textarea {
   width: 100%;
   margin-top: 4px;
   padding: 10px;
@@ -59,7 +59,7 @@ button, .button {
   cursor: pointer;
 }
 button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -72,6 +72,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .kiosk-main img { width: min(360px, 80vw); height: auto; background: white; border-radius: 12px; }
 .danger { color: var(--danger); }
 footer { padding: 24px 0 40px; }
+.brand-name { display: flex; gap: 10px; align-items: center; margin: 0; font-weight: 700; }
+.brand-logo { height: 40px; width: auto; max-width: 200px; object-fit: contain; }
+.brand-links { display: flex; flex-wrap: wrap; gap: 12px; }
+.brand-contact:empty, .brand-links:empty { display: none; }
+.brand-preview { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 12px; }
+.color-row { display: grid; grid-template-columns: 72px 1fr; gap: 8px; align-items: end; }
+.color-row input[type="color"] { padding: 0; height: 42px; }
 @media (max-width: 640px) {
   header { flex-direction: column; align-items: flex-start; gap: 8px; }
 }

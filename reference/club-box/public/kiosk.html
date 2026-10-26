@@ -7,10 +7,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Door kiosk</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/brand.css">
 </head>
 <body>
   <header>
-    <p>Club box</p>
+    <p class="brand-name"><img class="brand-logo" alt="" hidden><span class="brand-name-text">Your club</span></p>
     <nav>
       <a href="/">Booking</a>
       <a href="/kiosk" aria-current="page">Door kiosk</a>
@@ -40,6 +41,12 @@
       <p>Wallet sign-in needs this page's script and the local server. Use a fob, a PIN, or staff. Exits do not use this screen.</p>
     </noscript>
   </main>
+  <footer class="brand-footer">
+    <p class="brand-footer-text">This look is a placeholder. Give your club its own name and logo. The BitPadel name and logo are not your club's brand.</p>
+    <p class="brand-contact"></p>
+    <p class="brand-links"></p>
+  </footer>
+  <script src="/brand.js"></script>
   <script src="/kiosk.js"></script>
 </body>
 </html>

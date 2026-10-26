@@ -10,6 +10,8 @@ export type OutboundMessage = {
   to: string;
   subject: string | null;
   text: string;
+  /** Set by email branding. Providers that understand HTML include it. */
+  html?: string;
 };
 
 /**

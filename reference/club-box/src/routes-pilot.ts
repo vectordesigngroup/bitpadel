@@ -244,13 +244,17 @@ async function dailyEmail(req: HttpReq, ctx: AppDeps): Promise<void> {
   const to = ctx.config.dailySummaryEmail ?? ctx.config.notifyAdminEmail;
   if (!to) throw new AppError(400, "Set DAILY_SUMMARY_EMAIL or NOTIFY_ADMIN_EMAIL");
   const summary = dailySummary(ctx.db, ctx.config, date);
-  await sendTransactional(ctx.notifier, {
-    channel: "email",
-    kind: "transactional",
-    to,
-    subject: `Daily sales ${summary.date}`,
-    text: summaryText(summary),
-  });
+  await sendTransactional(
+    ctx.notifier,
+    {
+      channel: "email",
+      kind: "transactional",
+      to,
+      subject: `Daily sales ${summary.date}`,
+      text: summaryText(summary),
+    },
+    { db: ctx.db, publicBaseUrl: ctx.config.publicBaseUrl },
+  );
   sendJson(req.res, 200, { sent: true, date: summary.date });
 }
 
