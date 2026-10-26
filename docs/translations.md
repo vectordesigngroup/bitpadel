@@ -21,7 +21,7 @@ The language menu is on the booking page, My bookings, the kiosk, the guest form
 
 The NFC tap page is translated from the member's saved language, then the browser, then the club default. It does not show the language menu. Reloading that address would pulse the door again.
 
-Club-written text stays as the club wrote it: the club name, footer, contact line, and footer link labels.
+Club-written text stays as the club wrote it: the club name, footer, contact line, footer link labels, and announcements or marketing text a person typed. Court names, member labels, and ledger descriptions stay as stored.
 
 ## Add a language
 
@@ -44,12 +44,18 @@ Open a pull request that changes the JSON catalog, and say whether a native spea
 
 Staff-composed marketing text is sent as the staff member wrote it. The app does not translate that text.
 
-## Still in English
+## API errors
 
-These stay in English for now:
+When a request fails, the JSON includes the English sentence in `error` and a stable `code` such as `errors.hold-not-found`. Pages look up that code in the catalog for the language on screen, and use the English sentence if the code is missing. Placeholders arrive in `params`. Wallets that speak LNURL still receive the English `reason`, plus the same `code`, because those wallets do not load this catalog.
 
-- Lists the admin page builds after it loads: slots, bookings, the ledger, the access log, contrast warnings, and most status lines.
-- Buttons on a member card other than the profile fields and the preferred-language list (enrollment, revoke, household, card issue, tab).
-- Error messages returned by the API.
-- Playtomic import labels and conflict text.
-- The club's own name, footer, and contact line.
+Email and texts still use the recipient's saved language. A message a staff member wrote is sent as they wrote it.
+
+## Still as the club wrote it
+
+These are not translated:
+
+- The club name, short name, footer, contact line, footer link labels, and any announcement or marketing text a person typed.
+- Court names, member labels, price-rule labels, ledger descriptions, guest names, and refund reasons stored on a record.
+- A payment-service detail that is not one of the fixed sentences in the catalog. The page shows that text as the service sent it.
+- The end-of-day panel, which shows the totals as data.
+- Portugal Portuguese as its own catalog. `pt` and `pt-PT` still use Brazilian Portuguese.

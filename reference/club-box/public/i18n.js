@@ -16,6 +16,11 @@
   }
 
   if (!boot || typeof boot.messages !== "object" || boot.messages === null) {
+    function errorText(body, status) {
+      if (body && typeof body.error === "string" && body.error) return body.error;
+      if (body && typeof body.reason === "string" && body.reason) return body.reason;
+      return "Request failed (" + (status == null ? "" : String(status)) + ")";
+    }
     window.clubI18n = {
       t: missing,
       locale: "en",
@@ -29,6 +34,7 @@
       formatNumber: function (value) { return String(value); },
       formatMoney: function (amount, currency) { return `${amount} ${currency}`; },
       formatSats: function (amount) { return `${amount} sats`; },
+      errorText: errorText,
       apply: function () {},
     };
     return;
@@ -112,6 +118,17 @@
     return t("format.sats", { amount: formatNumber(amount) });
   }
 
+  function errorText(body, status) {
+    const code = body && typeof body.code === "string" ? body.code : "";
+    if (code && code !== "errors.unlisted") {
+      const rendered = t(code, body.params || {});
+      if (rendered !== code) return rendered;
+    }
+    if (body && typeof body.error === "string" && body.error) return body.error;
+    if (body && typeof body.reason === "string" && body.reason) return body.reason;
+    return t("common.failed", { status: status == null ? "" : String(status) });
+  }
+
   window.clubI18n = {
     t: t,
     locale: boot.locale,
@@ -125,6 +142,7 @@
     formatNumber: formatNumber,
     formatMoney: formatMoney,
     formatSats: formatSats,
+    errorText: errorText,
     apply: apply,
   };
 

@@ -27,6 +27,8 @@
     "email.privacy.text",
     "email.reminder.text",
     "email.household.created",
-    "email.household.updated"
+    "email.household.updated",
+    "errors.a-waiver-acknowledgement-is-required",
+    "errors.entry-controller-did-not-respond-use-a-fob-pin-or-staff-dot"
   ]
 }

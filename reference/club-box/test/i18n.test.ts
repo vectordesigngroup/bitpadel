@@ -2,11 +2,13 @@
 // Copyright (c) 2026 Daniel Solano and BitPadel contributors
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { formatDateTime, formatMoney, formatSats } from "../src/i18n/format.js";
+import { interpolate } from "../src/i18n/catalog.js";
+import { ERROR_TEMPLATES, EXACT_ERROR_MESSAGES, classifyError } from "../src/i18n/error-codes.js";
 import { LOCALE_IDS, canonicalizeLocale } from "../src/i18n/locales.js";
 import { resolveLocale } from "../src/i18n/negotiate.js";
 import { ConsoleMessageProvider } from "../src/notify/console.js";
@@ -216,6 +218,196 @@ test("a hold keeps the page language, and an English receipt still says it is tr
     await app.close();
   }
 });
+
+test("API errors keep the English sentence and a stable code the catalogs can render", async () => {
+  const english = catalog("en");
+  const seen = new Map<string, string>();
+  for (const message of EXACT_ERROR_MESSAGES) {
+    const classified = classifyError(message);
+    assert.notEqual(classified.code, "errors.unlisted", message);
+    assert.equal(interpolate(english[classified.code] ?? "", classified.params), message, message);
+    const previous = seen.get(classified.code);
+    if (previous !== undefined) assert.equal(previous, message, classified.code);
+    seen.set(classified.code, message);
+  }
+  for (const [code, template] of Object.entries(ERROR_TEMPLATES)) {
+    assert.equal(english[code], template, code);
+    const params: Record<string, string> = {};
+    for (const name of placeholders(template)) params[name] = name === "field" || name === "detail" || name === "value" || name === "allowed" ? "name" : "12";
+    const message = interpolate(template, params);
+    const classified = classifyError(message);
+    assert.equal(classified.code, code, message);
+    assert.equal(interpolate(english[classified.code] ?? "", classified.params), message);
+  }
+
+  const srcDir = path.join(localesDir, "../src");
+  const misses: string[] = [];
+  for (const file of walkTs(srcDir)) {
+    if (file.endsWith(`${path.sep}error-codes.ts`)) continue;
+    const source = readFileSync(file, "utf8");
+    const messages = [
+      ...callMessages(source, "AppError"),
+      ...callMessages(source, "LnurlError"),
+      ...callMessages(source, "PaymentError"),
+      ...quotedAfter(source, "message: "),
+      ...quotedAfter(source, "detail: "),
+    ];
+    if (file.endsWith(`${path.sep}brand${path.sep}svg.ts`)) messages.push(...callMessages(source, "Error"));
+    const hold = functionSource(source, "holdRefusal");
+    if (hold) messages.push(...quotedAfter(hold, "return "));
+    for (const message of messages) {
+      if (!message.includes(" ") && !message.endsWith(".")) continue;
+      if (classifyError(message).code === "errors.unlisted") misses.push(`${path.relative(srcDir, file)}: ${message}`);
+    }
+  }
+  assert.deepEqual(misses, []);
+
+  const app = await startTestApp();
+  try {
+    const missing = await api(app.baseUrl, "/api/holds/does-not-exist");
+    assert.equal(missing.status, 404);
+    assert.equal(missing.body.error, "Hold not found");
+    assert.equal(missing.body.code, "errors.hold-not-found");
+    assert.equal(missing.body.params, undefined);
+
+    const page = await fetch(`${app.baseUrl}/?lang=es`);
+    const html = await page.text();
+    assert.match(html, /<html lang="es">/);
+    assert.match(html, /No se encontró el apartado/);
+  } finally {
+    await app.close();
+  }
+});
+
+function walkTs(dir: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = path.join(dir, entry);
+    if (statSync(full).isDirectory()) files.push(...walkTs(full));
+    else if (entry.endsWith(".ts")) files.push(full);
+  }
+  return files;
+}
+
+function callMessages(source: string, name: string): string[] {
+  const needle = `new ${name}(`;
+  const messages: string[] = [];
+  let from = 0;
+  while (from < source.length) {
+    const start = source.indexOf(needle, from);
+    if (start < 0) break;
+    const open = start + needle.length - 1;
+    const close = matchingParen(source, open);
+    messages.push(...literalMessages(source.slice(open + 1, close)));
+    from = close + 1;
+  }
+  return messages;
+}
+
+function quotedAfter(source: string, prefix: string): string[] {
+  const messages: string[] = [];
+  let from = 0;
+  while (from < source.length) {
+    const start = source.indexOf(prefix, from);
+    if (start < 0) break;
+    let cursor = start + prefix.length;
+    while (cursor < source.length && /\s/.test(source[cursor] ?? "")) cursor += 1;
+    const quote = source[cursor];
+    if (quote === '"' || quote === "'") {
+      const end = endOfString(source, cursor);
+      messages.push(unescapeLiteral(source.slice(cursor + 1, end)));
+      from = end + 1;
+    } else {
+      from = cursor + 1;
+    }
+  }
+  return messages;
+}
+
+function functionSource(source: string, name: string): string | null {
+  const start = source.indexOf(`function ${name}`);
+  if (start < 0) return null;
+  const open = source.indexOf("{", start);
+  if (open < 0) return null;
+  return source.slice(open, matchingBrace(source, open) + 1);
+}
+
+function literalMessages(args: string): string[] {
+  const messages: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const char = args[index];
+    if (char !== '"' && char !== "'" && char !== "`") continue;
+    const end = endOfString(args, index);
+    const raw = args.slice(index + 1, end);
+    if (char === "`") messages.push(...sampleTemplate(raw));
+    else messages.push(unescapeLiteral(raw));
+    index = end;
+  }
+  return messages;
+}
+
+function sampleTemplate(raw: string): string[] {
+  const text = raw.replace(/\\`/g, "`").replace(/\\\$/g, "$");
+  if (text.includes("Payment backend returned HTTP")) {
+    return ["Payment backend returned HTTP 502", "Payment backend returned HTTP 502: upstream said no"];
+  }
+  return [
+    text.replace(/\$\{[^}]*\}/g, (expr) =>
+      /\b(status|bytes|max|min|limitSats|limit|count|hour|minute|length|size|photoMaxBytes)\b|MAX_/i.test(expr) ? "12" : "name",
+    ),
+  ];
+}
+
+function unescapeLiteral(raw: string): string {
+  return raw.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t").replace(/\\(["'`\\])/g, "$1");
+}
+
+function endOfString(source: string, open: number): number {
+  const quote = source[open];
+  for (let index = open + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "\\") {
+      index += 1;
+      continue;
+    }
+    if (char === quote) return index;
+  }
+  throw new Error("unterminated string");
+}
+
+function matchingParen(source: string, open: number): number {
+  return matching(source, open, "(", ")");
+}
+
+function matchingBrace(source: string, open: number): number {
+  return matching(source, open, "{", "}");
+}
+
+function matching(source: string, open: number, left: string, right: string): number {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let index = open; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (char === "\\") {
+        index += 1;
+        continue;
+      }
+      if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === left) depth += 1;
+    else if (char === right) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  throw new Error(`unbalanced ${left}`);
+}
 
 function brandBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

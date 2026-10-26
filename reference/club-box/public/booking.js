@@ -104,7 +104,11 @@ function setStatus(text) {
 async function getJson(url, options) {
   const response = await fetch(url, options);
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || t("common.failed", { status: response.status }));
+  if (!response.ok) {
+    const error = new Error(window.clubI18n.errorText(body, response.status));
+    error.code = body.code || "";
+    throw error;
+  }
   return body;
 }
 
