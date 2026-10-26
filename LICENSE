@@ -1,25 +1,3 @@
-BitPadel
-
-Copyright (c) 2026 Daniel Solano and BitPadel contributors
-
-The reference application in reference/club-box is free software licensed
-under the GNU Affero General Public License, version 3 only
-(AGPL-3.0-only). The full license text follows this notice and is
-included unmodified.
-
-Documentation, playbooks, templates, and brand placeholders are licensed
-separately under Creative Commons Attribution-ShareAlike 4.0
-International. See LICENSE-docs.
-
-Names and logos are not covered by either license. See TRADEMARKS.md.
-
-Commercial or other dual licensing is available on request. Contact the
-copyright holder through this repository. This notice does not list prices.
-
-SPDX-License-Identifier: AGPL-3.0-only
-
-========================================================================
-
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 

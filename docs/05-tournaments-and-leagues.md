@@ -1,5 +1,7 @@
 # Tournaments and leagues
 
+The software plan for running these on club-box (draws, court blocks, Lightning entry fees, signed check-in and scores) is in [`tournaments.md`](tournaments.md).
+
 ## Formats that work on one court
 | Format | How it runs | Why |
 |---|---|---|

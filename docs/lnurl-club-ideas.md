@@ -49,10 +49,10 @@ Several ideas below need the same missing piece: a small per-member ledger.
 ## Later / ideas
 
 ### Signed tournament check-in and score confirmation
-Players check in by signing at the kiosk. After a match, both sides sign the score; a result counts only when both teams agree. Disputes go to staff. Ratings update from confirmed results only. Builds on [tournaments and leagues](05-tournaments-and-leagues.md).
+Players check in by signing at the kiosk. After a match, both sides sign the score; a result counts only when both teams agree. Disputes go to staff. Ratings update from confirmed results only. Builds on [tournaments and leagues](05-tournaments-and-leagues.md). **Moved to Next:** the full plan is in [`tournaments.md`](tournaments.md).
 
 ### Prizes, streak and referral rewards (LNURL-withdraw)
-The club issues a one-time LNURL-withdraw link or QR for a prize or reward, with an amount cap and an expiry. LNbits can already create withdraw links. Club-box would add rules (who qualifies, one claim per member) and the audit trail.
+Tournament prizes are planned in [`tournaments.md`](tournaments.md#prizes-fiat-or-sats); this idea covers streak and referral rewards. The club issues a one-time LNURL-withdraw link or QR for a prize or reward, with an amount cap and an expiry. LNbits can already create withdraw links. Club-box would add rules (who qualifies, one claim per member) and the audit trail.
 
 ### Coach tips (Lightning address / LNURL-pay)
 Each coach gets a Lightning address or LNURL-pay QR that pays the coach's own wallet, shown on the class page or the court screen. The club does not hold tip money.
