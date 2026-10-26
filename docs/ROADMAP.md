@@ -13,6 +13,7 @@
 - [x] **Profiles and guest check-in.** Optional name, phone, email, and photo; household; on-site list; guest cap; waiver; marketing opt-in stored apart from the visit. The notice template is [`templates/privacy-notice.md`](../templates/privacy-notice.md). It is not legal advice.
 - [x] **Read-only Playtomic sync.** Optional import of bookings and payments. Imported time blocks Lightning holds. Two-way sync stays with Playtomic Connect. Scraped integrations are out of scope.
 - [x] **Staff and operator manuals.** [`docs/manuals`](manuals/README.md) covers daily operations, admin, installation, maintenance, troubleshooting, security, training, emergencies, and contributors, plus one-page desk cards. Gaps the software does not cover are marked in those pages.
+- [ ] **Tournaments.** Socials (Americano, Mexicano), round robins, brackets and leagues on the CourtHive [competition-factory](https://github.com/CourtHive/competition-factory) engine (MIT). Draws reserve courts so they block booking slots; players register with LNURL-auth, a card or the desk; entry fees by Lightning or card with refunds on withdrawal; signed kiosk check-in; a score counts only when both sides sign it; [TMX](https://github.com/CourtHive/TMX) as an optional desk for big events. Prizes (sats or fiat) come last and stay off until an attorney and a CPA have reviewed them. Plan: [`tournaments.md`](tournaments.md).
 - [ ] Open workshop slide deck for the small-business Lightning curriculum.
 - [ ] Spreadsheet version of the financial model (with charts).
 - [ ] Translations (Spanish first).
@@ -27,8 +28,7 @@ Design notes for everything in this section and the next: [`lnurl-club-ideas.md`
 - [ ] **Member-vouched guest passes.** A member signs to issue a one-day guest QR, within the guest cap and waiver rules.
 
 ## Later / ideas
-- [ ] Signed tournament check-in and two-sided score confirmation.
-- [ ] Prizes, streak and referral rewards through LNURL-withdraw.
+- [ ] Streak and referral rewards through LNURL-withdraw. (Signed tournament check-in, two-sided score confirmation and tournament prizes moved to **Tournaments** under Next.)
 - [ ] Coach tips through a Lightning address or LNURL-pay.
 - [ ] Gift cards (LNURL-withdraw or Bolt Card).
 - [ ] Member voting, one signature per member.
