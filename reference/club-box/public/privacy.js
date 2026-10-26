@@ -15,7 +15,7 @@ document.querySelector("#privacy").addEventListener("submit", async (event) => {
       body: JSON.stringify({ token: data.get("token") }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || i18n.t("privacy.failed"));
+    if (!response.ok) throw new Error(body.code || body.error ? i18n.errorText(body, response.status) : i18n.t("privacy.failed"));
     statusEl.textContent = action === "delete" ? i18n.t("privacy.deleted") : i18n.t("privacy.unsubscribed");
   } catch (error) {
     statusEl.textContent = error.message;

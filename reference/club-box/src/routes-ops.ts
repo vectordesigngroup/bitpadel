@@ -15,6 +15,7 @@ import {
   type Route,
 } from "./http.js";
 import { newId } from "./ids.js";
+import { errorPayload } from "./i18n/error-codes.js";
 import { refundCharge } from "./player/cancel.js";
 import { sendMarketing } from "./notify/service.js";
 import type { Channel } from "./notify/types.js";
@@ -160,7 +161,13 @@ async function refund(req: HttpReq, ctx: AppDeps): Promise<void> {
 
 async function paymentHealth(req: HttpReq, ctx: AppDeps): Promise<void> {
   requireAdmin(req, ctx);
-  sendJson(req.res, 200, await ctx.payments.health());
+  const health = await ctx.payments.health();
+  const classified = errorPayload(health.detail);
+  sendJson(req.res, 200, {
+    ...health,
+    code: classified.code,
+    ...(classified.params ? { params: classified.params } : {}),
+  });
 }
 
 async function marketingSend(req: HttpReq, ctx: AppDeps): Promise<void> {

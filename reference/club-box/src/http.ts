@@ -5,6 +5,7 @@ import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Serv
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { AppError, LnurlError, PaymentError } from "./errors.js";
+import { errorPayload } from "./i18n/error-codes.js";
 import { log } from "./log.js";
 import { actorAllows, presentedCredential, resolveActor } from "./staff/gate.js";
 import type { AppDeps } from "./deps.js";
@@ -201,16 +202,16 @@ async function handleRequest(
     const found = matches.find((item) => item.route.method === method);
     if (!found) {
       if (matches.length > 0) {
-        sendJson(res, 405, { error: "Method not allowed" });
+        sendJson(res, 405, errorPayload("Method not allowed"));
         return;
       }
       if (method !== "GET" && method !== "HEAD") {
-        sendJson(res, 404, { error: "Not found" });
+        sendJson(res, 404, errorPayload("Not found"));
         return;
       }
       const file = staticFile(url.pathname, publicRoot);
       if (!file) {
-        sendJson(res, 404, { error: "Not found" });
+        sendJson(res, 404, errorPayload("Not found"));
         return;
       }
       const body = await readFile(file.path);
@@ -244,11 +245,12 @@ async function handleRequest(
       return;
     }
     if (error instanceof LnurlError) {
-      sendJson(res, 200, { status: "ERROR", reason: error.message });
+      const classified = errorPayload(error.message);
+      sendJson(res, 200, { status: "ERROR", reason: error.message, code: classified.code, ...(classified.params ? { params: classified.params } : {}) });
       return;
     }
     if (error instanceof AppError) {
-      sendJson(res, error.status, { error: error.message });
+      sendJson(res, error.status, errorPayload(error.message));
       onComplete?.({
         method: incoming.method ?? "GET",
         path: new URL(incoming.url ?? "/", "http://localhost").pathname,
@@ -258,11 +260,11 @@ async function handleRequest(
       return;
     }
     if (error instanceof PaymentError) {
-      sendJson(res, 502, { error: error.message });
+      sendJson(res, 502, errorPayload(error.message));
       return;
     }
     log("error", "request failed", { error: error instanceof Error ? error.message : "error" });
-    sendJson(res, 500, { error: "Internal error" });
+    sendJson(res, 500, errorPayload("Internal error"));
   }
 }
 

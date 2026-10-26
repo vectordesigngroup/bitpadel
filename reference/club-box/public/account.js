@@ -28,7 +28,11 @@ async function api(pathname, options = {}) {
   if (options.body) headers.set("content-type", "application/json");
   const response = await fetch(pathname, { ...options, headers, credentials: "same-origin" });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || t("common.failed", { status: response.status }));
+  if (!response.ok) {
+    const error = new Error(window.clubI18n.errorText(body, response.status));
+    error.code = body.code || "";
+    throw error;
+  }
   return body;
 }
 
@@ -169,7 +173,7 @@ async function loadTab() {
       lines.append(waitingLine);
     }
   } catch (error) {
-    if (String(error.message).includes("No membership")) {
+    if (error.code === "errors.no-membership-is-linked-to-this-login") {
       section.hidden = true;
       return;
     }

@@ -24,7 +24,7 @@ async function start() {
       const response = await fetch(`/api/access/challenges/${k1}`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setStatus(body.error || i18n.t("enroll.unavailable"));
+        setStatus(body.code || body.error ? i18n.errorText(body, response.status) : i18n.t("enroll.unavailable"));
         window.clearInterval(timer);
         return;
       }

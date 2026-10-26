@@ -62,7 +62,7 @@ async function rotate() {
       body: JSON.stringify({ area }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || t("kiosk.couldNotStart"));
+    if (!response.ok) throw new Error(body.code || body.error ? i18n.errorText(body, response.status) : t("kiosk.couldNotStart"));
     const challenge = body.challenge;
     qrEl.hidden = false;
     qrEl.src = `/api/access/challenges/${challenge.k1}/qr.png?ts=${Date.now()}`;
@@ -136,7 +136,7 @@ async function changeGuests(checkin, delta, count) {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    setStatus(body.error || t("kiosk.couldNotUpdate"));
+    setStatus(body.code || body.error ? i18n.errorText(body, response.status) : t("kiosk.couldNotUpdate"));
     return;
   }
   count.textContent = String(body.checkin.guestCount);

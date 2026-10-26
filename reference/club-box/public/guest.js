@@ -25,7 +25,7 @@ document.querySelector("#guest").addEventListener("submit", async (event) => {
       }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || i18n.t("guest.failed"));
+    if (!response.ok) throw new Error(body.code || body.error ? i18n.errorText(body, response.status) : i18n.t("guest.failed"));
     statusEl.textContent = i18n.t("guest.added");
     if (form instanceof HTMLFormElement) form.reset();
   } catch (error) {
