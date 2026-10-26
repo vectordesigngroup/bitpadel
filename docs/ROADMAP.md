@@ -18,6 +18,13 @@
 - [ ] Spreadsheet version of the financial model (with charts).
 - [ ] Translations (Spanish first).
 - [ ] Case studies from clubs using the kit.
+- [ ] **Padel and pickleball CRM.** One player page on the members, guests, bookings, and consent the app already stores, plus a lead list, tags, and campaigns on the existing email and SMS path. Plan: [`crm.md`](crm.md).
+- [ ] **Digital waivers.** Players sign a liability waiver online before the first visit, and staff can see who has not signed. A Florida attorney must approve the waiver text; today's guest form only stores a version and a time, and members are not asked to sign.
+- [ ] **Open play and leagues.** Drop-in sessions grouped by skill level, plus ladders and leagues that show standings. Skill uses the CRM player fields; event tournaments stay in the tournaments item above.
+- [ ] **Coaches and lessons.** Coaches set times they can teach; a player books a lesson and pays by card or Lightning. A report lists those lesson payments, in the club's currency, so the club can pay the coach.
+- [ ] **Peak and off-peak pricing.** The club types peak and off-peak prices on the weekday and time-window rules the admin page already stores (a member amount and a guest amount). The kit includes no sample prices.
+- [ ] **Rentals.** Staff check out paddles, balls, and the ball machine, and charge by card or Lightning, or to the member tab once that ledger exists. Rental amounts are the club's to set.
+- [ ] **Phone-friendly member app.** A page a member can add to their phone home screen, with court booking, door check-in, and the member tab in one place. The tab waits on the allowance and tab ledger; the app has no installable phone page today.
 
 ## Next: member perks on the same identity
 Design notes for everything in this section and the next: [`lnurl-club-ideas.md`](lnurl-club-ideas.md). They reuse LNURL-auth identity (no sats move), the NFC card fallback, door `area` pulses and the booking window, plus a new allowance and tab ledger.
