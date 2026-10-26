@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Court booking</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/booking.css">
 </head>
 <body>
   <header>
@@ -18,23 +19,77 @@
       <a href="/admin">Admin</a>
     </nav>
   </header>
-  <main>
+  <main class="booking-schedule">
     <h1>Book a court</h1>
     <p class="note">Prices follow the club's rules. Log in on <a href="/account">your bookings</a> with the email on a membership to get the member price.</p>
-    <fieldset id="pay-with">
-      <legend>Pay with</legend>
-      <label><input type="radio" name="method" value="lightning" checked> Lightning</label>
-    </fieldset>
-    <label>Receipt email, optional
-      <input id="receipt-email" type="email" maxlength="200" autocomplete="email">
-    </label>
-    <label><input id="reminder-email" type="checkbox"> Email me a reminder before this booking</label>
-    <label>Reminder phone, only if you want a text
-      <input id="reminder-phone" type="tel" maxlength="32" autocomplete="tel">
-    </label>
-    <label><input id="reminder-sms" type="checkbox"> Text me a reminder. This is not marketing.</label>
-    <div id="courts" class="row"></div>
-    <div id="slots"></div>
+
+    <section aria-labelledby="date-heading">
+      <h2 id="date-heading" class="visually-hidden">Choose a day</h2>
+      <div class="booking-cal-nav">
+        <button type="button" id="cal-prev">Previous</button>
+        <p id="cal-title" aria-live="polite"></p>
+        <button type="button" id="cal-next">Next</button>
+      </div>
+      <div id="calendar" role="grid" aria-labelledby="cal-title"></div>
+      <div id="day-chips" class="booking-chips" role="group" aria-label="Next 7 days"></div>
+    </section>
+
+    <section aria-labelledby="day-heading">
+      <div class="booking-filters">
+        <label>Length
+          <select id="duration-filter">
+            <option value="">Any length</option>
+          </select>
+        </label>
+        <label id="court-filter-label">Court
+          <select id="court-filter">
+            <option value="">All courts</option>
+          </select>
+        </label>
+        <label id="sport-filter-label" hidden>Sport
+          <select id="sport-filter">
+            <option value="">All sports</option>
+          </select>
+        </label>
+      </div>
+      <h2 id="day-heading" aria-live="polite"></h2>
+      <p id="tz-note" class="note"></p>
+      <ul class="booking-legend" aria-label="Time slot states">
+        <li><span class="swatch swatch-open" aria-hidden="true"></span> Open</li>
+        <li><span class="swatch swatch-held" aria-hidden="true"></span> Held</li>
+        <li><span class="swatch swatch-booked" aria-hidden="true"></span> Booked</li>
+        <li><span class="swatch swatch-unavailable" aria-hidden="true"></span> Unavailable</li>
+      </ul>
+      <p id="schedule-note" class="note" hidden></p>
+      <div id="schedule"></div>
+    </section>
+
+    <dialog id="slot-sheet" aria-labelledby="sheet-title">
+      <form id="slot-form">
+        <h2 id="sheet-title">Hold this time</h2>
+        <p id="sheet-court"></p>
+        <p id="sheet-when"></p>
+        <div id="sheet-price"></div>
+        <p id="sheet-hold-note" class="note"></p>
+        <fieldset id="pay-with">
+          <legend>Pay with</legend>
+          <label><input type="radio" name="method" value="lightning" checked> Lightning</label>
+        </fieldset>
+        <label>Receipt email, optional
+          <input id="receipt-email" type="email" maxlength="200" autocomplete="email">
+        </label>
+        <label><input id="reminder-email" type="checkbox"> Email me a reminder before this booking</label>
+        <label>Reminder phone, only if you want a text
+          <input id="reminder-phone" type="tel" maxlength="32" autocomplete="tel">
+        </label>
+        <label><input id="reminder-sms" type="checkbox"> Text me a reminder. This is not marketing.</label>
+        <div class="row">
+          <button type="submit" id="hold-button">Hold this time</button>
+          <button type="button" class="secondary" id="sheet-close">Close</button>
+        </div>
+      </form>
+    </dialog>
+
     <section id="invoice" hidden>
       <h2 id="invoice-title">Lightning invoice</h2>
       <p id="invoice-note"></p>
@@ -48,6 +103,6 @@
   <footer>
     <p>Reference app. Replace the placeholder colors with your club's brand.</p>
   </footer>
-  <script src="/booking.js"></script>
+  <script type="module" src="/booking.js"></script>
 </body>
 </html>

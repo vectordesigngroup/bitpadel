@@ -1,0 +1,379 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (c) 2026 Daniel Solano and BitPadel contributors */
+
+/* Member booking schedule. Colors come from the variables in styles.css. */
+
+.booking-schedule {
+  width: min(1100px, calc(100% - 32px));
+}
+
+body:has(.booking-schedule) header,
+body:has(.booking-schedule) footer {
+  width: min(1100px, calc(100% - 32px));
+}
+
+.booking-schedule .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.booking-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.booking-cal-nav p {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.booking-cal-nav button,
+.booking-chips button,
+.booking-day {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.booking-cal-nav button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+#calendar {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+#calendar [role="row"] {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+#calendar [role="columnheader"] {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 4px 0;
+}
+
+.booking-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 4px 0 6px;
+  border-radius: 10px;
+  line-height: 1.2;
+}
+
+.booking-day.is-outside {
+  color: var(--muted);
+}
+
+.booking-day.is-today:not([aria-selected="true"]) {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.booking-day[aria-selected="true"] {
+  background: var(--primary);
+  color: var(--bg);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.booking-day .dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.booking-day[aria-selected="true"] .dot {
+  background: var(--bg);
+}
+
+.booking-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-top: 14px;
+  padding-bottom: 2px;
+}
+
+.booking-chips button {
+  flex: 0 0 auto;
+}
+
+.booking-chips button[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--bg);
+  border-color: transparent;
+}
+
+.booking-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.booking-filters label {
+  flex: 1 1 160px;
+  margin: 0 0 8px;
+}
+
+.booking-schedule input[type="radio"],
+.booking-schedule input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+
+.booking-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+}
+
+.booking-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+
+.swatch-open {
+  background: var(--primary);
+  border-color: transparent;
+}
+
+.swatch-held {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.swatch-booked {
+  background: var(--surface);
+}
+
+.swatch-unavailable {
+  border-style: dashed;
+}
+
+.booking-grid-wrap {
+  overflow-x: auto;
+}
+
+.booking-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.booking-grid [role="row"] {
+  display: grid;
+  grid-template-columns: 92px repeat(var(--courts, 1), minmax(140px, 1fr));
+  gap: 6px;
+  align-items: stretch;
+  min-width: calc(92px + var(--courts, 1) * 146px);
+}
+
+.booking-court-name,
+.booking-time {
+  font-weight: 700;
+}
+
+.booking-court-name {
+  text-align: center;
+  padding: 4px;
+  overflow-wrap: anywhere;
+}
+
+.booking-time {
+  align-self: center;
+}
+
+.booking-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  min-height: 52px;
+  padding: 8px;
+  border-radius: 10px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.booking-member {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.booking-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: transparent;
+}
+
+.booking-state.is-held {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.booking-state.is-booked {
+  background: var(--bg);
+}
+
+.booking-state.is-unavailable,
+.booking-state.is-past,
+.booking-state.is-continued,
+.booking-state.is-empty {
+  border-style: dashed;
+}
+
+.booking-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.booking-group h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.booking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.booking-list-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  line-height: 1.3;
+}
+
+button.booking-list-item.is-open {
+  border-color: var(--primary);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.booking-list-court {
+  font-weight: 700;
+}
+
+.booking-list-meta,
+.booking-list-state {
+  color: var(--muted);
+}
+
+.booking-list-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.booking-list-item.is-held {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.booking-list-item.is-unavailable,
+.booking-list-item.is-past {
+  border-style: dashed;
+}
+
+#slot-sheet {
+  width: min(480px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  margin: auto;
+  border: 0;
+  border-radius: 16px;
+  padding: 18px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+#slot-sheet::backdrop {
+  background: color-mix(in srgb, var(--bg) 78%, black);
+}
+
+#slot-sheet h2 {
+  margin-top: 0;
+}
+
+#sheet-court {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+#sheet-price p {
+  margin: 4px 0;
+}
+
+#slot-sheet .row {
+  margin-top: 8px;
+}
+
+@media (max-width: 719px) {
+  body:has(.booking-schedule) header {
+    align-items: flex-start;
+  }
+
+  body:has(.booking-schedule) nav {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .booking-cal-nav button {
+    padding: 8px 10px;
+  }
+}
