@@ -549,7 +549,7 @@ function listen(server: ReturnType<typeof createServer>): Promise<void> {
 }
 
 function stripeSignature(raw: string): string {
-  const stamp = "1710000000";
+  const stamp = Math.floor(Date.now() / 1000).toString();
   const digest = createHmac("sha256", STRIPE_WEBHOOK).update(`${stamp}.${raw}`).digest("hex");
   return `t=${stamp},v1=${digest}`;
 }
