@@ -5,7 +5,8 @@ import path from "node:path";
 import { appendFileSync, mkdirSync, renameSync, statSync, unlinkSync } from "node:fs";
 
 type LogFields = Record<string, string | number | boolean | null>;
-type Sink = (level: "info" | "error", line: string) => void;
+type Level = "info" | "warn" | "error";
+type Sink = (level: Level, line: string) => void;
 
 let sinks: Sink[] = [consoleSink];
 
@@ -17,7 +18,7 @@ export function configureLog(options: { filePath: string | null; maxBytes: numbe
   }
 }
 
-export function log(level: "info" | "error", msg: string, fields?: LogFields): void {
+export function log(level: Level, msg: string, fields?: LogFields): void {
   const line = JSON.stringify({
     time: new Date().toISOString(),
     level,
@@ -27,8 +28,9 @@ export function log(level: "info" | "error", msg: string, fields?: LogFields): v
   for (const sink of sinks) sink(level, line);
 }
 
-function consoleSink(level: "info" | "error", line: string): void {
+function consoleSink(level: Level, line: string): void {
   if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
   else console.log(line);
 }
 

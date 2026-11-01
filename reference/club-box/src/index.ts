@@ -4,7 +4,7 @@
 import { releaseExpired } from "./booking/service.js";
 import { expireDueTabSettlements } from "./ledger/service.js";
 import { expireStaleCheckins } from "./checkin/service.js";
-import { loadConfig } from "./config.js";
+import { clubTimeZoneWarning, loadConfig } from "./config.js";
 import { openDatabase, purgeOldRows } from "./db.js";
 import { openDoorController } from "./doors/index.js";
 import { listen } from "./http.js";
@@ -27,6 +27,8 @@ try {
     maxBytes: config.logFileMaxBytes,
     keep: config.logFileKeep,
   });
+  const timeZoneWarning = clubTimeZoneWarning(process.env);
+  if (timeZoneWarning) log("warn", timeZoneWarning);
   const db = openDatabase(config.databasePath);
   bootstrapStaff(db, config.staffBootstrap, new Date());
   const payments = createPaymentBackend(config);
