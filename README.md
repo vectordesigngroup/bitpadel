@@ -44,9 +44,10 @@ This is a **metaphor for the mission, not a mining claim.** A BitPadel club does
 1. **Read** [`docs/01-concept-and-phases.md`](docs/01-concept-and-phases.md) and decide which phase you're starting with (most clubs should start with one pilot court).
 2. **Fill in** [`templates/financial-model.csv`](templates/financial-model.csv) with your own local quotes. Every input starts at zero on purpose: the kit has no prices, because yours depend on your city, site and costs.
 3. **Work through** [`docs/02-pilot-checklist.md`](docs/02-pilot-checklist.md) with your landlord or host site, your local permitting office and an insurance broker.
-4. **Pick a Lightning stack** from [`docs/04-lightning-integrations.md`](docs/04-lightning-integrations.md). You can run the reference booking and entry app locally with its mock backend ([`reference/club-box`](reference/club-box)), then test a real node with small payments before opening.
-5. **Start the community before the court:** a waitlist, a founding-member interest page ([`templates/founding-member-page.html`](templates/founding-member-page.html)) and a first Bitcoin meetup or small-business workshop ([`docs/03-bitcoin-hub-playbook.md`](docs/03-bitcoin-hub-playbook.md)).
-6. **Talk to professionals** before you take money from the public or hold Bitcoin as a business: a local attorney, a CPA and an insurance broker.
+4. **Set your club's time zone** if you run the reference app. Set `CLUB_TIMEZONE` in `.env` to your IANA time zone, for example `America/New_York`. It defaults to `UTC`, and it drives opening hours, booking slots, price rules, reminders, receipts and reports, so a club left on UTC sees the wrong times. See [`reference/club-box`](reference/club-box).
+5. **Pick a Lightning stack** from [`docs/04-lightning-integrations.md`](docs/04-lightning-integrations.md). You can run the reference booking and entry app locally with its mock backend ([`reference/club-box`](reference/club-box)), then test a real node with small payments before opening.
+6. **Start the community before the court:** a waitlist, a founding-member interest page ([`templates/founding-member-page.html`](templates/founding-member-page.html)) and a first Bitcoin meetup or small-business workshop ([`docs/03-bitcoin-hub-playbook.md`](docs/03-bitcoin-hub-playbook.md)).
+7. **Talk to professionals** before you take money from the public or hold Bitcoin as a business: a local attorney, a CPA and an insurance broker.
 
 ## First club using the kit
 

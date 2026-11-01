@@ -3,7 +3,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadConfig } from "../src/config.js";
+import { CLUB_TIMEZONE_UNSET_WARNING, clubTimeZoneWarning, loadConfig } from "../src/config.js";
 import { zonedLocalToUtc } from "../src/time.js";
 import { ADMIN_TOKEN } from "./helpers.js";
 
@@ -54,4 +54,16 @@ test("club-local clock times convert to UTC", () => {
   assert.equal(zonedLocalToUtc("2026-01-15", "18:00", "America/New_York").toISOString(), "2026-01-15T23:00:00.000Z");
   assert.equal(zonedLocalToUtc("2026-07-15", "18:00", "America/New_York").toISOString(), "2026-07-15T22:00:00.000Z");
   assert.equal(zonedLocalToUtc("2026-06-01", "15:00", "UTC").toISOString(), "2026-06-01T15:00:00.000Z");
+});
+
+test("a startup warning appears only when CLUB_TIMEZONE is unset or empty", () => {
+  assert.equal(clubTimeZoneWarning(base), CLUB_TIMEZONE_UNSET_WARNING);
+  assert.equal(clubTimeZoneWarning({ ...base, CLUB_TIMEZONE: "" }), CLUB_TIMEZONE_UNSET_WARNING);
+  assert.equal(clubTimeZoneWarning({ ...base, CLUB_TIMEZONE: "   " }), CLUB_TIMEZONE_UNSET_WARNING);
+  assert.equal(clubTimeZoneWarning({ ...base, CLUB_TIMEZONE: "UTC" }), null);
+  assert.equal(clubTimeZoneWarning({ ...base, CLUB_TIMEZONE: "America/New_York" }), null);
+  assert.match(CLUB_TIMEZONE_UNSET_WARNING, /CLUB_TIMEZONE is not set; using UTC/);
+  // Behavior is unchanged: the unset case still falls back to UTC.
+  assert.equal(loadConfig(base).clubTimeZone, "UTC");
+  assert.equal(loadConfig({ ...base, CLUB_TIMEZONE: "UTC" }).clubTimeZone, "UTC");
 });

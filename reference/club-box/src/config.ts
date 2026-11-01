@@ -209,6 +209,14 @@ const UID_MODES = ["off", "insecure-dev"] as const;
 const AREA_ID = /^[a-z0-9][a-z0-9-]{0,40}$/;
 const SECRET_PATH = /^[A-Za-z0-9_-]{16,128}$/;
 
+export const CLUB_TIMEZONE_UNSET_WARNING =
+  "CLUB_TIMEZONE is not set; using UTC. Set it to your club's IANA time zone (e.g. America/New_York) so hours and bookings are correct.";
+
+/** Returns a warning when CLUB_TIMEZONE is unset or empty, so the app is falling back to UTC. An explicit UTC gives no warning. */
+export function clubTimeZoneWarning(env: Record<string, string | undefined>): string | null {
+  return env.CLUB_TIMEZONE?.trim() ? null : CLUB_TIMEZONE_UNSET_WARNING;
+}
+
 export function loadConfig(env: Env): AppConfig {
   const port = intEnv(env, "PORT", 3000, 0, 65535);
   const host = env.HOST?.trim() || "127.0.0.1";

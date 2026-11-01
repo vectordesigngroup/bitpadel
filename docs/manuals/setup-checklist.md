@@ -4,7 +4,7 @@ A short list for the first server. It is not a go-live approval. Permits, the lo
 
 Use [installation](03-installation.md) for the commands and [integrations](10-integrations.md) for each provider.
 
-1. Copy `reference/club-box/.env.example` to `.env`. Set `CURRENCY`, `CURRENCY_DECIMALS`, and a long `ADMIN_TOKEN`. Leave every secret empty until that provider is the one you mean to use.
+1. Copy `reference/club-box/.env.example` to `.env`. Set `CURRENCY`, `CURRENCY_DECIMALS`, a long `ADMIN_TOKEN`, and `CLUB_TIMEZONE` (your club's IANA time zone, such as `America/New_York`; it defaults to `UTC`, which gives wrong hours and booking times for most clubs). Leave every secret empty until that provider is the one you mean to use.
 2. Leave `PAYMENT_BACKEND=mock` and `DOOR_BACKEND=mock` until Lightning and the door are ready. Leave `CARD_PROVIDERS` empty. Leave `EMAIL_PROVIDER` and `SMS_PROVIDER` on `console` until you want mail or texts to leave the machine.
 3. Start with `npm run dev` or `docker compose up --build`. Open `/api/health`. It should name the backends and list no secrets.
 4. For HTTPS, use the Caddy service. `SITE_ADDRESS=localhost` is the local certificate. A public hostname needs DNS, `PUBLIC_BASE_URL=https://` that name, and `TRUST_PROXY=true`.

@@ -51,6 +51,7 @@ Edit `.env`. You must set:
 - `CURRENCY` — a 3-letter code you use for slot prices (for example the code your bookkeeper uses)
 - `CURRENCY_DECIMALS` — digits after the major unit (often `2`)
 - `ADMIN_TOKEN` — a long random string, at least 16 characters (`openssl rand -hex 24`)
+- `CLUB_TIMEZONE` — **your club's time zone**, as an IANA name such as `America/New_York`. It defaults to `UTC`, which will show the wrong times for most clubs. It sets opening hours, booking slots, price rules, reminders, receipts and reports. If it is unset or empty, the server starts on UTC and logs a warning.
 
 Leave `PAYMENT_BACKEND=mock` and `DOOR_BACKEND=mock`. Leave price fields empty if you want to type every price in the admin page. `DEFAULT_SLOT_PRICE_MINOR` is optional and is only a helper for the generate-slots API.
 
@@ -172,7 +173,7 @@ Copy [`.env.example`](.env.example). It contains no real secrets. Prices are nev
 | `VENDING_DEVICE_TOKEN` | Optional bearer token for `/api/devices/vending/*`. At least 16 characters. Empty leaves those routes closed. |
 | `ACCESS_AREAS` | Comma-separated ids such as `lounge,after-hours`. |
 | `ACCESS_AREA_HOURS` | Optional `area=HH:MM-HH:MM` pairs. Empty means the area is allowed whenever the server is up. A window that wraps past midnight is written with the start later than the end. |
-| `CLUB_TIMEZONE` | IANA name. Default `UTC`. Used for hours and generated slots. |
+| `CLUB_TIMEZONE` | IANA name, for example `America/New_York`. Default `UTC`, so set it to your club's zone. Used for hours, generated slots, price rules, reminders, receipts and reports. If unset or empty, a warning is logged at startup. |
 | `LOG_RETENTION_DAYS` | Access-log and old-challenge retention. Default 90. |
 | `TRUST_PROXY` | `true` only behind a proxy that sets `X-Forwarded-For`. |
 
