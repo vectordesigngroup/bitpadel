@@ -26,12 +26,19 @@ test("prices and secrets come from the environment", () => {
   assert.throws(() => loadConfig({ ...base, PAYMENT_BACKEND: "cash" }), /PAYMENT_BACKEND/);
   assert.throws(() => loadConfig({ ...base, DEFAULT_SLOT_PRICE_MINOR: "0" }), /positive/);
   assert.throws(() => loadConfig({ ...base, CARD_PROVIDERS: "bitcoin" }), /CARD_PROVIDERS/);
+  const stripe = loadConfig({
+    ...base,
+    CARD_PROVIDERS: "stripe",
+    STRIPE_SECRET_KEY: "sk_test_placeholder_not_a_real_secret",
+    STRIPE_WEBHOOK_SECRET: "1234567890123456",
+  });
+  assert.equal(stripe.stripe?.secretKey, "sk_test_placeholder_not_a_real_secret");
   assert.throws(
     () =>
       loadConfig({
         ...base,
         CARD_PROVIDERS: "stripe",
-        STRIPE_SECRET_KEY: "sk_live_not_for_this_repo",
+        STRIPE_SECRET_KEY: "placeholder-not-a-real-stripe-secret",
         STRIPE_WEBHOOK_SECRET: "1234567890123456",
       }),
     /sk_test_/,

@@ -132,7 +132,15 @@ export class StripeCardProvider implements CardProvider {
   }
 }
 
-export function verifyStripeSignature(rawBody: Buffer, header: string | undefined, secret: string): boolean {
+/** Signed events further than this many seconds from now are rejected. */
+const STRIPE_SIGNATURE_TOLERANCE_SECONDS = 300;
+
+export function verifyStripeSignature(
+  rawBody: Buffer,
+  header: string | undefined,
+  secret: string,
+  nowMs: number = Date.now(),
+): boolean {
   if (!header) return false;
   const parts = new Map<string, string[]>();
   for (const piece of header.split(",")) {
@@ -148,7 +156,15 @@ export function verifyStripeSignature(rawBody: Buffer, header: string | undefine
   const signatures = parts.get("v1") ?? [];
   if (!timestamp || !/^\d+$/.test(timestamp) || signatures.length === 0) return false;
   const expected = createHmac("sha256", secret).update(`${timestamp}.${rawBody.toString("utf8")}`).digest("hex");
-  return signatures.some((signature) => safeEqual(signature, expected));
+  let matched = false;
+  for (const signature of signatures) {
+    if (safeEqual(signature, expected)) matched = true;
+  }
+  if (!matched) return false;
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isSafeInteger(timestampSeconds) || !Number.isFinite(nowMs)) return false;
+  const nowSeconds = Math.floor(nowMs / 1000);
+  return Math.abs(nowSeconds - timestampSeconds) <= STRIPE_SIGNATURE_TOLERANCE_SECONDS;
 }
 
 function successUrl(webhookUrl: string | null): string {
